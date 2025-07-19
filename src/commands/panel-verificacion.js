@@ -7,17 +7,15 @@ module.exports = {
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     
     async execute(interaction) {
-        // --- LÓGICA CORREGIDA ---
+        // --- LÓGICA FINAL Y ROBUSTA ---
 
-        // 1. Primero, respondemos a la interacción de forma privada y segura.
-        //    Esto confirma inmediatamente a Discord que hemos recibido el comando.
-        await interaction.reply({ 
-            content: 'Panel de verificación creado con éxito.', 
-            ephemeral: true // Usamos ephemeral aquí ya que es la respuesta directa a la interacción.
-        });
+        // 1. DIFIERE LA RESPUESTA INMEDIATAMENTE.
+        //    Esto le dice a Discord "recibido" y nos da 15 minutos.
+        //    Lo hacemos efímero para que el "Bot está pensando..." solo lo vea el admin.
+        await interaction.deferReply({ ephemeral: true });
 
-        // 2. Después, realizamos la acción principal de enviar el panel al canal.
-        //    Como ya hemos respondido, usamos channel.send.
+        // 2. Realiza la acción principal (enviar el panel).
+        //    Esto ahora puede tardar lo que necesite sin causar un error.
         const row = new ActionRowBuilder()
             .addComponents(
                 new ButtonBuilder()
@@ -30,5 +28,10 @@ module.exports = {
             content: 'Haga clic en el botón de abajo para vincular su cuenta de Discord con su perfil de Virtual Pro Gaming y obtener sus roles de equipo y nivel.',
             components: [row]
         });
+
+        // 3. EDITA LA RESPUESTA ORIGINAL.
+        //    Ahora que todo ha terminado, editamos el "Bot está pensando..."
+        //    con el mensaje de éxito final.
+        await interaction.editReply({ content: 'Panel de verificación creado con éxito.' });
     },
 };
