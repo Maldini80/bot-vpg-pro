@@ -7,8 +7,6 @@ module.exports = {
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     
     async execute(interaction) {
-        // --- LÓGICA FINAL Y ROBUSTA ---
-
         // 1. Difiere la respuesta para ganar tiempo y evitar el crash.
         await interaction.deferReply({ ephemeral: true });
 
