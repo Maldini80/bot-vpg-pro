@@ -2,7 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { Client, Collection, GatewayIntentBits, Events, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
 const mongoose = require('mongoose');
-const User = require('./models/User.js');
+const User = require('./models/user.js'); // <-- ¡LÍNEA CORREGIDA! (user.js en minúscula)
 const { getVpgProfile } = require('./utils/scraper.js');
 
 mongoose.connect(process.env.DATABASE_URL)
@@ -71,17 +71,14 @@ client.on(Events.InteractionCreate, async interaction => {
                 const member = interaction.member;
                 await member.setNickname(`${member.user.username} | ${profileData.teamName}`);
 
-                // --- SECCIÓN MODIFICADA ---
-                // Gestionar Rol de Manager por ID
-                const managerRoleId = process.env.MANAGER_ROLE_ID; // Leemos el ID desde Render
+                const managerRoleId = process.env.MANAGER_ROLE_ID;
                 if (managerRoleId) {
                     if (profileData.isManager) {
                         await member.roles.add(managerRoleId);
                     } else {
-                        await member.roles.remove(managerRoleId).catch(() => {}); // Añadimos .catch para que no de error si el usuario no tiene el rol
+                        await member.roles.remove(managerRoleId).catch(() => {});
                     }
                 }
-                // --- FIN DE LA SECCIÓN MODIFICADA ---
 
                 await interaction.followUp({ content: `✅ ¡Verificación completada! Tu perfil ha sido vinculado con **${profileData.teamName}**.`, ephemeral: true });
 
