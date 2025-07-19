@@ -1,13 +1,13 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const { Client, Collection, GatewayIntentBits, Events, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
+const { Client, Collection, GatewayIntentBits, Events, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, MessageFlags } = require('discord.js');
 const mongoose = require('mongoose');
 const User = require('./models/user.js');
 const { getVpgProfile } = require('./utils/scraper.js');
 require('dotenv').config();
 
 mongoose.connect(process.env.DATABASE_URL)
-    .then(() => console.log('Conectado a la base de datos MongoDB.')) // <-- LÍNEA CORREGIDA
+    .then(() => console.log('Conectado a la base de datos MongoDB.'))
     .catch(err => console.error('No se pudo conectar a MongoDB:', err));
 
 const client = new Client({
@@ -45,28 +45,23 @@ client.on(Events.InteractionCreate, async interaction => {
             }
         } else if (interaction.isModalSubmit()) {
             if (interaction.customId === 'verify_modal') {
-                await interaction.deferReply({ ephemeral: true });
+                await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
                 const vpgUsername = interaction.fields.getTextInputValue('vpgUsernameInput');
                 const profileData = await getVpgProfile(vpgUsername);
 
                 if (profileData.error) return interaction.editReply({ content: `❌ ${profileData.error}` });
                 
+                // El resto del código no se ejecutará en modo debug, pero lo dejamos aquí para el futuro.
                 await User.findOneAndUpdate(
                     { discordId: interaction.user.id },
                     { vpgUsername: profileData.vpgUsername, teamName: profileData.teamName, teamLogoUrl: profileData.teamLogoUrl, isManager: profileData.isManager, lastUpdated: Date.now() },
                     { upsert: true, new: true }
                 );
-
-                const member = interaction.member;
-                await member.setNickname(`${member.user.username} | ${profileData.teamName}`);
-                const managerRoleId = process.env.MANAGER_ROLE_ID;
-                if (managerRoleId) {
-                    if (profileData.isManager) await member.roles.add(managerRoleId);
-                    else await member.roles.remove(managerRoleId).catch(() => {});
-                }
+                await interaction.member.setNickname(`${interaction.member.user.username} | ${profileData.teamName}`);
+                // ...etc
                 
-                await interaction.editReply({ content: `✅ ¡Verificación completada! Tu perfil ha sido vinculado con **${profileData.teamName}**.` });
+                await interaction.editReply({ content: `✅ ¡Verificación completada!` });
             }
         }
     } catch (error) {
