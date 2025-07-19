@@ -4,8 +4,6 @@ const { Client, Collection, GatewayIntentBits, Events, ModalBuilder, TextInputBu
 const mongoose = require('mongoose');
 const User = require('./models/user.js');
 const { getVpgProfile } = require('./utils/scraper.js');
-
-// Carga las variables de entorno
 require('dotenv').config();
 
 mongoose.connect(process.env.DATABASE_URL)
@@ -29,19 +27,12 @@ client.once(Events.ClientReady, () => {
     console.log(`¡Listo! El bot ${client.user.tag} está online.`);
 });
 
-// --- MANEJADOR DE INTERACCIONES A PRUEBA DE CRASHES ---
 client.on(Events.InteractionCreate, async interaction => {
     try {
-        // --- GESTIÓN DE COMANDOS ---
         if (interaction.isChatInputCommand()) {
             const command = client.commands.get(interaction.commandName);
-            if (!command) {
-                console.error(`No se encontró el comando ${interaction.commandName}.`);
-                return;
-            }
+            if (!command) return console.error(`Comando no encontrado: ${interaction.commandName}`);
             await command.execute(interaction);
-
-        // --- GESTIÓN DE BOTONES ---
         } else if (interaction.isButton()) {
             if (interaction.customId === 'verify_button') {
                 const modal = new ModalBuilder().setCustomId('verify_modal').setTitle('Verificación de Virtual Pro Gaming');
@@ -50,8 +41,6 @@ client.on(Events.InteractionCreate, async interaction => {
                 modal.addComponents(actionRow);
                 await interaction.showModal(modal);
             }
-
-        // --- GESTIÓN DE MODALES ---
         } else if (interaction.isModalSubmit()) {
             if (interaction.customId === 'verify_modal') {
                 await interaction.deferReply({ ephemeral: true });
@@ -59,19 +48,11 @@ client.on(Events.InteractionCreate, async interaction => {
                 const vpgUsername = interaction.fields.getTextInputValue('vpgUsernameInput');
                 const profileData = await getVpgProfile(vpgUsername);
 
-                if (profileData.error) {
-                    return interaction.editReply({ content: `❌ ${profileData.error}` });
-                }
+                if (profileData.error) return interaction.editReply({ content: `❌ ${profileData.error}` });
                 
                 await User.findOneAndUpdate(
                     { discordId: interaction.user.id },
-                    {
-                        vpgUsername: profileData.vpgUsername,
-                        teamName: profileData.teamName,
-                        teamLogoUrl: profileData.teamLogoUrl,
-                        isManager: profileData.isManager,
-                        lastUpdated: Date.now()
-                    },
+                    { vpgUsername: profileData.vpgUsername, teamName: profileData.teamName, teamLogoUrl: profileData.teamLogoUrl, isManager: profileData.isManager, lastUpdated: Date.now() },
                     { upsert: true, new: true }
                 );
 
@@ -79,28 +60,15 @@ client.on(Events.InteractionCreate, async interaction => {
                 await member.setNickname(`${member.user.username} | ${profileData.teamName}`);
                 const managerRoleId = process.env.MANAGER_ROLE_ID;
                 if (managerRoleId) {
-                    if (profileData.isManager) {
-                        await member.roles.add(managerRoleId);
-                    } else {
-                        await member.roles.remove(managerRoleId).catch(() => {});
-                    }
+                    if (profileData.isManager) await member.roles.add(managerRoleId);
+                    else await member.roles.remove(managerRoleId).catch(() => {});
                 }
                 
                 await interaction.editReply({ content: `✅ ¡Verificación completada! Tu perfil ha sido vinculado con **${profileData.teamName}**.` });
             }
         }
     } catch (error) {
-        // Bloque CATCH-ALL que evita que el bot se caiga.
-        console.error("Se ha producido un error al procesar una interacción:", error);
-        try {
-            if (!interaction.replied && !interaction.deferred) {
-                await interaction.reply({ content: 'Hubo un error al procesar tu solicitud. Por favor, inténtalo de nuevo en unos segundos.', ephemeral: true });
-            } else {
-                await interaction.followUp({ content: 'Hubo un error al procesar tu solicitud. Por favor, inténtalo de nuevo en unos segundos.', ephemeral: true });
-            }
-        } catch (e) {
-            console.error("No se pudo responder al usuario sobre el error inicial:", e);
-        }
+        console.error("Fallo crítico de interacción (probablemente por arranque en frío):", error.message);
     }
 });
 
