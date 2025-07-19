@@ -4,14 +4,19 @@ const axios = require('axios');
 const fs = require('fs');
 const FormData = require('form-data');
 
+// Esta es la ruta exacta donde Render instala el navegador.
+// La hemos sacado de tus propios logs de error.
+const CHROME_PATH = '/opt/render/.cache/puppeteer/chrome/linux-127.0.6533.88/chrome-linux64/chrome';
+
 async function getVpgProfile(vpgUsername) {
     let browser = null;
-    let page = null; // Definimos page aquí para poder acceder a ella en el catch
+    let page = null;
     try {
         console.log(`PUPPETEER: Iniciando navegador para ${vpgUsername}...`);
         
         browser = await puppeteer.launch({
             headless: true,
+            executablePath: CHROME_PATH, // Le decimos a Puppeteer dónde encontrar el ejecutable de Chrome
             args: ['--no-sandbox', '--disable-setuid-sandbox']
         });
 
@@ -48,45 +53,31 @@ async function getVpgProfile(vpgUsername) {
 
     } catch (error) {
         console.error(`PUPPETEER ERROR para ${vpgUsername}:`, error.message);
-
-        // --- LÓGICA DE DEPURACIÓN CON CAPTURA DE PANTALLA ---
+        
         let screenshotUrl = 'No se pudo generar la captura.';
         if (page) {
             try {
-                // Genera un nombre de archivo único para la captura de pantalla
                 const screenshotPath = `error_screenshot_${Date.now()}.png`;
                 await page.screenshot({ path: screenshotPath, fullPage: true });
-                console.log(`Captura de pantalla guardada en: ${screenshotPath}`);
-
-                // Prepara el formulario para subir la imagen
+                
                 const form = new FormData();
                 form.append('key', process.env.FREEIMAGE_API_KEY);
                 form.append('action', 'upload');
                 form.append('source', fs.createReadStream(screenshotPath));
-
-                // Sube la imagen a freeimage.host
-                const response = await axios.post('https://freeimage.host/api/1/upload', form, {
-                    headers: form.getHeaders()
-                });
                 
+                const response = await axios.post('https://freeimage.host/api/1/upload', form, { headers: form.getHeaders() });
                 screenshotUrl = response.data.image.url;
-                fs.unlinkSync(screenshotPath); // Borra la imagen local después de subirla para no ocupar espacio
-
+                fs.unlinkSync(screenshotPath);
             } catch (uploadError) {
-                console.error("Error al subir la captura de pantalla:", uploadError.message);
                 screenshotUrl = `Error al subir la captura: ${uploadError.message}`;
             }
         }
         
-        // Devuelve el mensaje de error junto con el enlace a la captura de pantalla
         return { 
-            error: `No se pudo cargar el perfil de VPG para **${vpgUsername}**. El sitio puede estar lento o protegido.\n\n**Depuración:** Revisa esta captura de lo que vio el bot: ${screenshotUrl}`
+            error: `No se pudo cargar el perfil de VPG para **${vpgUsername}**. El sitio puede estar lento o protegido.\n\n**Depuración:** ${screenshotUrl}`
         };
     } finally {
-        // Asegura que el navegador siempre se cierre, incluso si hay un error
-        if (browser) {
-            await browser.close();
-        }
+        if (browser) await browser.close();
     }
 }
 
