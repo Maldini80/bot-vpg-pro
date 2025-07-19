@@ -8,10 +8,14 @@ async function getVpgProfile(vpgUsername) {
         const userPageResponse = await axios.get(userUrl);
         const $user = cheerio.load(userPageResponse.data);
 
-        // Buscar el enlace a la página del equipo
-        const teamLinkElement = $user('div.module-player-card-item:contains("EQUIPO")').next('a');
+        // --- SELECTOR MEJORADO ---
+        // Buscamos cualquier 'div' que contenga el texto "EQUIPO" y luego cogemos el siguiente
+        // elemento hermano que sea un enlace ('a'). Esto es mucho más robusto.
+        const teamLinkElement = $user('div:contains("EQUIPO")').next('a');
+
         if (teamLinkElement.length === 0) {
-            return { error: `El usuario **${vpgUsername}** no parece tener un equipo asignado.` };
+            // Si esto falla, el diseño de la web ha cambiado de forma significativa o el usuario es nuevo.
+            return { error: `El usuario **${vpgUsername}** no parece tener un equipo asignado. (Error Code: SELECTOR_FAIL)` };
         }
 
         const teamName = teamLinkElement.text().trim();
@@ -40,10 +44,11 @@ async function getVpgProfile(vpgUsername) {
         };
 
     } catch (error) {
-        if (error.response && error.response.status === 404) {
+        // VPG a veces devuelve un error 400 en lugar de 404 para usuarios no encontrados
+        if (error.response && (error.response.status === 404 || error.response.status === 400)) {
             return { error: `No se pudo encontrar al usuario de VPG **${vpgUsername}**. Revisa que el nombre sea correcto.` };
         }
-        console.error("Error en el scraper:", error);
+        console.error("Error en el scraper:", error.message);
         return { error: "Ocurrió un error inesperado al intentar obtener los datos de VPG." };
     }
 }
