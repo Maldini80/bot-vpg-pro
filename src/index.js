@@ -5,7 +5,9 @@ const path = require('node:path');
 const { Client, Collection, GatewayIntentBits, Events, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, PermissionFlagsBits, WebhookClient, StringSelectMenuBuilder } = require('discord.js');
 const mongoose = require('mongoose');
 
+// --- CARGA DE MODELOS ---
 const Team = require('./models/team.js');
+const TeamChatChannel = require('./models/teamChatChannel.js'); // <-- El modelo para el chat automático
 
 mongoose.connect(process.env.DATABASE_URL).then(() => console.log('Conectado a MongoDB.')).catch(err => console.error('Error MongoDB:', err));
 
@@ -13,6 +15,7 @@ const client = new Client({
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
 });
 
+// --- CARGA DE COMANDOS ---
 client.commands = new Collection();
 const commandsPath = path.join(__dirname, 'commands');
 const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
@@ -26,44 +29,51 @@ client.once(Events.ClientReady, () => {
     console.log(`¡Listo! ${client.user.tag} está online.`);
 });
 
-// --- SISTEMA DE COLA (Se mantiene igual) ---
-const processingQueue = [];
-let isProcessing = false;
-async function processQueue() {
-    if (isProcessing || processingQueue.length === 0) return;
-    isProcessing = true;
-    const message = processingQueue.shift();
-    try {
-        const team = await Team.findOne({ guildId: message.guildId, $or: [{ managerId: message.member.id }, { captains: message.member.id }, { players: message.member.id }] });
-        if (!team) return;
-        const botPermissions = message.channel.permissionsFor(client.user);
-        if (!botPermissions || !botPermissions.has('ManageWebhooks') || !botPermissions.has('ManageMessages')) return;
-        const webhooks = await message.channel.fetchWebhooks();
-        let webhook = webhooks.find(wh => wh.owner.id === client.user.id && wh.name === `VPG Bot - ${team.name}`);
-        if (!webhook) {
-            webhook = await message.channel.createWebhook({ name: `VPG Bot - ${team.name}`, avatar: client.user.displayAvatarURL(), reason: `Webhook dinámico para el equipo ${team.name}` });
-        }
-        await webhook.send({ content: message.content, username: message.member.displayName, avatarURL: team.logoUrl, allowedMentions: { parse: ['users', 'roles', 'everyone'] } });
-        await message.delete();
-    } catch (error) {
-        if (error.code !== 10008) console.error(`Error procesando mensaje de la cola:`, error.message);
-    } finally {
-        isProcessing = false;
-        processQueue();
-    }
-}
+// =========================================================================================
+// === NUEVA LÓGICA DE CHAT AUTOMÁTICO (CON "BORRAR PRIMERO") ===
+// =========================================================================================
 client.on(Events.MessageCreate, async message => {
-    if (message.author.bot || !message.inGuild() || message.content.startsWith('/')) return;
-    const hasTeamRole = message.member.roles.cache.has(process.env.MANAGER_ROLE_ID) || message.member.roles.cache.has(process.env.CAPTAIN_ROLE_ID) || message.member.roles.cache.has(process.env.PLAYER_ROLE_ID);
-    if (hasTeamRole) {
-        processingQueue.push(message);
-        processQueue();
+    if (message.author.bot || !message.inGuild()) return;
+
+    // 1. Comprobar si el CANAL está en la lista de canales activos
+    const activeChannel = await TeamChatChannel.findOne({ channelId: message.channel.id, guildId: message.guildId });
+    if (!activeChannel) return; // Si el canal no está activado, no hacer nada.
+
+    // 2. Si el canal está activado, comprobar si el USUARIO pertenece a un equipo
+    const team = await Team.findOne({ guildId: message.guildId, $or: [{ managerId: message.member.id }, { captains: message.member.id }, { players: message.member.id }] });
+    if (!team) return; // Si no es de un equipo, no hacer nada.
+
+    // 3. Si se cumplen las condiciones, borrar el mensaje original primero para la mejor experiencia
+    try {
+        await message.delete();
+    } catch (deleteError) {
+        console.error(`No se pudo borrar el mensaje original de ${message.author.tag}: ${deleteError.message}`);
+        return; // Salir si el borrado falla para evitar mensajes duplicados.
+    }
+
+    // 4. Con el canal limpio, enviar el mensaje a través del Webhook
+    try {
+        const webhooks = await message.channel.fetchWebhooks();
+        let webhook = webhooks.find(wh => wh.owner.id === client.user.id && wh.name.startsWith('VPG Bot'));
+        if (!webhook) {
+            webhook = await message.channel.createWebhook({ name: `VPG Bot - Chat`, avatar: client.user.displayAvatarURL() });
+        }
+
+        await webhook.send({
+            content: message.content,
+            username: message.member.displayName,
+            avatarURL: team.logoUrl,
+            allowedMentions: { parse: ['users', 'roles', 'everyone'] }
+        });
+    } catch (error) {
+        console.error(`Fallo al enviar el webhook después de borrar: ${error.message}`);
+        message.author.send(`Tu mensaje en #${message.channel.name} no se pudo enviar. Por favor, inténtalo de nuevo.`).catch(() => {});
     }
 });
 
 
 // =========================================================================================
-// === GESTIÓN DE INTERACCIONES (CON LOGS DE DIAGNÓSTICO) ===
+// === GESTIÓN DE INTERACCIONES (SE MANTIENE IGUAL PARA EL RESTO DE FUNCIONES) ===
 // =========================================================================================
 client.on(Events.InteractionCreate, async interaction => {
     try {
@@ -73,6 +83,7 @@ client.on(Events.InteractionCreate, async interaction => {
             const command = client.commands.get(interaction.commandName);
             if (command) await command.execute(interaction);
         } else if (interaction.isButton()) {
+            // El resto de la lógica de tus botones va aquí...
             const esAprobador = interaction.member.roles.cache.has(process.env.APPROVER_ROLE_ID) || interaction.member.permissions.has(PermissionFlagsBits.Administrator);
             
             if (interaction.customId === 'request_manager_role_button') {
@@ -183,20 +194,10 @@ client.on(Events.InteractionCreate, async interaction => {
                 await targetMember.roles.remove([process.env.PLAYER_ROLE_ID, process.env.CAPTAIN_ROLE_ID]).catch(() => {});
                 await targetMember.setNickname(targetMember.user.username).catch(err => console.error(`Fallo al resetear apodo: ${err.message}`));
                 await interaction.update({ content: `✅ **${targetMember.user.username}** ha sido expulsado del equipo.`, components: [] });
-            
-            // =========================================================================================
-            // === CORRECCIÓN 1: LÓGICA PARA EL BOTÓN DEL PANEL DE ADMIN ===
-            // =========================================================================================
-            } else if (interaction.customId === 'admin_manage_team_button') {
-                if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-                    return interaction.reply({ content: 'Solo los administradores del servidor pueden usar esta función.', ephemeral: true });
-                }
-                // Aquí se puede añadir en el futuro una lógica más compleja,
-                // como un menú para seleccionar un equipo y gestionarlo.
-                await interaction.reply({ content: 'La función para gestionar equipos como administrador está en desarrollo.', ephemeral: true });
             }
 
         } else if (interaction.isStringSelectMenu()) {
+            // Lógica de menús...
             if (interaction.customId === 'roster_management_menu') {
                 const team = await Team.findOne({ guildId: interaction.guildId, $or: [{ managerId: interaction.user.id }, { captains: interaction.user.id }] });
                 const isManager = team.managerId === interaction.user.id;
@@ -210,6 +211,7 @@ client.on(Events.InteractionCreate, async interaction => {
                 await interaction.reply({ content: `Gestionando a **${targetMember.user.username}**:`, components: [row], ephemeral: true });
             }
         } else if (interaction.isModalSubmit()) {
+            // Lógica de modales...
             if (interaction.customId === 'manager_request_modal') {
                 const vpgUsername = interaction.fields.getTextInputValue('vpgUsername');
                 const teamName = interaction.fields.getTextInputValue('teamName');
@@ -223,56 +225,34 @@ client.on(Events.InteractionCreate, async interaction => {
             } 
             
             else if (interaction.customId.startsWith('approve_modal_')) {
-                console.log('[DIAGNÓSTICO] Se ha entrado en el flujo de aprobación del modal.');
-                
                 const applicantId = interaction.customId.split('_')[2];
-                console.log(`[DIAGNÓSTICO] ID del solicitante extraído: ${applicantId}`);
-
-                const originalRequestMessage = (await interaction.channel.messages.fetch({ limit: 100 }))
-                    .find(msg => msg.embeds[0]?.fields[0]?.value.includes(applicantId) && msg.components[0]?.components[0]?.disabled === false);
-
-                if (!originalRequestMessage) {
-                     console.error(`[DIAGNÓSTICO] No se encontró el mensaje de solicitud original para el applicantId: ${applicantId}`);
-                     return interaction.reply({ content: 'Error: No se pudo encontrar el mensaje de solicitud original. Puede que ya haya sido procesado.', ephemeral: true });
-                }
-
+                const originalRequestMessage = (await interaction.channel.messages.fetch({ limit: 100 })).find(msg => msg.embeds[0]?.fields[0]?.value.includes(applicantId) && !msg.components[0]?.components[0]?.disabled);
+                if (!originalRequestMessage) return interaction.reply({ content: 'Error: No se pudo encontrar el mensaje de solicitud original.', ephemeral: true });
                 const teamName = originalRequestMessage.embeds[0].fields.find(f => f.name === 'Nombre del Equipo').value;
                 const leagueName = originalRequestMessage.embeds[0].fields.find(f => f.name === 'Liga').value;
                 const teamLogoUrl = interaction.fields.getTextInputValue('teamLogoUrl');
-
                 let applicant;
                 try {
                     applicant = await interaction.guild.members.fetch(applicantId);
-                    console.log(`[DIAGNÓSTICO] Miembro solicitante encontrado: ${applicant.user.tag}`);
                 } catch (fetchError) {
-                    console.error(`[DIAGNÓSTICO] FALLO CRÍTICO: No se pudo encontrar al miembro con ID ${applicantId}. Error: ${fetchError.message}`);
                     return interaction.reply({ content: 'Error: No se pudo encontrar al miembro solicitante en el servidor.', ephemeral: true });
                 }
-                
                 const existingTeam = await Team.findOne({ name: teamName, guildId: interaction.guildId });
                 if (existingTeam) return interaction.reply({ content: `Error: Ya existe un equipo llamado **${teamName}**.`, ephemeral: true });
                 const isAlreadyManaged = await Team.findOne({ managerId: applicant.id });
                 if (isAlreadyManaged) return interaction.reply({ content: `Error: Este usuario ya es mánager del equipo **${isAlreadyManaged.name}**.`, ephemeral: true });
-                
                 const newTeam = new Team({ name: teamName, guildId: interaction.guildId, league: leagueName, logoUrl: teamLogoUrl, managerId: applicant.id });
                 await newTeam.save();
-                
                 await applicant.roles.add(process.env.MANAGER_ROLE_ID);
-                console.log(`[DIAGNÓSTICO] Rol de Manager (${process.env.MANAGER_ROLE_ID}) añadido a ${applicant.user.tag}.`);
-
                 try {
-                    console.log(`[DIAGNÓSTICO] Intentando cambiar apodo a: "|MG| ${applicant.user.username}"`);
                     await applicant.setNickname(`|MG| ${applicant.user.username}`);
-                    console.log(`[DIAGNÓSTICO] ¡ÉXITO! Apodo cambiado.`);
                 } catch (nicknameError) {
-                    console.error(`[DIAGNÓSTICO] FALLO AL CAMBIAR APODO: ${nicknameError.message}. Asegúrate de que el rol del bot está por encima del rol de Mánager.`);
+                    console.error(`FALLO AL CAMBIAR APODO: ${nicknameError.message}`);
                 }
-                
                 if(originalRequestMessage) {
                     const disabledRow = new ActionRowBuilder().addComponents(ButtonBuilder.from(originalRequestMessage.components[0].components[0]).setDisabled(true).setLabel('Aprobado'), ButtonBuilder.from(originalRequestMessage.components[0].components[1]).setDisabled(true));
                     await originalRequestMessage.edit({ components: [disabledRow] });
                 }
-
                 await interaction.reply({ content: `¡Equipo **${teamName}** aprobado! **${applicant.user.tag}** es ahora Mánager.`, ephemeral: false });
                 await applicant.send(`¡Felicidades! Tu equipo **${teamName}** ha sido APROBADO.`).catch(() => {});
             }
@@ -285,9 +265,6 @@ client.on(Events.InteractionCreate, async interaction => {
             await interaction.reply({ content: 'Ha ocurrido un error al procesar tu solicitud.', ephemeral: true });
         }
     }
-// =========================================================================================
-// === CORRECCIÓN 2: CIERRE DEL BLOQUE `client.on` QUE FALTABA ===
-// =========================================================================================
 });
 
 client.login(process.env.DISCORD_TOKEN);
