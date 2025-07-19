@@ -22,44 +22,74 @@ for (const file of commandFiles) {
     if ('data' in command && 'execute' in command) { client.commands.set(command.data.name, command); }
 }
 
-// --- LÓGICA DE INICIO SIMPLIFICADA ---
-// Ahora solo nos avisa que el bot está online, eliminando el punto de fallo.
 client.once(Events.ClientReady, () => {
     console.log(`¡Listo! ${client.user.tag} está online.`);
 });
 
-const webhookChannelIds = process.env.WEBHOOK_CHANNEL_IDS ? process.env.WEBHOOK_CHANNEL_IDS.split(',') : [];
-client.on(Events.MessageCreate, async message => {
-    if (message.author.bot || !webhookChannelIds.includes(message.channelId) || !message.member || message.content.startsWith('/')) return;
-    const isManager = message.member.roles.cache.has(process.env.MANAGER_ROLE_ID);
-    const isCaptain = message.member.roles.cache.has(process.env.CAPTAIN_ROLE_ID);
 
-    if (isManager || isCaptain) {
-        const team = await Team.findOne({ guildId: message.guildId, $or: [{ managerId: message.member.id }, { captains: message.member.id }] });
-        if (team && team.webhookId && team.webhookToken) {
-            try {
-                const webhook = new WebhookClient({ id: team.webhookId, token: team.webhookToken });
-                await message.delete();
-                await webhook.send({
-                    content: message.content,
-                    username: message.member.displayName.split(' | ')[0],
-                    avatarURL: team.logoUrl,
-                    allowedMentions: { parse: ['users', 'roles', 'everyone'] }
-                });
-            } catch (error) { console.error(`Error de Webhook para ${team.name}:`, error.message); }
+// =========================================================================================
+// === NUEVA LÓGICA DE MENSAJES CON LOGO (PARA MG, CAPITANES Y JUGADORES) ===
+// =========================================================================================
+client.on(Events.MessageCreate, async message => {
+    // 1. Ignorar bots, mensajes privados y comandos.
+    if (message.author.bot || !message.inGuild() || message.content.startsWith('/')) return;
+
+    // 2. Comprobar si el autor tiene alguno de los roles del equipo.
+    const hasTeamRole = message.member.roles.cache.has(process.env.MANAGER_ROLE_ID) ||
+                        message.member.roles.cache.has(process.env.CAPTAIN_ROLE_ID) ||
+                        message.member.roles.cache.has(process.env.PLAYER_ROLE_ID);
+
+    if (!hasTeamRole) return; // Si no tiene ningún rol de equipo, no hacemos nada.
+
+    // 3. Buscar el equipo del usuario en la base de datos.
+    const team = await Team.findOne({
+        guildId: message.guildId,
+        $or: [
+            { managerId: message.member.id },
+            { captains: message.member.id },
+            { players: message.member.id }
+        ]
+    });
+
+    // 4. Si se encuentra un equipo con webhook, actuar.
+    if (team && team.webhookId && team.webhookToken) {
+        try {
+            const botPermissions = message.channel.permissionsFor(client.user);
+            if (!botPermissions || !botPermissions.has('ManageWebhooks')) return;
+
+            const webhook = new WebhookClient({ id: team.webhookId, token: team.webhookToken });
+            
+            await message.delete();
+            
+            await webhook.send({
+                content: message.content,
+                username: message.member.displayName, // Usamos el apodo directamente (|MG| Nick, |C| Nick, etc.)
+                avatarURL: team.logoUrl,
+                allowedMentions: { parse: ['users', 'roles', 'everyone'] }
+            });
+        } catch (error) {
+            if (error.code !== 10015) { // Ignora el error "Unknown Webhook"
+                console.error(`Error de Webhook para ${team.name}:`, error.message);
+            }
         }
     }
 });
 
+
+// =========================================================================================
+// === GESTIÓN DE INTERACCIONES (BOTONES, MODALES, MENÚS) ===
+// =========================================================================================
 client.on(Events.InteractionCreate, async interaction => {
     try {
         if (!interaction.inGuild()) return;
 
+        // --- MANEJO DE COMANDOS SLASH ---
         if (interaction.isChatInputCommand()) {
             const command = client.commands.get(interaction.commandName);
             if (command) await command.execute(interaction);
         } 
         
+        // --- MANEJO DE BOTONES ---
         else if (interaction.isButton()) {
             const esAprobador = interaction.member.roles.cache.has(process.env.APPROVER_ROLE_ID) || interaction.member.permissions.has(PermissionFlagsBits.Administrator);
             
@@ -102,7 +132,7 @@ client.on(Events.InteractionCreate, async interaction => {
                 team.players.push(interaction.user.id);
                 await team.save();
                 await interaction.member.roles.add(process.env.PLAYER_ROLE_ID);
-                await interaction.member.setNickname(`${interaction.user.username} | ${team.name}`);
+                await interaction.member.setNickname(interaction.user.username); // <-- APODO CORREGIDO
                 await interaction.reply({ content: `¡Felicidades! Te has unido a **${team.name}**.`, ephemeral: true });
                 const manager = await client.users.fetch(team.managerId);
                 await manager.send(`✅ **${interaction.user.username}** ha aceptado tu invitación a **${team.name}**.`);
@@ -117,13 +147,6 @@ client.on(Events.InteractionCreate, async interaction => {
                     await manager.send(`❌ **${interaction.user.username}** ha rechazado tu invitación para unirse a **${team.name}**.`);
                 }
                 await interaction.message.edit({ components: [] });
-            }
-            else if (interaction.customId === 'admin_manage_team_button') {
-                if (!esAprobador) return interaction.reply({ content: 'No tienes permiso.', ephemeral: true });
-                const modal = new ModalBuilder().setCustomId('admin_search_team_modal').setTitle('Gestionar Equipo');
-                const teamNameInput = new TextInputBuilder().setCustomId('teamName').setLabel("Nombre exacto del equipo a gestionar").setStyle(TextInputStyle.Short).setRequired(true);
-                modal.addComponents(new ActionRowBuilder().addComponents(teamNameInput));
-                await interaction.showModal(modal);
             }
             else if (interaction.customId === 'manager_invite_player') {
                 const team = await Team.findOne({ guildId: interaction.guildId, managerId: interaction.user.id });
@@ -149,8 +172,64 @@ client.on(Events.InteractionCreate, async interaction => {
                 const selectMenu = new StringSelectMenuBuilder().setCustomId('roster_management_menu').setPlaceholder('Selecciona un jugador para gestionar').addOptions(memberOptions);
                 await interaction.reply({ content: 'Selecciona un miembro de tu plantilla:', components: [new ActionRowBuilder().addComponents(selectMenu)], ephemeral: true });
             }
+             // --- LÓGICA COMPLETA PARA GESTIÓN DE PLANTILLA (Añadida y corregida) ---
+            else if (interaction.customId.startsWith('promote_player_')) {
+                const team = await Team.findOne({ guildId: interaction.guildId, managerId: interaction.user.id });
+                if (!team) return interaction.reply({ content: 'Solo el mánager puede ascender.', ephemeral: true });
+    
+                const targetId = interaction.customId.split('_')[2];
+                team.players = team.players.filter(p => p !== targetId);
+                team.captains.push(targetId);
+                await team.save();
+    
+                const targetMember = await interaction.guild.members.fetch(targetId);
+                await targetMember.roles.remove(process.env.PLAYER_ROLE_ID);
+                await targetMember.roles.add(process.env.CAPTAIN_ROLE_ID);
+                await targetMember.setNickname(`|C| ${targetMember.user.username}`);
+    
+                await interaction.update({ content: `✅ **${targetMember.user.username}** ha sido ascendido a Capitán.`, components: [] });
+            }
+            else if (interaction.customId.startsWith('demote_captain_')) {
+                const team = await Team.findOne({ guildId: interaction.guildId, managerId: interaction.user.id });
+                if (!team) return interaction.reply({ content: 'Solo el mánager puede degradar.', ephemeral: true });
+    
+                const targetId = interaction.customId.split('_')[2];
+                team.captains = team.captains.filter(c => c !== targetId);
+                team.players.push(targetId);
+                await team.save();
+    
+                const targetMember = await interaction.guild.members.fetch(targetId);
+                await targetMember.roles.remove(process.env.CAPTAIN_ROLE_ID);
+                await targetMember.roles.add(process.env.PLAYER_ROLE_ID);
+                await targetMember.setNickname(targetMember.user.username);
+    
+                await interaction.update({ content: `✅ **${targetMember.user.username}** ha sido degradado a Jugador.`, components: [] });
+            }
+            else if (interaction.customId.startsWith('kick_player_')) {
+                const team = await Team.findOne({ guildId: interaction.guildId, $or: [{ managerId: interaction.user.id }, { captains: interaction.user.id }]});
+                if (!team) return interaction.reply({ content: 'No tienes permiso para expulsar.', ephemeral: true });
+                
+                const targetId = interaction.customId.split('_')[2];
+                const isTargetCaptain = team.captains.includes(targetId);
+                const isManager = team.managerId === interaction.user.id;
+
+                if(isTargetCaptain && !isManager) {
+                    return interaction.update({ content: '❌ Los capitanes no pueden expulsar a otros capitanes.', components: [] });
+                }
+
+                team.players = team.players.filter(p => p !== targetId);
+                team.captains = team.captains.filter(c => c !== targetId);
+                await team.save();
+
+                const targetMember = await interaction.guild.members.fetch(targetId);
+                await targetMember.roles.remove([process.env.PLAYER_ROLE_ID, process.env.CAPTAIN_ROLE_ID]);
+                await targetMember.setNickname(targetMember.user.username); // Resetea el apodo
+
+                await interaction.update({ content: `✅ **${targetMember.user.username}** ha sido expulsado del equipo.`, components: [] });
+            }
         } 
         
+        // --- MANEJO DE MENÚS DESPLEGABLES ---
         else if (interaction.isStringSelectMenu()) {
             if (interaction.customId === 'roster_management_menu') {
                 const team = await Team.findOne({ guildId: interaction.guildId, $or: [{ managerId: interaction.user.id }, { captains: interaction.user.id }] });
@@ -158,14 +237,21 @@ client.on(Events.InteractionCreate, async interaction => {
                 const targetId = interaction.values[0];
                 const isTargetCaptain = team.captains.includes(targetId);
                 const targetMember = await interaction.guild.members.fetch(targetId);
+
                 const row = new ActionRowBuilder();
                 if (isManager && !isTargetCaptain) row.addComponents(new ButtonBuilder().setCustomId(`promote_player_${targetId}`).setLabel('⬆️ Ascender a Capitán').setStyle(ButtonStyle.Success));
                 if (isManager && isTargetCaptain) row.addComponents(new ButtonBuilder().setCustomId(`demote_captain_${targetId}`).setLabel('⬇️ Degradar a Jugador').setStyle(ButtonStyle.Secondary));
-                if (isManager || !isTargetCaptain) row.addComponents(new ButtonBuilder().setCustomId(`kick_player_${targetId}`).setLabel('❌ Expulsar del Equipo').setStyle(ButtonStyle.Danger));
+                
+                // Un capitán no puede expulsar a otro capitán
+                if (isManager || !isTargetCaptain) {
+                    row.addComponents(new ButtonBuilder().setCustomId(`kick_player_${targetId}`).setLabel('❌ Expulsar del Equipo').setStyle(ButtonStyle.Danger));
+                }
+
                 await interaction.reply({ content: `Gestionando a **${targetMember.user.username}**:`, components: [row], ephemeral: true });
             }
         }
 
+        // --- MANEJO DE MODALES (FORMULARIOS) ---
         else if (interaction.isModalSubmit()) {
             if (interaction.customId === 'manager_request_modal') {
                 const vpgUsername = interaction.fields.getTextInputValue('vpgUsername');
@@ -193,31 +279,21 @@ client.on(Events.InteractionCreate, async interaction => {
                 const isAlreadyManager = await Team.findOne({ managerId: applicant.id });
                 if (isAlreadyManager) return interaction.reply({ content: `Error: Este usuario ya es mánager del equipo **${isAlreadyManager.name}**.`, ephemeral: true });
                 
-                const webhookChannel = await client.channels.fetch(webhookChannelIds[0]);
-                const webhook = await webhookChannel.createWebhook({ name: teamName, avatar: teamLogoUrl, reason: `Webhook para el equipo ${teamName}` });
+                // Busca un canal válido para crear el webhook
+                const firstValidChannel = await interaction.guild.channels.fetch(interaction.guild.systemChannelId || (await interaction.guild.channels.fetch()).find(c => c.isTextBased()).id);
+                const webhook = await firstValidChannel.createWebhook({ name: teamName, avatar: teamLogoUrl, reason: `Webhook para el equipo ${teamName}` });
                 
                 const newTeam = new Team({ name: teamName, guildId: interaction.guildId, league: leagueName, logoUrl: teamLogoUrl, managerId: applicant.id, webhookId: webhook.id, webhookToken: webhook.token });
                 await newTeam.save();
                 
                 await applicant.roles.add(process.env.MANAGER_ROLE_ID);
-                await applicant.setNickname(`${applicant.user.username} | ${teamName}`);
+                await applicant.setNickname(`|MG| ${applicant.user.username}`); // <-- APODO CORREGIDO
                 
                 const disabledRow = new ActionRowBuilder().addComponents(ButtonBuilder.from(originalRequestMessage.components[0].components[0]).setDisabled(true).setLabel('Aprobado'), ButtonBuilder.from(originalRequestMessage.components[0].components[1]).setDisabled(true));
                 await originalRequestMessage.edit({ components: [disabledRow] });
 
                 await interaction.reply({ content: `¡Equipo **${teamName}** aprobado! **${applicant.user.tag}** es ahora Mánager.`, ephemeral: false });
                 await applicant.send(`¡Felicidades! Tu equipo **${teamName}** ha sido APROBADO.`).catch(() => {});
-            }
-            if (interaction.customId === 'admin_search_team_modal') {
-                if (!esAprobador) return interaction.reply({ content: 'No tienes permiso.', ephemeral: true });
-                const teamName = interaction.fields.getTextInputValue('teamName');
-                const team = await Team.findOne({ guildId: interaction.guildId, name: teamName });
-                if (!team) return interaction.reply({ content: `No se encontró el equipo **${teamName}**.`, ephemeral: true });
-
-                const manager = team.managerId ? await interaction.guild.members.fetch(team.managerId).catch(() => ({ user: { tag: 'No Asignado' } })) : { user: { tag: 'No Asignado' } };
-                
-                const embed = new EmbedBuilder().setTitle(`Gestión del Equipo: ${team.name}`).setThumbnail(team.logoUrl).addFields({ name: 'Mánager', value: manager.user.tag });
-                await interaction.reply({ embeds: [embed], ephemeral: true });
             }
         }
     } catch (error) {
