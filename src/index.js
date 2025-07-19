@@ -1,8 +1,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
-// --- LÍNEA CORREGIDA ---
-// Añadimos ButtonBuilder, ButtonStyle y EmbedBuilder para que no falte nada.
-const { Client, Collection, GatewayIntentBits, Events, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
+// Añadimos PermissionFlagsBits para poder comprobar si un usuario es administrador.
+const { Client, Collection, GatewayIntentBits, Events, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 const mongoose = require('mongoose');
 require('dotenv').config();
 
@@ -38,15 +37,20 @@ client.on(Events.InteractionCreate, async interaction => {
             if (!command) return;
             await command.execute(interaction);
         } else if (interaction.isButton()) {
+            // --- LÓGICA DE PERMISOS MEJORADA ---
+            // Comprobamos si el usuario tiene el rol de Aprobador O si tiene el permiso de Administrador.
+            const esAprobador = interaction.member.roles.cache.has(ROL_APROBADOR_ID) || interaction.member.permissions.has(PermissionFlagsBits.Administrator);
+
             if (interaction.customId === 'request_manager_role_button') {
                 const modal = new ModalBuilder().setCustomId('manager_request_modal').setTitle('Formulario de Solicitud de Mánager');
                 const vpgUsernameInput = new TextInputBuilder().setCustomId('vpgUsername').setLabel("Tu nombre de usuario en VPG").setStyle(TextInputStyle.Short).setRequired(true);
                 const teamNameInput = new TextInputBuilder().setCustomId('teamName').setLabel("Nombre de tu equipo en VPG").setStyle(TextInputStyle.Short).setRequired(true);
                 const leagueNameInput = new TextInputBuilder().setCustomId('leagueName').setLabel("Liga de VPG en la que compites").setStyle(TextInputStyle.Short).setRequired(true);
-                modal.addComponents(new ActionRowBuilder().addComponents(vpgUsernameInput), new ActionRowBuilder().addComponents(teamNameInput), new ActionRowBuilder().addComponents(leagueNameInput));
+                modal.addComponents(new ActionRowBuilder().addComponents(vpgUsernameInput), new ActionRowBuilder().addComponents(teamNameInput), new ActionRowRowBuilder().addComponents(leagueNameInput));
                 await interaction.showModal(modal);
             } else if (interaction.customId.startsWith('approve_request_')) {
-                if (!interaction.member.roles.cache.has(ROL_APROBADOR_ID)) {
+                // Usamos nuestra nueva variable para la comprobación.
+                if (!esAprobador) {
                     return interaction.reply({ content: 'No tienes permiso para aprobar solicitudes.', ephemeral: true });
                 }
                 const parts = interaction.customId.split('_');
@@ -57,7 +61,8 @@ client.on(Events.InteractionCreate, async interaction => {
                 modal.addComponents(new ActionRowBuilder().addComponents(teamLogoInput));
                 await interaction.showModal(modal);
             } else if (interaction.customId.startsWith('reject_request_')) {
-                if (!interaction.member.roles.cache.has(ROL_APROBADOR_ID)) {
+                // Usamos nuestra nueva variable para la comprobación.
+                if (!esAprobador) {
                     return interaction.reply({ content: 'No tienes permiso para rechazar solicitudes.', ephemeral: true });
                 }
                 const applicantId = interaction.customId.split('_')[2];
