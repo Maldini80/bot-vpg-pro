@@ -1,7 +1,3 @@
-
----
-#### **Código para `src/models/user.js`**
-*Este archivo define la estructura de los datos en tu base de datos MongoDB. Reemplaza todo el contenido.*```javascript
 const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
