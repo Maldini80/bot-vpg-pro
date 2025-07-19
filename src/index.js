@@ -1,7 +1,7 @@
 require('dotenv').config();
 
 const fs = require('node:fs');
-const path = 'node:path');
+const path = require('node:path'); // <-- ¡LÍNEA CORREGIDA!
 const { Client, Collection, GatewayIntentBits, Events, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, PermissionFlagsBits, WebhookClient, StringSelectMenuBuilder } = require('discord.js');
 const mongoose = require('mongoose');
 
@@ -55,9 +55,6 @@ client.on(Events.MessageCreate, async message => {
 
             const webhook = new WebhookClient({ id: team.webhookId, token: team.webhookToken });
             
-            // ======================================================
-            // === ¡AQUÍ ESTÁ LA MAGIA! SE EJECUTA SIMULTÁNEAMENTE ===
-            // ======================================================
             await Promise.all([
                 webhook.send({
                     content: message.content,
@@ -81,7 +78,6 @@ client.on(Events.MessageCreate, async message => {
 // === GESTIÓN DE INTERACCIONES (BOTONES, MODALES, MENÚS) ===
 // =========================================================================================
 client.on(Events.InteractionCreate, async interaction => {
-    // ... (El resto del archivo de interacciones se mantiene exactamente igual que el anterior)
     try {
         if (!interaction.inGuild()) return;
 
