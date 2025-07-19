@@ -1,10 +1,10 @@
 const { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
-const { CANAL_SOLICITUDES_ID } = require('../utils/config.js'); // <-- Esta línea llama a config.js
+const { CANAL_SOLICITUDES_ID } = require('../utils/config.js');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('panel-solicitud')
-        .setDescription('Crea el panel para que los usuarios soliciten ser mánager.')
+        .setDescription('Crea el panel para que los usuarios soliciten ser mánager de un equipo.')
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     
     async execute(interaction) {
@@ -14,15 +14,16 @@ module.exports = {
 
         const embed = new EmbedBuilder()
             .setTitle('📝 Solicitud para Registrar un Equipo de VPG')
-            .setDescription('Haz clic en el botón de abajo para iniciar el proceso de solicitud.')
-            .setColor('#2ecc71');
+            .setDescription('¿Eres mánager de un equipo en Virtual Pro Gaming y quieres registrarlo en nuestro sistema?\n\nHaz clic en el botón de abajo para iniciar el proceso de solicitud.')
+            .setColor('#2ecc71')
+            .setFooter({ text: 'VPG Order Management' });
 
         const row = new ActionRowBuilder()
             .addComponents(
                 new ButtonBuilder()
                     .setCustomId('request_manager_role_button')
                     .setLabel('Quiero Registrar mi Equipo')
-                    .setStyle(ButtonStyle.Success)
+                    .setStyle(ButtonStyle.Success) // <-- Necesitaba ButtonStyle
             );
 
         await interaction.channel.send({ embeds: [embed], components: [row] });
