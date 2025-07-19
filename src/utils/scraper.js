@@ -1,37 +1,42 @@
 const puppeteer = require('puppeteer');
 const cheerio = require('cheerio');
+const axios = require('axios');
 
 async function getVpgProfile(vpgUsername) {
-    let browser = null; // Definimos el navegador fuera del try para poder cerrarlo en el finally.
+    let browser = null; // Definimos el navegador aquí para poder cerrarlo en el bloque 'finally'
     try {
-        console.log(`PUPPETEER: Iniciando navegador para el usuario ${vpgUsername}...`);
+        console.log(`PUPPETEER: Iniciando navegador para ${vpgUsername}...`);
         
-        // 1. Inicia el navegador sin cabeza con argumentos especiales para que funcione en Render.
+        // Inicia una instancia del navegador sin cabeza (headless).
+        // Los argumentos '--no-sandbox' y '--disable-setuid-sandbox' son cruciales
+        // para que funcione en entornos de servidor como Render.
         browser = await puppeteer.launch({
             headless: true,
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--single-process'
-            ],
-            executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
         });
 
+        // Abre una nueva pestaña en el navegador
         const page = await browser.newPage();
         const userUrl = `https://virtualprogaming.com/user/${vpgUsername}`;
 
-        // 2. Navega a la página del usuario.
-        await page.goto(userUrl, { waitUntil: 'networkidle2' }); // Espera a que la página esté mayormente cargada.
+        // Navega a la URL del perfil y espera a que la red esté inactiva,
+        // lo que usualmente significa que la página ha terminado de cargar.
+        await page.goto(userUrl, { waitUntil: 'networkidle2' });
 
-        // 3. Espera a que un selector específico (que solo existe después de que JS se ejecuta) aparezca.
-        //    Este selector apunta al contenedor de la información del perfil.
-        await page.waitForSelector('.profile-info-container', { timeout: 30000 }); // Espera hasta 30 segundos.
+        // Espera explícitamente a que aparezca un elemento específico que solo
+        // existe después de que el JavaScript se haya ejecutado.
+        // Esto confirma que el contenido dinámico está presente.
+        await page.waitForSelector('.profile-info-container', { timeout: 30000 });
 
-        // 4. Una vez que el contenido está ahí, lo extraemos.
+        // Obtiene el HTML completo de la página después de la ejecución de JavaScript.
         const content = await page.content();
         const $ = cheerio.load(content);
+        
+        // Cierra el navegador tan pronto como ya no lo necesitemos para liberar recursos.
+        await browser.close();
+        browser = null;
 
+        // A partir de aquí, usamos Cheerio para analizar el HTML que obtuvimos.
         const teamLinkElement = $('div.text-muted:contains("EQUIPO")').next().find('a');
         if (teamLinkElement.length === 0) {
             return { error: `No se pudo encontrar un equipo en el perfil de **${vpgUsername}**.` };
@@ -40,26 +45,35 @@ async function getVpgProfile(vpgUsername) {
         const teamName = teamLinkElement.text().trim();
         const teamUrl = teamLinkElement.attr('href');
 
-        await browser.close(); // Cerramos el navegador para liberar memoria.
-        browser = null;
-
-        // 5. La segunda parte (ir a la página del equipo) sigue siendo válida y la hacemos con axios por eficiencia.
-        const teamPageResponse = require('axios').get(teamUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } });
-        const $team = cheerio.load((await teamPageResponse).data);
+        // Para la segunda página (la del equipo), podemos usar axios que es más rápido,
+        // ya que no parece requerir una renderización de JS tan compleja.
+        const teamPageResponse = await axios.get(teamUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+        const $team = cheerio.load(teamPageResponse.data);
         const teamLogoUrl = $team('.profile-team-emblem img').attr('src');
+        
         let isManager = false;
         const managerHeader = $team('h5:contains("MANAGER")');
         if (managerHeader.length > 0) {
-            if (managerHeader.next().find(`a[href*="/user/${vpgUsername}"]`).length > 0) isManager = true;
+            if (managerHeader.next().find(`a[href*="/user/${vpgUsername}"]`).length > 0) {
+                isManager = true;
+            }
         }
 
-        return { vpgUsername, teamName, teamLogoUrl: teamLogoUrl || null, isManager };
+        // Devuelve el objeto con toda la información recopilada.
+        return { 
+            vpgUsername, 
+            teamName, 
+            teamLogoUrl: teamLogoUrl || null, 
+            isManager 
+        };
 
     } catch (error) {
+        // Captura cualquier error que ocurra durante el proceso.
         console.error(`PUPPETEER ERROR para ${vpgUsername}:`, error.message);
         return { error: `No se pudo cargar el perfil de VPG para **${vpgUsername}**. El sitio puede estar lento o el perfil no existe.` };
     } finally {
-        // Asegurarnos de que el navegador siempre se cierre, incluso si hay un error.
+        // Este bloque se asegura de que el navegador se cierre siempre,
+        // incluso si ocurre un error, para evitar procesos fantasma.
         if (browser) {
             await browser.close();
         }
