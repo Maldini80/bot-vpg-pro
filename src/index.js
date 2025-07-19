@@ -1,7 +1,7 @@
 require('dotenv').config();
 
 const fs = require('node:fs');
-const path = require('node:path');
+const path = 'node:path');
 const { Client, Collection, GatewayIntentBits, Events, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, PermissionFlagsBits, WebhookClient, StringSelectMenuBuilder } = require('discord.js');
 const mongoose = require('mongoose');
 
@@ -28,20 +28,17 @@ client.once(Events.ClientReady, () => {
 
 
 // =========================================================================================
-// === NUEVA LÓGICA DE MENSAJES CON LOGO (PARA MG, CAPITANES Y JUGADORES) ===
+// === LÓGICA DE MENSAJES CON LOGO (CON OPTIMIZACIÓN DE PARPADEO) ===
 // =========================================================================================
 client.on(Events.MessageCreate, async message => {
-    // 1. Ignorar bots, mensajes privados y comandos.
     if (message.author.bot || !message.inGuild() || message.content.startsWith('/')) return;
 
-    // 2. Comprobar si el autor tiene alguno de los roles del equipo.
     const hasTeamRole = message.member.roles.cache.has(process.env.MANAGER_ROLE_ID) ||
                         message.member.roles.cache.has(process.env.CAPTAIN_ROLE_ID) ||
                         message.member.roles.cache.has(process.env.PLAYER_ROLE_ID);
 
-    if (!hasTeamRole) return; // Si no tiene ningún rol de equipo, no hacemos nada.
+    if (!hasTeamRole) return;
 
-    // 3. Buscar el equipo del usuario en la base de datos.
     const team = await Team.findOne({
         guildId: message.guildId,
         $or: [
@@ -51,7 +48,6 @@ client.on(Events.MessageCreate, async message => {
         ]
     });
 
-    // 4. Si se encuentra un equipo con webhook, actuar.
     if (team && team.webhookId && team.webhookToken) {
         try {
             const botPermissions = message.channel.permissionsFor(client.user);
@@ -59,16 +55,21 @@ client.on(Events.MessageCreate, async message => {
 
             const webhook = new WebhookClient({ id: team.webhookId, token: team.webhookToken });
             
-            await message.delete();
-            
-            await webhook.send({
-                content: message.content,
-                username: message.member.displayName, // Usamos el apodo directamente (|MG| Nick, |C| Nick, etc.)
-                avatarURL: team.logoUrl,
-                allowedMentions: { parse: ['users', 'roles', 'everyone'] }
-            });
+            // ======================================================
+            // === ¡AQUÍ ESTÁ LA MAGIA! SE EJECUTA SIMULTÁNEAMENTE ===
+            // ======================================================
+            await Promise.all([
+                webhook.send({
+                    content: message.content,
+                    username: message.member.displayName,
+                    avatarURL: team.logoUrl,
+                    allowedMentions: { parse: ['users', 'roles', 'everyone'] }
+                }),
+                message.delete()
+            ]);
+
         } catch (error) {
-            if (error.code !== 10015) { // Ignora el error "Unknown Webhook"
+            if (error.code !== 10015) {
                 console.error(`Error de Webhook para ${team.name}:`, error.message);
             }
         }
@@ -80,16 +81,15 @@ client.on(Events.MessageCreate, async message => {
 // === GESTIÓN DE INTERACCIONES (BOTONES, MODALES, MENÚS) ===
 // =========================================================================================
 client.on(Events.InteractionCreate, async interaction => {
+    // ... (El resto del archivo de interacciones se mantiene exactamente igual que el anterior)
     try {
         if (!interaction.inGuild()) return;
 
-        // --- MANEJO DE COMANDOS SLASH ---
         if (interaction.isChatInputCommand()) {
             const command = client.commands.get(interaction.commandName);
             if (command) await command.execute(interaction);
         } 
         
-        // --- MANEJO DE BOTONES ---
         else if (interaction.isButton()) {
             const esAprobador = interaction.member.roles.cache.has(process.env.APPROVER_ROLE_ID) || interaction.member.permissions.has(PermissionFlagsBits.Administrator);
             
@@ -132,7 +132,7 @@ client.on(Events.InteractionCreate, async interaction => {
                 team.players.push(interaction.user.id);
                 await team.save();
                 await interaction.member.roles.add(process.env.PLAYER_ROLE_ID);
-                await interaction.member.setNickname(interaction.user.username); // <-- APODO CORREGIDO
+                await interaction.member.setNickname(interaction.user.username);
                 await interaction.reply({ content: `¡Felicidades! Te has unido a **${team.name}**.`, ephemeral: true });
                 const manager = await client.users.fetch(team.managerId);
                 await manager.send(`✅ **${interaction.user.username}** ha aceptado tu invitación a **${team.name}**.`);
@@ -172,7 +172,6 @@ client.on(Events.InteractionCreate, async interaction => {
                 const selectMenu = new StringSelectMenuBuilder().setCustomId('roster_management_menu').setPlaceholder('Selecciona un jugador para gestionar').addOptions(memberOptions);
                 await interaction.reply({ content: 'Selecciona un miembro de tu plantilla:', components: [new ActionRowBuilder().addComponents(selectMenu)], ephemeral: true });
             }
-             // --- LÓGICA COMPLETA PARA GESTIÓN DE PLANTILLA (Añadida y corregida) ---
             else if (interaction.customId.startsWith('promote_player_')) {
                 const team = await Team.findOne({ guildId: interaction.guildId, managerId: interaction.user.id });
                 if (!team) return interaction.reply({ content: 'Solo el mánager puede ascender.', ephemeral: true });
@@ -223,13 +222,12 @@ client.on(Events.InteractionCreate, async interaction => {
 
                 const targetMember = await interaction.guild.members.fetch(targetId);
                 await targetMember.roles.remove([process.env.PLAYER_ROLE_ID, process.env.CAPTAIN_ROLE_ID]);
-                await targetMember.setNickname(targetMember.user.username); // Resetea el apodo
+                await targetMember.setNickname(targetMember.user.username);
 
                 await interaction.update({ content: `✅ **${targetMember.user.username}** ha sido expulsado del equipo.`, components: [] });
             }
         } 
         
-        // --- MANEJO DE MENÚS DESPLEGABLES ---
         else if (interaction.isStringSelectMenu()) {
             if (interaction.customId === 'roster_management_menu') {
                 const team = await Team.findOne({ guildId: interaction.guildId, $or: [{ managerId: interaction.user.id }, { captains: interaction.user.id }] });
@@ -242,7 +240,6 @@ client.on(Events.InteractionCreate, async interaction => {
                 if (isManager && !isTargetCaptain) row.addComponents(new ButtonBuilder().setCustomId(`promote_player_${targetId}`).setLabel('⬆️ Ascender a Capitán').setStyle(ButtonStyle.Success));
                 if (isManager && isTargetCaptain) row.addComponents(new ButtonBuilder().setCustomId(`demote_captain_${targetId}`).setLabel('⬇️ Degradar a Jugador').setStyle(ButtonStyle.Secondary));
                 
-                // Un capitán no puede expulsar a otro capitán
                 if (isManager || !isTargetCaptain) {
                     row.addComponents(new ButtonBuilder().setCustomId(`kick_player_${targetId}`).setLabel('❌ Expulsar del Equipo').setStyle(ButtonStyle.Danger));
                 }
@@ -251,7 +248,6 @@ client.on(Events.InteractionCreate, async interaction => {
             }
         }
 
-        // --- MANEJO DE MODALES (FORMULARIOS) ---
         else if (interaction.isModalSubmit()) {
             if (interaction.customId === 'manager_request_modal') {
                 const vpgUsername = interaction.fields.getTextInputValue('vpgUsername');
@@ -279,7 +275,6 @@ client.on(Events.InteractionCreate, async interaction => {
                 const isAlreadyManager = await Team.findOne({ managerId: applicant.id });
                 if (isAlreadyManager) return interaction.reply({ content: `Error: Este usuario ya es mánager del equipo **${isAlreadyManager.name}**.`, ephemeral: true });
                 
-                // Busca un canal válido para crear el webhook
                 const firstValidChannel = await interaction.guild.channels.fetch(interaction.guild.systemChannelId || (await interaction.guild.channels.fetch()).find(c => c.isTextBased()).id);
                 const webhook = await firstValidChannel.createWebhook({ name: teamName, avatar: teamLogoUrl, reason: `Webhook para el equipo ${teamName}` });
                 
@@ -287,7 +282,7 @@ client.on(Events.InteractionCreate, async interaction => {
                 await newTeam.save();
                 
                 await applicant.roles.add(process.env.MANAGER_ROLE_ID);
-                await applicant.setNickname(`|MG| ${applicant.user.username}`); // <-- APODO CORREGIDO
+                await applicant.setNickname(`|MG| ${applicant.user.username}`);
                 
                 const disabledRow = new ActionRowBuilder().addComponents(ButtonBuilder.from(originalRequestMessage.components[0].components[0]).setDisabled(true).setLabel('Aprobado'), ButtonBuilder.from(originalRequestMessage.components[0].components[1]).setDisabled(true));
                 await originalRequestMessage.edit({ components: [disabledRow] });
