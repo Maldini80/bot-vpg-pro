@@ -1,7 +1,7 @@
 {
   "name": "bot-vpg-pro",
   "version": "1.0.0",
-  "description": "Bot de Gestión de Equipos para VPG (con Webhooks)",
+  "description": "Bot de Gestión de Equipos para VPG",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
