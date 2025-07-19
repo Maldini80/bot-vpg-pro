@@ -1,6 +1,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const { Client, Collection, GatewayIntentBits, Events, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, MessageFlags } = require('discord.js'); // Importar MessageFlags
+// ¡Importamos MessageFlags y lo usamos!
+const { Client, Collection, GatewayIntentBits, Events, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, MessageFlags } = require('discord.js');
 const mongoose = require('mongoose');
 const User = require('./models/user.js');
 const { getVpgProfile } = require('./utils/scraper.js');
@@ -38,11 +39,13 @@ client.on(Events.InteractionCreate, async interaction => {
             await command.execute(interaction);
         } catch (error) {
             console.error("Error ejecutando el comando:", error);
-            const errorMessage = { content: '¡Hubo un error al ejecutar este comando!', flags: [MessageFlags.Ephemeral] };
-            if (interaction.replied || interaction.deferred) {
-                await interaction.followUp(errorMessage);
+            // Lógica de respuesta de error segura
+            if (interaction.deferred || interaction.replied) {
+                // Si ya se difirió o respondió, usamos followUp para un nuevo mensaje
+                await interaction.followUp({ content: '¡Hubo un error al ejecutar este comando!', ephemeral: true });
             } else {
-                await interaction.reply(errorMessage);
+                // Si no, respondemos por primera vez
+                await interaction.reply({ content: '¡Hubo un error al ejecutar este comando!', ephemeral: true });
             }
         }
     
@@ -59,8 +62,8 @@ client.on(Events.InteractionCreate, async interaction => {
     // --- GESTIÓN DE MODALES ---
     } else if (interaction.isModalSubmit()) {
         if (interaction.customId === 'verify_modal') {
-            // Usamos deferReply con la sintaxis actualizada
-            await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
+            // Diferimos la respuesta de forma efímera
+            await interaction.deferReply({ ephemeral: true });
 
             const vpgUsername = interaction.fields.getTextInputValue('vpgUsernameInput');
             const profileData = await getVpgProfile(vpgUsername);
