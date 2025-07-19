@@ -1,22 +1,24 @@
 const fs = require('node:fs');
 const path = require('node:path');
-// --- LÍNEA CORREGIDA ---
-// Escribimos todas las importaciones necesarias de forma explícita.
 const { Client, Collection, GatewayIntentBits, Events, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 const mongoose = require('mongoose');
 require('dotenv').config();
 
+// Importamos los modelos y la config
 const Team = require('./models/team.js');
-const { CANAL_APROBACIONES_ID, ROL_APROBADOR_ID, MANAGER_CHANNEL_ID } = require('./utils/config.js');
+const { CANAL_APROBACIONES_ID, ROL_APROBADOR_ID } = require('./utils/config.js');
 
+// Conexión a la base de datos
 mongoose.connect(process.env.DATABASE_URL)
     .then(() => console.log('Conectado a la base de datos MongoDB.'))
     .catch(err => console.error('No se pudo conectar a MongoDB:', err));
 
+// Creación del cliente del bot con los permisos (intents) necesarios
 const client = new Client({
-    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildMessages]
+    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
 });
 
+// Carga dinámica de comandos desde la carpeta /commands
 client.commands = new Collection();
 const commandsPath = path.join(__dirname, 'commands');
 const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
@@ -28,19 +30,25 @@ for (const file of commandFiles) {
     }
 }
 
+// Evento que se dispara una vez que el bot está listo y online
 client.once(Events.ClientReady, () => {
     console.log(`¡Listo! El bot ${client.user.tag} está online.`);
 });
 
+// Manejador principal de todas las interacciones (comandos, botones, modales)
 client.on(Events.InteractionCreate, async interaction => {
     try {
+        // --- MANEJO DE COMANDOS DE BARRA (/) ---
         if (interaction.isChatInputCommand()) {
             const command = client.commands.get(interaction.commandName);
             if (!command) return;
             await command.execute(interaction);
-        } else if (interaction.isButton()) {
+        } 
+        // --- MANEJO DE BOTONES ---
+        else if (interaction.isButton()) {
             const esAprobador = interaction.member.roles.cache.has(ROL_APROBADOR_ID) || interaction.member.permissions.has(PermissionFlagsBits.Administrator);
 
+            // --- Botones del Flujo de Solicitud de Mánager ---
             if (interaction.customId === 'request_manager_role_button') {
                 const modal = new ModalBuilder().setCustomId('manager_request_modal').setTitle('Formulario de Solicitud de Mánager');
                 const vpgUsernameInput = new TextInputBuilder().setCustomId('vpgUsername').setLabel("Tu nombre de usuario en VPG").setStyle(TextInputStyle.Short).setRequired(true);
@@ -65,14 +73,17 @@ client.on(Events.InteractionCreate, async interaction => {
                 await interaction.message.edit({ components: [disabledRow] });
                 await interaction.reply({ content: `La solicitud de **${applicant.user.tag}** ha sido rechazada.`, ephemeral: false });
                 await applicant.send(`Tu solicitud para registrar un equipo ha sido rechazada por un administrador.`).catch(() => {});
-            } else if (interaction.customId.startsWith('accept_invite_')) {
+            }
+
+            // --- Botones del Flujo de Invitaciones de Equipo ---
+            else if (interaction.customId.startsWith('accept_invite_')) {
                 const teamId = interaction.customId.split('_')[2];
                 const team = await Team.findById(teamId);
                 if (!team) return interaction.reply({ content: 'Este equipo ya no existe.', ephemeral: true });
                 const isAlreadyInTeam = await Team.findOne({ guildId: interaction.guildId, $or: [{ managerId: interaction.user.id }, { captains: interaction.user.id }, { players: interaction.user.id }] });
                 if (isAlreadyInTeam) {
                     await interaction.message.delete();
-                    return interaction.reply({ content: `Ya perteneces al equipo **${isAlreadyInTeam.name}**.`, ephemeral: true });
+                    return interaction.reply({ content: `Ya perteneces al equipo **${isAlreadyInTeam.name}**. No puedes unirte a otro.`, ephemeral: true });
                 }
                 team.players.push(interaction.user.id);
                 await team.save();
@@ -93,7 +104,18 @@ client.on(Events.InteractionCreate, async interaction => {
                 }
                 await interaction.message.edit({ components: [] });
             }
-        } else if (interaction.isModalSubmit()) {
+
+            // --- Botones del Panel de Administrador ---
+            else if (interaction.customId === 'admin_search_team_button') {
+                if (!esAprobador) return interaction.reply({ content: 'No tienes permiso para usar esta función.', ephemeral: true });
+                const modal = new ModalBuilder().setCustomId('admin_search_team_modal').setTitle('Buscar Equipo por Nombre');
+                const teamNameInput = new TextInputBuilder().setCustomId('teamName').setLabel("Introduce el nombre exacto del equipo").setStyle(TextInputStyle.Short).setRequired(true);
+                modal.addComponents(new ActionRowBuilder().addComponents(teamNameInput));
+                await interaction.showModal(modal);
+            }
+        } 
+        // --- MANEJO DE FORMULARIOS (MODALS) ---
+        else if (interaction.isModalSubmit()) {
             if (interaction.customId === 'manager_request_modal') {
                 const vpgUsername = interaction.fields.getTextInputValue('vpgUsername');
                 const teamName = interaction.fields.getTextInputValue('teamName');
@@ -129,6 +151,26 @@ client.on(Events.InteractionCreate, async interaction => {
                 await originalRequestMessage.edit({ components: [disabledRow] });
                 await interaction.reply({ content: `¡Equipo **${teamName}** aprobado! **${applicant.user.tag}** ha recibido el rol de Mánager.`, ephemeral: false });
                 await applicant.send(`¡Felicidades! Tu equipo **${teamName}** ha sido APROBADO.`).catch(() => {});
+            } else if (interaction.customId === 'admin_search_team_modal') {
+                if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+                     return interaction.reply({ content: 'No tienes permiso para realizar esta acción.', ephemeral: true });
+                }
+                const teamName = interaction.fields.getTextInputValue('teamName');
+                const team = await Team.findOne({ guildId: interaction.guildId, name: teamName });
+                if (!team) return interaction.reply({ content: `No se encontró ningún equipo llamado **${teamName}**.`, ephemeral: true });
+
+                const manager = await interaction.guild.members.fetch(team.managerId).catch(() => ({ user: { tag: 'No Encontrado' } }));
+                
+                const embed = new EmbedBuilder()
+                    .setTitle(`Información del Equipo: ${team.name}`)
+                    .setThumbnail(team.logoUrl)
+                    .setColor('#ecf0f1')
+                    .addFields(
+                        { name: 'Liga', value: team.league, inline: true },
+                        { name: 'Mánager Actual', value: manager.user.tag, inline: true }
+                    );
+
+                await interaction.reply({ embeds: [embed], ephemeral: true });
             }
         }
     } catch (error) {
@@ -136,4 +178,5 @@ client.on(Events.InteractionCreate, async interaction => {
     }
 });
 
+// Inicio de sesión del bot con el token
 client.login(process.env.DISCORD_TOKEN);
