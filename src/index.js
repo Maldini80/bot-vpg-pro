@@ -1,6 +1,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const { Client, Collection, GatewayIntentBits, Events, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
+const { Client, Collection, GatewayIntentBits, Events, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, MessageFlags } = require('discord.js');
 const mongoose = require('mongoose');
 const User = require('./models/user.js');
 const { getVpgProfile } = require('./utils/scraper.js');
@@ -45,7 +45,7 @@ client.on(Events.InteractionCreate, async interaction => {
             }
         } else if (interaction.isModalSubmit()) {
             if (interaction.customId === 'verify_modal') {
-                await interaction.deferReply({ ephemeral: true });
+                await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
                 const vpgUsername = interaction.fields.getTextInputValue('vpgUsernameInput');
                 const profileData = await getVpgProfile(vpgUsername);
