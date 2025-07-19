@@ -46,18 +46,10 @@ client.on(Events.InteractionCreate, async interaction => {
         } else if (interaction.isModalSubmit()) {
             if (interaction.customId === 'verify_modal') {
                 await interaction.deferReply({ ephemeral: true });
-
                 const vpgUsername = interaction.fields.getTextInputValue('vpgUsernameInput');
                 const profileData = await getVpgProfile(vpgUsername);
-
                 if (profileData.error) return interaction.editReply({ content: `❌ ${profileData.error}` });
-                
-                await User.findOneAndUpdate(
-                    { discordId: interaction.user.id },
-                    { vpgUsername: profileData.vpgUsername, teamName: profileData.teamName, teamLogoUrl: profileData.teamLogoUrl, isManager: profileData.isManager, lastUpdated: Date.now() },
-                    { upsert: true, new: true }
-                );
-
+                await User.findOneAndUpdate({ discordId: interaction.user.id }, { vpgUsername: profileData.vpgUsername, teamName: profileData.teamName, teamLogoUrl: profileData.teamLogoUrl, isManager: profileData.isManager, lastUpdated: Date.now() }, { upsert: true, new: true });
                 const member = interaction.member;
                 await member.setNickname(`${member.user.username} | ${profileData.teamName}`);
                 const managerRoleId = process.env.MANAGER_ROLE_ID;
@@ -65,7 +57,6 @@ client.on(Events.InteractionCreate, async interaction => {
                     if (profileData.isManager) await member.roles.add(managerRoleId);
                     else await member.roles.remove(managerRoleId).catch(() => {});
                 }
-                
                 await interaction.editReply({ content: `✅ ¡Verificación completada! Tu perfil ha sido vinculado con **${profileData.teamName}**.` });
             }
         }
