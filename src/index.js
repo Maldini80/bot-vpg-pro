@@ -34,10 +34,10 @@ let isProcessing = false;
 
 async function processQueue() {
     if (isProcessing || processingQueue.length === 0) {
-        return; // Si ya está procesando o la cola está vacía, no hace nada.
+        return;
     }
     isProcessing = true;
-    const message = processingQueue.shift(); // Coge el primer mensaje de la cola.
+    const message = processingQueue.shift();
 
     try {
         const team = await Team.findOne({
@@ -54,30 +54,26 @@ async function processQueue() {
             if (botPermissions && botPermissions.has('ManageWebhooks')) {
                 const webhook = new WebhookClient({ id: team.webhookId, token: team.webhookToken });
                 
-                // Procesa las acciones en orden para máxima seguridad.
                 await message.delete();
                 await webhook.send({
                     content: message.content,
-                    username: message.member.displayName, // Usa el apodo que ya tiene el prefijo
+                    username: message.member.displayName,
                     avatarURL: team.logoUrl,
                     allowedMentions: { parse: ['users', 'roles', 'everyone'] }
                 });
             }
         }
     } catch (error) {
-        // Ignora errores si el mensaje ya fue borrado por otra razón.
         if (error.code !== 10008) { 
              console.error(`Error procesando mensaje de la cola:`, error.message);
         }
     } finally {
-        // Marca que ha terminado y llama de nuevo para procesar el siguiente mensaje en la cola.
         isProcessing = false;
         processQueue(); 
     }
 }
 
 client.on(Events.MessageCreate, async message => {
-    // La función se activa para cualquier mensaje de un usuario que no sea un bot y esté en el servidor.
     if (message.author.bot || !message.inGuild() || message.content.startsWith('/')) return;
 
     const hasTeamRole = message.member.roles.cache.has(process.env.MANAGER_ROLE_ID) ||
@@ -85,16 +81,14 @@ client.on(Events.MessageCreate, async message => {
                         message.member.roles.cache.has(process.env.PLAYER_ROLE_ID);
 
     if (hasTeamRole) {
-        // En lugar de procesar, simplemente añade el mensaje a la cola.
         processingQueue.push(message); 
-        // Intenta iniciar el procesador (solo funcionará si no estaba ya activo).
         processQueue(); 
     }
 });
 
 
 // =========================================================================================
-// === GESTIÓN DE INTERACCIONES (CON APODOS CORREGIDOS) ===
+// === GESTIÓN DE INTERACCIONES (CON APODOS DEFINITIVOS) ===
 // =========================================================================================
 client.on(Events.InteractionCreate, async interaction => {
     try {
@@ -288,7 +282,7 @@ client.on(Events.InteractionCreate, async interaction => {
                 const existingTeam = await Team.findOne({ name: teamName, guildId: interaction.guildId });
                 if (existingTeam) return interaction.reply({ content: `Error: Ya existe un equipo llamado **${teamName}**.`, ephemeral: true });
                 const isAlreadyManager = await Team.findOne({ managerId: applicant.id });
-                if (isAlreadyManager) return interaction.reply({ content: `Error: Este usuario ya es mánager del equipo **${isAlreadyManager.name}**.`, ephemeral: true });
+                if (isAlreadyManager) return interaction.reply({ content: `Error: Este usuario ya es mánager del equipo **${isAlreadyInManager.name}**.`, ephemeral: true });
                 
                 const firstValidChannel = await interaction.guild.channels.fetch(interaction.guild.systemChannelId || (await interaction.guild.channels.fetch()).find(c => c.isTextBased()).id);
                 const webhook = await firstValidChannel.createWebhook({ name: teamName, avatar: teamLogoUrl, reason: `Webhook para el equipo ${teamName}` });
