@@ -1,6 +1,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const { Client, Collection, GatewayIntentBits, Events, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, MessageFlags } = require('discord.js');
+const { Client, Collection, GatewayIntentBits, Events, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
 const mongoose = require('mongoose');
 const User = require('./models/user.js');
 const { getVpgProfile } = require('./utils/scraper.js');
@@ -45,27 +45,32 @@ client.on(Events.InteractionCreate, async interaction => {
             }
         } else if (interaction.isModalSubmit()) {
             if (interaction.customId === 'verify_modal') {
-                await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+                await interaction.deferReply({ ephemeral: true });
 
                 const vpgUsername = interaction.fields.getTextInputValue('vpgUsernameInput');
                 const profileData = await getVpgProfile(vpgUsername);
 
                 if (profileData.error) return interaction.editReply({ content: `❌ ${profileData.error}` });
                 
-                // El resto del código no se ejecutará en modo debug, pero lo dejamos aquí para el futuro.
                 await User.findOneAndUpdate(
                     { discordId: interaction.user.id },
                     { vpgUsername: profileData.vpgUsername, teamName: profileData.teamName, teamLogoUrl: profileData.teamLogoUrl, isManager: profileData.isManager, lastUpdated: Date.now() },
                     { upsert: true, new: true }
                 );
-                await interaction.member.setNickname(`${interaction.member.user.username} | ${profileData.teamName}`);
-                // ...etc
+
+                const member = interaction.member;
+                await member.setNickname(`${member.user.username} | ${profileData.teamName}`);
+                const managerRoleId = process.env.MANAGER_ROLE_ID;
+                if (managerRoleId) {
+                    if (profileData.isManager) await member.roles.add(managerRoleId);
+                    else await member.roles.remove(managerRoleId).catch(() => {});
+                }
                 
-                await interaction.editReply({ content: `✅ ¡Verificación completada!` });
+                await interaction.editReply({ content: `✅ ¡Verificación completada! Tu perfil ha sido vinculado con **${profileData.teamName}**.` });
             }
         }
     } catch (error) {
-        console.error("Fallo crítico de interacción (probablemente por arranque en frío):", error.message);
+        console.error("Fallo crítico de interacción:", error.message);
     }
 });
 
