@@ -3,34 +3,63 @@ const cheerio = require('cheerio');
 
 async function getVpgProfile(vpgUsername) {
     try {
+        // --- PASO 1: OBTENER DATOS DE LA PÁGINA DEL USUARIO ---
         const userUrl = `https://virtualprogaming.com/user/${vpgUsername}`;
-        const userPageResponse = await axios.get(userUrl);
+        const userPageResponse = await axios.get(userUrl, {
+            headers: { // Nos hacemos pasar por un navegador para evitar bloqueos
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+        });
         const $user = cheerio.load(userPageResponse.data);
 
-        // --- CÓDIGO DE DEPURACIÓN ---
-        // Vamos a buscar el div que contiene la palabra "EQUIPO"
-        const teamInfoDiv = $user('div:contains("EQUIPO")');
+        // Buscamos el div que contiene la palabra "EQUIPO" y luego encontramos el enlace del equipo
+        const teamLinkElement = $user('div.text-muted:contains("EQUIPO")').next().find('a');
 
-        // Si no encontramos NADA que contenga la palabra "EQUIPO"
-        if (teamInfoDiv.length === 0) {
-            console.log("DEBUG: No se encontró ningún div con la palabra 'EQUIPO'.");
-            return { error: `No se encontró la sección de equipo en el perfil de **${vpgUsername}**.` };
+        if (teamLinkElement.length === 0) {
+            return { error: `No se pudo encontrar un equipo en el perfil de **${vpgUsername}**. Asegúrate de que estás en un equipo.` };
         }
 
-        // Si SÍ lo encontramos, vamos a ver qué hay a su alrededor
-        const siblingHtml = teamInfoDiv.next().html(); // Cogemos el HTML del siguiente elemento
-        console.log("DEBUG: Se encontró el div 'EQUIPO'. El siguiente elemento es:", siblingHtml);
+        const teamName = teamLinkElement.text().trim();
+        const teamUrl = teamLinkElement.attr('href');
 
-        // Devolvemos un mensaje de depuración para verlo en Discord
-        return { error: `Debug exitoso. Revisa los logs de Render para ver la información.` };
-        // --- FIN DEL CÓDIGO DE DEPURACIÓN ---
+        if (!teamName || !teamUrl) {
+            return { error: `Se encontró la sección de equipo para **${vpgUsername}**, pero no se pudo extraer el nombre o la URL.` };
+        }
+
+
+        // --- PASO 2: OBTENER DATOS DE LA PÁGINA DEL EQUIPO ---
+        const teamPageResponse = await axios.get(teamUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+        const $team = cheerio.load(teamPageResponse.data);
+
+        // Extraer la URL del logo del equipo
+        const teamLogoUrl = $team('.profile-team-emblem img').attr('src');
+        
+        // Comprobar si el usuario es mánager
+        let isManager = false;
+        // Buscamos la cabecera "MANAGER"
+        const managerHeader = $team('h5:contains("MANAGER")');
+        if (managerHeader.length > 0) {
+            // Buscamos en la lista de mánagers un enlace que apunte al perfil del usuario
+            const managerList = managerHeader.next();
+            if (managerList.find(`a[href*="/user/${vpgUsername}"]`).length > 0) {
+                isManager = true;
+            }
+        }
+
+        // --- PASO 3: DEVOLVER TODOS LOS DATOS RECOPILADOS ---
+        return {
+            vpgUsername: vpgUsername, // Devolvemos el nombre de usuario original
+            teamName: teamName,
+            teamLogoUrl: teamLogoUrl || null, // Devolvemos null si no se encuentra
+            isManager: isManager
+        };
 
     } catch (error) {
         if (error.response && (error.response.status === 404 || error.response.status === 400)) {
             return { error: `No se pudo encontrar al usuario de VPG **${vpgUsername}**.` };
         }
-        console.error("Error en el scraper:", error.message);
-        return { error: "Ocurrió un error inesperado en el scraper." };
+        console.error("Error detallado en el scraper:", error);
+        return { error: "Ocurrió un error inesperado al intentar obtener los datos de VPG. Revisa los logs del bot." };
     }
 }
 
