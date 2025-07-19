@@ -6,11 +6,13 @@ const teamSchema = new mongoose.Schema({
     league: { type: String, required: true },
     logoUrl: { type: String, required: true },
     
-    // Ya no guardamos los IDs de los roles aquí.
-
-    managerId: { type: String, required: true, unique: true }, // Solo puede haber un mánager
+    managerId: { type: String, unique: true, sparse: true }, // sparse permite multiples 'null'
     captains: [{ type: String }],
     players: [{ type: String }],
+
+    // Guardamos los datos del webhook para cada equipo
+    webhookId: { type: String },
+    webhookToken: { type: String },
 });
 
 module.exports = mongoose.model('Team', teamSchema, 'teams');
