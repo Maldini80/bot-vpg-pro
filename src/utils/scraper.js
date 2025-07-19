@@ -1,30 +1,23 @@
 const puppeteer = require('puppeteer');
 const cheerio = require('cheerio');
 const axios = require('axios');
-const fs = require('fs');
-const FormData = require('form-data');
-
-// Esta es la ruta exacta donde Render instala el navegador.
-// La hemos sacado de tus propios logs de error.
-const CHROME_PATH = '/opt/render/.cache/puppeteer/chrome/linux-127.0.6533.88/chrome-linux64/chrome';
 
 async function getVpgProfile(vpgUsername) {
     let browser = null;
-    let page = null;
     try {
         console.log(`PUPPETEER: Iniciando navegador para ${vpgUsername}...`);
         
+        // Puppeteer usará automáticamente el navegador instalado en la ruta definida por PUPPETEER_CACHE_DIR
         browser = await puppeteer.launch({
             headless: true,
-            executablePath: CHROME_PATH, // Le decimos a Puppeteer dónde encontrar el ejecutable de Chrome
             args: ['--no-sandbox', '--disable-setuid-sandbox']
         });
 
-        page = await browser.newPage();
+        const page = await browser.newPage();
         const userUrl = `https://virtualprogaming.com/user/${vpgUsername}`;
 
         await page.goto(userUrl, { waitUntil: 'networkidle2' });
-        await page.waitForSelector('.profile-info-container', { timeout: 30000 });
+        await page.waitForSelector('.profile-info-container', { timeout: 45000 }); // Aumentamos el timeout por seguridad
 
         const content = await page.content();
         const $ = cheerio.load(content);
@@ -53,29 +46,7 @@ async function getVpgProfile(vpgUsername) {
 
     } catch (error) {
         console.error(`PUPPETEER ERROR para ${vpgUsername}:`, error.message);
-        
-        let screenshotUrl = 'No se pudo generar la captura.';
-        if (page) {
-            try {
-                const screenshotPath = `error_screenshot_${Date.now()}.png`;
-                await page.screenshot({ path: screenshotPath, fullPage: true });
-                
-                const form = new FormData();
-                form.append('key', process.env.FREEIMAGE_API_KEY);
-                form.append('action', 'upload');
-                form.append('source', fs.createReadStream(screenshotPath));
-                
-                const response = await axios.post('https://freeimage.host/api/1/upload', form, { headers: form.getHeaders() });
-                screenshotUrl = response.data.image.url;
-                fs.unlinkSync(screenshotPath);
-            } catch (uploadError) {
-                screenshotUrl = `Error al subir la captura: ${uploadError.message}`;
-            }
-        }
-        
-        return { 
-            error: `No se pudo cargar el perfil de VPG para **${vpgUsername}**. El sitio puede estar lento o protegido.\n\n**Depuración:** ${screenshotUrl}`
-        };
+        return { error: `No se pudo cargar el perfil de VPG para **${vpgUsername}**. El sitio puede estar lento o el perfil no existe.` };
     } finally {
         if (browser) await browser.close();
     }
