@@ -41,20 +41,19 @@ client.once(Events.ClientReady, async () => {
 
 const webhookChannelIds = process.env.WEBHOOK_CHANNEL_IDS ? process.env.WEBHOOK_CHANNEL_IDS.split(',') : [];
 client.on(Events.MessageCreate, async message => {
-    if (message.author.bot || !webhookChannelIds.includes(message.channelId) || message.content.startsWith('/')) return;
-    const member = message.member;
-    const isManager = member.roles.cache.has(process.env.MANAGER_ROLE_ID);
-    const isCaptain = member.roles.cache.has(process.env.CAPTAIN_ROLE_ID);
+    if (message.author.bot || !webhookChannelIds.includes(message.channelId) || !message.member || message.content.startsWith('/')) return;
+    const isManager = message.member.roles.cache.has(process.env.MANAGER_ROLE_ID);
+    const isCaptain = message.member.roles.cache.has(process.env.CAPTAIN_ROLE_ID);
 
     if (isManager || isCaptain) {
-        const team = await Team.findOne({ guildId: message.guildId, $or: [{ managerId: member.id }, { captains: member.id }] });
+        const team = await Team.findOne({ guildId: message.guildId, $or: [{ managerId: message.member.id }, { captains: message.member.id }] });
         if (team && team.webhookId && team.webhookToken) {
             try {
                 const webhook = new WebhookClient({ id: team.webhookId, token: team.webhookToken });
                 await message.delete();
                 await webhook.send({
                     content: message.content,
-                    username: member.displayName.split(' | ')[0],
+                    username: message.member.displayName.split(' | ')[0],
                     avatarURL: team.logoUrl,
                     allowedMentions: { parse: ['users', 'roles', 'everyone'] }
                 });
@@ -67,14 +66,17 @@ client.on(Events.MessageCreate, async message => {
 
 client.on(Events.InteractionCreate, async interaction => {
     try {
+        if (!interaction.inGuild()) return;
+
         if (interaction.isChatInputCommand()) {
             const command = client.commands.get(interaction.commandName);
             if (command) await command.execute(interaction);
-        } 
-        
-        else if (interaction.isButton()) {
-            const esAprobador = interaction.member.roles.cache.has(process.env.APPROVER_ROLE_ID) || interaction.member.permissions.has(PermissionFlagsBits.Administrator);
-            
+            return;
+        }
+
+        const esAprobador = interaction.member.roles.cache.has(process.env.APPROVER_ROLE_ID) || interaction.member.permissions.has(PermissionFlagsBits.Administrator);
+
+        if (interaction.isButton()) {
             if (interaction.customId === 'request_manager_role_button') {
                 const modal = new ModalBuilder().setCustomId('manager_request_modal').setTitle('Formulario de Solicitud de Mánager');
                 const vpgUsernameInput = new TextInputBuilder().setCustomId('vpgUsername').setLabel("Tu nombre de usuario en VPG").setStyle(TextInputStyle.Short).setRequired(true);
