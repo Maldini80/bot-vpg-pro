@@ -1,6 +1,6 @@
 // src/commands/activar-chat-canal.js
 const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
-const TeamChatChannel = require('../models/teamChatChannel.js');
+// const TeamChatChannel = require('../models/teamChatChannel.js'); // <-- ELIMINA ESTA LÍNEA DE AQUÍ
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -9,6 +9,9 @@ module.exports = {
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
     async execute(interaction) {
+        // Y AÑÁDELA JUSTO AQUÍ DENTRO
+        const TeamChatChannel = require('../models/teamChatChannel.js'); 
+        
         const { channelId, guildId } = interaction;
 
         const existing = await TeamChatChannel.findOne({ channelId, guildId });
