@@ -1,5 +1,4 @@
 const { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
-const { CANAL_SOLICITUDES_ID } = require('../utils/config.js');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -8,7 +7,8 @@ module.exports = {
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     
     async execute(interaction) {
-        if (interaction.channelId !== CANAL_SOLICITUDES_ID) {
+        // Usamos la variable de entorno directamente
+        if (interaction.channelId !== process.env.REQUEST_CHANNEL_ID) {
             return interaction.reply({ content: `Este comando solo se puede usar en el canal de solicitudes designado.`, ephemeral: true });
         }
         const embed = new EmbedBuilder()
