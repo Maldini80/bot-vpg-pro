@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
-module.deexports = {
+module.exports = {
     data: new SlashCommandBuilder()
         .setName('panel-manager')
         .setDescription('Crea el panel de control para mánagers en el canal actual.')
