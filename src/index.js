@@ -2,8 +2,11 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { Client, Collection, GatewayIntentBits, Events, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
 const mongoose = require('mongoose');
-const User = require('./models/user.js'); // <-- ¡LÍNEA CORREGIDA! (user.js en minúscula)
+const User = require('./models/user.js');
 const { getVpgProfile } = require('./utils/scraper.js');
+
+// Carga las variables de entorno desde un archivo .env si existe
+require('dotenv').config();
 
 mongoose.connect(process.env.DATABASE_URL)
     .then(() => console.log('Conectado a la base de datos MongoDB.'))
@@ -27,15 +30,22 @@ client.once(Events.ClientReady, () => {
 });
 
 client.on(Events.InteractionCreate, async interaction => {
+    // --- GESTIÓN DE COMANDOS ---
     if (interaction.isChatInputCommand()) {
         const command = client.commands.get(interaction.commandName);
         if (!command) return;
         try {
             await command.execute(interaction);
         } catch (error) {
-            console.error(error);
-            await interaction.reply({ content: '¡Hubo un error al ejecutar este comando!', ephemeral: true });
+            console.error("Error ejecutando el comando:", error);
+            if (interaction.replied || interaction.deferred) {
+                await interaction.followUp({ content: '¡Hubo un error al ejecutar este comando!', ephemeral: true });
+            } else {
+                await interaction.reply({ content: '¡Hubo un error al ejecutar este comando!', ephemeral: true });
+            }
         }
+    
+    // --- GESTIÓN DE BOTONES ---
     } else if (interaction.isButton()) {
         if (interaction.customId === 'verify_button') {
             const modal = new ModalBuilder().setCustomId('verify_modal').setTitle('Verificación de Virtual Pro Gaming');
@@ -44,15 +54,17 @@ client.on(Events.InteractionCreate, async interaction => {
             modal.addComponents(actionRow);
             await interaction.showModal(modal);
         }
+
+    // --- GESTIÓN DE MODALES (CON LÓGICA DEFER) ---
     } else if (interaction.isModalSubmit()) {
         if (interaction.customId === 'verify_modal') {
-            const vpgUsername = interaction.fields.getTextInputValue('vpgUsernameInput');
-            await interaction.reply({ content: `Recibido. Verificando el usuario **${vpgUsername}**... Esto puede tardar unos segundos.`, ephemeral: true });
+            await interaction.deferReply({ ephemeral: true });
 
+            const vpgUsername = interaction.fields.getTextInputValue('vpgUsernameInput');
             const profileData = await getVpgProfile(vpgUsername);
 
             if (profileData.error) {
-                return interaction.followUp({ content: `❌ ${profileData.error}`, ephemeral: true });
+                return interaction.editReply({ content: `❌ ${profileData.error}` });
             }
             
             await User.findOneAndUpdate(
@@ -79,12 +91,12 @@ client.on(Events.InteractionCreate, async interaction => {
                         await member.roles.remove(managerRoleId).catch(() => {});
                     }
                 }
-
-                await interaction.followUp({ content: `✅ ¡Verificación completada! Tu perfil ha sido vinculado con **${profileData.teamName}**.`, ephemeral: true });
+                
+                await interaction.editReply({ content: `✅ ¡Verificación completada! Tu perfil ha sido vinculado con **${profileData.teamName}**.` });
 
             } catch (err) {
                 console.error("Error actualizando perfil de Discord:", err);
-                await interaction.followUp({ content: `⚠️ Tu perfil de VPG se ha verificado, pero no he podido actualizar tu apodo o roles. Es posible que mis permisos estén por debajo de los tuyos.`, ephemeral: true });
+                await interaction.editReply({ content: `⚠️ Tu perfil de VPG se ha verificado, pero no he podido actualizar tu apodo o roles. Es posible que mis permisos estén por debajo de los tuyos.` });
             }
         }
     }
