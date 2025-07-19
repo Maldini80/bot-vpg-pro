@@ -1,7 +1,7 @@
 {
   "name": "bot-vpg-pro",
   "version": "1.0.0",
-  "description": "Bot para VPG",
+  "description": "Bot de Gestión de Equipos para VPG",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
@@ -12,9 +12,6 @@
     "cheerio": "^1.0.0-rc.12",
     "discord.js": "^14.7.1",
     "dotenv": "^16.3.1",
-    "mongoose": "^7.0.0",
-    "puppeteer": "^22.10.0",
-    "puppeteer-extra": "^3.3.6",
-    "puppeteer-extra-plugin-stealth": "^2.11.2"
+    "mongoose": "^7.0.0"
   }
 }
