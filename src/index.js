@@ -1,11 +1,11 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const { Client, Collection, GatewayIntentBits, Events, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
+const { Client, Collection, GatewayIntentBits, Events, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, MessageFlags } = require('discord.js'); // Importar MessageFlags
 const mongoose = require('mongoose');
 const User = require('./models/user.js');
 const { getVpgProfile } = require('./utils/scraper.js');
 
-// Carga las variables de entorno desde un archivo .env si existe
+// Carga las variables de entorno
 require('dotenv').config();
 
 mongoose.connect(process.env.DATABASE_URL)
@@ -38,10 +38,11 @@ client.on(Events.InteractionCreate, async interaction => {
             await command.execute(interaction);
         } catch (error) {
             console.error("Error ejecutando el comando:", error);
+            const errorMessage = { content: '¡Hubo un error al ejecutar este comando!', flags: [MessageFlags.Ephemeral] };
             if (interaction.replied || interaction.deferred) {
-                await interaction.followUp({ content: '¡Hubo un error al ejecutar este comando!', ephemeral: true });
+                await interaction.followUp(errorMessage);
             } else {
-                await interaction.reply({ content: '¡Hubo un error al ejecutar este comando!', ephemeral: true });
+                await interaction.reply(errorMessage);
             }
         }
     
@@ -55,10 +56,11 @@ client.on(Events.InteractionCreate, async interaction => {
             await interaction.showModal(modal);
         }
 
-    // --- GESTIÓN DE MODALES (CON LÓGICA DEFER) ---
+    // --- GESTIÓN DE MODALES ---
     } else if (interaction.isModalSubmit()) {
         if (interaction.customId === 'verify_modal') {
-            await interaction.deferReply({ ephemeral: true });
+            // Usamos deferReply con la sintaxis actualizada
+            await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
 
             const vpgUsername = interaction.fields.getTextInputValue('vpgUsernameInput');
             const profileData = await getVpgProfile(vpgUsername);
