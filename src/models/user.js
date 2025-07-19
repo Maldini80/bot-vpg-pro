@@ -9,4 +9,4 @@ const userSchema = new mongoose.Schema({
     lastUpdated: { type: Date, default: Date.now },
 });
 
-module.exports = mongoose.model('VPGUser', userSchema, 'vpg_users'); // Especificamos nombre de la colección
+module.exports = mongoose.model('VPGUser', userSchema, 'vpg_users');
