@@ -3,7 +3,7 @@ const path = require('node:path');
 const { Client, Collection, GatewayIntentBits, Events, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
 const mongoose = require('mongoose');
 const User = require('./models/user.js');
-const { getVpgProfile } = require('./utils/scraper.js');
+// const { getVpgProfile } = require('./utils/scraper.js'); // <-- CAMBIO 1: HEMOS COMENTADO O BORRADO ESTA LÍNEA
 require('dotenv').config();
 
 mongoose.connect(process.env.DATABASE_URL)
@@ -47,8 +47,15 @@ client.on(Events.InteractionCreate, async interaction => {
             if (interaction.customId === 'verify_modal') {
                 await interaction.deferReply({ ephemeral: true });
                 const vpgUsername = interaction.fields.getTextInputValue('vpgUsernameInput');
+                
+                // --- CAMBIO 2: IMPORTACIÓN DINÁMICA ---
+                // Cargamos el scraper justo aquí, en el momento en que lo necesitamos.
+                // Esto evita que el módulo bloquee el inicio del bot.
+                const { getVpgProfile } = require('./utils/scraper.js');
+                
                 const profileData = await getVpgProfile(vpgUsername);
                 if (profileData.error) return interaction.editReply({ content: `❌ ${profileData.error}` });
+                
                 await User.findOneAndUpdate({ discordId: interaction.user.id }, { vpgUsername: profileData.vpgUsername, teamName: profileData.teamName, teamLogoUrl: profileData.teamLogoUrl, isManager: profileData.isManager, lastUpdated: Date.now() }, { upsert: true, new: true });
                 const member = interaction.member;
                 await member.setNickname(`${member.user.username} | ${profileData.teamName}`);
