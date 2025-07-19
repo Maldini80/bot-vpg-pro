@@ -1,8 +1,8 @@
 const fs = require('node:fs');
 const path = require('node:path');
 // --- LÍNEA CORREGIDA ---
-// Añadimos ButtonBuilder y EmbedBuilder a la lista de importaciones.
-const { Client, Collection, GatewayIntentBits, Events, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, ButtonBuilder, EmbedBuilder } = require('discord.js');
+// Añadimos ButtonBuilder, ButtonStyle y EmbedBuilder para que no falte nada.
+const { Client, Collection, GatewayIntentBits, Events, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
 const mongoose = require('mongoose');
 require('dotenv').config();
 
@@ -63,7 +63,7 @@ client.on(Events.InteractionCreate, async interaction => {
                 const applicantId = interaction.customId.split('_')[2];
                 const applicant = await interaction.guild.members.fetch(applicantId);
                 const disabledRow = new ActionRowBuilder().addComponents(
-                    ButtonBuilder.from(interaction.message.components[0].components[0]).setDisabled(true), // Usamos ButtonBuilder.from() para clonar el botón
+                    ButtonBuilder.from(interaction.message.components[0].components[0]).setDisabled(true),
                     ButtonBuilder.from(interaction.message.components[0].components[1]).setDisabled(true)
                 );
                 await interaction.message.edit({ components: [disabledRow] });
@@ -77,7 +77,6 @@ client.on(Events.InteractionCreate, async interaction => {
                 const leagueName = interaction.fields.getTextInputValue('leagueName');
                 const approvalChannel = await client.channels.fetch(CANAL_APROBACIONES_ID);
                 if (!approvalChannel) {
-                    console.error("El canal de aprobaciones no se encontró.");
                     return interaction.reply({ content: 'Hubo un error al procesar tu solicitud.', ephemeral: true });
                 }
                 const embed = new EmbedBuilder().setTitle('Nueva Solicitud de Mánager').setColor('#f1c40f').addFields({ name: 'Solicitante', value: `<@${interaction.user.id}> (${interaction.user.tag})`, inline: true }, { name: 'Usuario VPG', value: vpgUsername, inline: true }, { name: 'Nombre del Equipo', value: teamName, inline: false }, { name: 'Liga', value: leagueName, inline: false }).setTimestamp();
@@ -92,10 +91,9 @@ client.on(Events.InteractionCreate, async interaction => {
                 const applicant = await interaction.guild.members.fetch(applicantId);
                 console.log(`EQUIPO APROBADO: Nombre=${teamName}, Mánager=${applicant.user.tag}, Escudo=${teamLogoUrl}`);
                 
-                // La referencia al mensaje original es un poco más compleja, hay que buscarlo en el canal.
                 const approvalChannel = await client.channels.fetch(CANAL_APROBACIONES_ID);
                 const messages = await approvalChannel.messages.fetch({ limit: 50 });
-                const originalRequestMessage = messages.find(msg => msg.embeds[0]?.fields[0]?.value.includes(applicantId));
+                const originalRequestMessage = messages.find(msg => msg.embeds[0]?.fields[0]?.value.includes(applicantId) && msg.components[0]?.components[0]?.disabled === false);
 
                 if (originalRequestMessage) {
                     const disabledRow = new ActionRowBuilder().addComponents(
