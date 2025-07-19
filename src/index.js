@@ -183,7 +183,19 @@ client.on(Events.InteractionCreate, async interaction => {
                 await targetMember.roles.remove([process.env.PLAYER_ROLE_ID, process.env.CAPTAIN_ROLE_ID]).catch(() => {});
                 await targetMember.setNickname(targetMember.user.username).catch(err => console.error(`Fallo al resetear apodo: ${err.message}`));
                 await interaction.update({ content: `✅ **${targetMember.user.username}** ha sido expulsado del equipo.`, components: [] });
+            
+            // =========================================================================================
+            // === CORRECCIÓN 1: LÓGICA PARA EL BOTÓN DEL PANEL DE ADMIN ===
+            // =========================================================================================
+            } else if (interaction.customId === 'admin_manage_team_button') {
+                if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+                    return interaction.reply({ content: 'Solo los administradores del servidor pueden usar esta función.', ephemeral: true });
+                }
+                // Aquí se puede añadir en el futuro una lógica más compleja,
+                // como un menú para seleccionar un equipo y gestionarlo.
+                await interaction.reply({ content: 'La función para gestionar equipos como administrador está en desarrollo.', ephemeral: true });
             }
+
         } else if (interaction.isStringSelectMenu()) {
             if (interaction.customId === 'roster_management_menu') {
                 const team = await Team.findOne({ guildId: interaction.guildId, $or: [{ managerId: interaction.user.id }, { captains: interaction.user.id }] });
@@ -216,12 +228,16 @@ client.on(Events.InteractionCreate, async interaction => {
                 const applicantId = interaction.customId.split('_')[2];
                 console.log(`[DIAGNÓSTICO] ID del solicitante extraído: ${applicantId}`);
 
-                const teamName = (await interaction.channel.messages.fetch({ limit: 50 }))
-                    .find(msg => msg.embeds[0]?.fields[0]?.value.includes(applicantId) && !msg.components[0]?.components[0]?.disabled)
-                    .embeds[0].fields.find(f => f.name === 'Nombre del Equipo').value;
-                const leagueName = (await interaction.channel.messages.fetch({ limit: 50 }))
-                    .find(msg => msg.embeds[0]?.fields[0]?.value.includes(applicantId) && !msg.components[0]?.components[0]?.disabled)
-                    .embeds[0].fields.find(f => f.name === 'Liga').value;
+                const originalRequestMessage = (await interaction.channel.messages.fetch({ limit: 100 }))
+                    .find(msg => msg.embeds[0]?.fields[0]?.value.includes(applicantId) && msg.components[0]?.components[0]?.disabled === false);
+
+                if (!originalRequestMessage) {
+                     console.error(`[DIAGNÓSTICO] No se encontró el mensaje de solicitud original para el applicantId: ${applicantId}`);
+                     return interaction.reply({ content: 'Error: No se pudo encontrar el mensaje de solicitud original. Puede que ya haya sido procesado.', ephemeral: true });
+                }
+
+                const teamName = originalRequestMessage.embeds[0].fields.find(f => f.name === 'Nombre del Equipo').value;
+                const leagueName = originalRequestMessage.embeds[0].fields.find(f => f.name === 'Liga').value;
                 const teamLogoUrl = interaction.fields.getTextInputValue('teamLogoUrl');
 
                 let applicant;
@@ -249,10 +265,9 @@ client.on(Events.InteractionCreate, async interaction => {
                     await applicant.setNickname(`|MG| ${applicant.user.username}`);
                     console.log(`[DIAGNÓSTICO] ¡ÉXITO! Apodo cambiado.`);
                 } catch (nicknameError) {
-                    console.error(`[DIAGNÓSTICO] FALLO AL CAMBIAR APODO: ${nicknameError.message}`);
+                    console.error(`[DIAGNÓSTICO] FALLO AL CAMBIAR APODO: ${nicknameError.message}. Asegúrate de que el rol del bot está por encima del rol de Mánager.`);
                 }
                 
-                const originalRequestMessage = (await interaction.channel.messages.fetch({ limit: 50 })).find(msg => msg.embeds[0]?.fields[0]?.value.includes(applicantId) && !msg.components[0]?.components[0]?.disabled);
                 if(originalRequestMessage) {
                     const disabledRow = new ActionRowBuilder().addComponents(ButtonBuilder.from(originalRequestMessage.components[0].components[0]).setDisabled(true).setLabel('Aprobado'), ButtonBuilder.from(originalRequestMessage.components[0].components[1]).setDisabled(true));
                     await originalRequestMessage.edit({ components: [disabledRow] });
@@ -270,6 +285,9 @@ client.on(Events.InteractionCreate, async interaction => {
             await interaction.reply({ content: 'Ha ocurrido un error al procesar tu solicitud.', ephemeral: true });
         }
     }
+// =========================================================================================
+// === CORRECCIÓN 2: CIERRE DEL BLOQUE `client.on` QUE FALTABA ===
+// =========================================================================================
 });
 
-client.login(process.env.DISCORD_TOKEN);```
+client.login(process.env.DISCORD_TOKEN);
