@@ -7,7 +7,17 @@ module.exports = {
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     
     async execute(interaction) {
-        // Se crea la fila de componentes para añadir el botón
+        // --- LÓGICA CORREGIDA ---
+
+        // 1. Primero, respondemos a la interacción de forma privada y segura.
+        //    Esto confirma inmediatamente a Discord que hemos recibido el comando.
+        await interaction.reply({ 
+            content: 'Panel de verificación creado con éxito.', 
+            ephemeral: true // Usamos ephemeral aquí ya que es la respuesta directa a la interacción.
+        });
+
+        // 2. Después, realizamos la acción principal de enviar el panel al canal.
+        //    Como ya hemos respondido, usamos channel.send.
         const row = new ActionRowBuilder()
             .addComponents(
                 new ButtonBuilder()
@@ -16,14 +26,9 @@ module.exports = {
                     .setStyle(ButtonStyle.Success)
             );
 
-        // ¡CORRECCIÓN! Se envía el panel y la confirmación en una sola respuesta.
-        // Se envía el mensaje al canal donde se usó el comando
         await interaction.channel.send({
             content: 'Haga clic en el botón de abajo para vincular su cuenta de Discord con su perfil de Virtual Pro Gaming y obtener sus roles de equipo y nivel.',
             components: [row]
         });
-        
-        // Se envía una confirmación invisible (efímera) para el administrador.
-        await interaction.reply({ content: 'Panel de verificación creado con éxito.', ephemeral: true });
     },
 };
