@@ -1,3 +1,4 @@
+// src/models/team.js
 const mongoose = require('mongoose');
 
 const teamSchema = new mongoose.Schema({
@@ -8,8 +9,7 @@ const teamSchema = new mongoose.Schema({
     managerId: { type: String, unique: true, sparse: true },
     captains: [{ type: String }],
     players: [{ type: String }],
-    webhookId: { type: String },
-    webhookToken: { type: String },
+    // Los campos webhookId y webhookToken han sido eliminados.
 });
 
 module.exports = mongoose.model('Team', teamSchema, 'teams');
