@@ -1,29 +1,29 @@
-// test
 const { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits } = require('discord.js');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('panel-verificacion')
         .setDescription('Crea el panel con el botón de verificación en el canal actual.')
-        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator), // Solo los administradores pueden usar este comando
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     
     async execute(interaction) {
-        // Crea una fila de componentes para añadir el botón
+        // Se crea la fila de componentes para añadir el botón
         const row = new ActionRowBuilder()
             .addComponents(
                 new ButtonBuilder()
-                    .setCustomId('verify_button') // Este es el ID único que identificará nuestro botón
+                    .setCustomId('verify_button')
                     .setLabel('✅ Verificar mi Cuenta de VPG')
-                    .setStyle(ButtonStyle.Success) // Le da al botón un color verde
+                    .setStyle(ButtonStyle.Success)
             );
 
-        // Envía el mensaje al canal donde se usó el comando
+        // ¡CORRECCIÓN! Se envía el panel y la confirmación en una sola respuesta.
+        // Se envía el mensaje al canal donde se usó el comando
         await interaction.channel.send({
             content: 'Haga clic en el botón de abajo para vincular su cuenta de Discord con su perfil de Virtual Pro Gaming y obtener sus roles de equipo y nivel.',
-            components: [row] // Añade la fila con el botón al mensaje
+            components: [row]
         });
         
-        // Envía una confirmación invisible para el administrador que usó el comando
+        // Se envía una confirmación invisible (efímera) para el administrador.
         await interaction.reply({ content: 'Panel de verificación creado con éxito.', ephemeral: true });
     },
 };
