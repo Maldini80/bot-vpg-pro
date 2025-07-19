@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const commands = [];
-// Esta es la línea que corregimos para que apunte a 'src/commands'
+// Ruta corregida que apunta a la carpeta 'src/commands'
 const commandsPath = path.join(__dirname, 'src', 'commands');
 const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 
@@ -13,15 +13,20 @@ for (const file of commandFiles) {
     commands.push(command.data.toJSON());
 }
 
+// Carga las variables de entorno desde un archivo .env si existe
+require('dotenv').config();
+
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 
 (async () => {
     try {
         console.log(`Refrescando ${commands.length} comandos de aplicación (/).`);
+        
         const data = await rest.put(
             Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
             { body: commands },
         );
+        
         console.log(`¡Éxito! Se han recargado ${data.length} comandos.`);
     } catch (error) {
         console.error(error);
