@@ -9,13 +9,10 @@ module.exports = {
     async execute(interaction) {
         // --- LÓGICA FINAL Y ROBUSTA ---
 
-        // 1. DIFIERE LA RESPUESTA INMEDIATAMENTE.
-        //    Esto le dice a Discord "recibido" y nos da 15 minutos.
-        //    Lo hacemos efímero para que el "Bot está pensando..." solo lo vea el admin.
+        // 1. Difiere la respuesta para ganar tiempo y evitar el crash.
         await interaction.deferReply({ ephemeral: true });
 
-        // 2. Realiza la acción principal (enviar el panel).
-        //    Esto ahora puede tardar lo que necesite sin causar un error.
+        // 2. Realiza la acción principal de enviar el panel.
         const row = new ActionRowBuilder()
             .addComponents(
                 new ButtonBuilder()
@@ -29,9 +26,7 @@ module.exports = {
             components: [row]
         });
 
-        // 3. EDITA LA RESPUESTA ORIGINAL.
-        //    Ahora que todo ha terminado, editamos el "Bot está pensando..."
-        //    con el mensaje de éxito final.
+        // 3. Edita la respuesta original con el mensaje de éxito.
         await interaction.editReply({ content: 'Panel de verificación creado con éxito.' });
     },
 };
