@@ -6,7 +6,6 @@ const { Client, Collection, GatewayIntentBits, Events, ModalBuilder, TextInputBu
 const mongoose = require('mongoose');
 
 const Team = require('./models/team.js');
-const { ROL_APROBADOR_ID, CANAL_APROBACIONES_ID, MANAGER_CHANNEL_ID } = require('./utils/config.js');
 
 mongoose.connect(process.env.DATABASE_URL).then(() => console.log('Conectado a MongoDB.')).catch(err => console.error('Error MongoDB:', err));
 
@@ -26,7 +25,7 @@ for (const file of commandFiles) {
 client.once(Events.ClientReady, async () => {
     console.log(`¡Listo! ${client.user.tag} está online.`);
     try {
-        const managerChannel = await client.channels.fetch(MANAGER_CHANNEL_ID);
+        const managerChannel = await client.channels.fetch(process.env.MANAGER_CHANNEL_ID);
         if (managerChannel) {
             const embed = new EmbedBuilder().setTitle('Panel de Control de Mánager').setDescription('Usa los botones de abajo para gestionar tu equipo. Tu equipo se detectará automáticamente.').setColor('#e67e22');
             const row = new ActionRowBuilder().addComponents(
@@ -68,14 +67,14 @@ client.on(Events.MessageCreate, async message => {
 
 client.on(Events.InteractionCreate, async interaction => {
     try {
-        const esAprobador = interaction.member.roles.cache.has(ROL_APROBADOR_ID) || interaction.member.permissions.has(PermissionFlagsBits.Administrator);
-        
         if (interaction.isChatInputCommand()) {
             const command = client.commands.get(interaction.commandName);
             if (command) await command.execute(interaction);
         } 
         
         else if (interaction.isButton()) {
+            const esAprobador = interaction.member.roles.cache.has(process.env.APPROVER_ROLE_ID) || interaction.member.permissions.has(PermissionFlagsBits.Administrator);
+            
             if (interaction.customId === 'request_manager_role_button') {
                 const modal = new ModalBuilder().setCustomId('manager_request_modal').setTitle('Formulario de Solicitud de Mánager');
                 const vpgUsernameInput = new TextInputBuilder().setCustomId('vpgUsername').setLabel("Tu nombre de usuario en VPG").setStyle(TextInputStyle.Short).setRequired(true);
@@ -95,7 +94,7 @@ client.on(Events.InteractionCreate, async interaction => {
                 await interaction.showModal(modal);
             }
             else if (interaction.customId.startsWith('reject_request_')) {
-                if (!esAprobador) return interaction.reply({ content: 'No tienes permiso.', ephemeral: true });
+                 if (!esAprobador) return interaction.reply({ content: 'No tienes permiso.', ephemeral: true });
                 const applicantId = interaction.customId.split('_')[2];
                 const applicant = await interaction.guild.members.fetch(applicantId);
                 const disabledRow = new ActionRowBuilder().addComponents(ButtonBuilder.from(interaction.message.components[0].components[0]).setDisabled(true), ButtonBuilder.from(interaction.message.components[0].components[1]).setDisabled(true));
@@ -184,7 +183,7 @@ client.on(Events.InteractionCreate, async interaction => {
                 const vpgUsername = interaction.fields.getTextInputValue('vpgUsername');
                 const teamName = interaction.fields.getTextInputValue('teamName');
                 const leagueName = interaction.fields.getTextInputValue('leagueName');
-                const approvalChannel = await client.channels.fetch(CANAL_APROBACIONES_ID);
+                const approvalChannel = await client.channels.fetch(process.env.APPROVAL_CHANNEL_ID);
                 if (!approvalChannel) return interaction.reply({ content: 'Error: Canal de aprobaciones no encontrado.', ephemeral: true });
                 const embed = new EmbedBuilder().setTitle('Nueva Solicitud de Mánager').setColor('#f1c40f').addFields({ name: 'Solicitante', value: `<@${interaction.user.id}> (${interaction.user.tag})` }, { name: 'Usuario VPG', value: vpgUsername }, { name: 'Nombre del Equipo', value: teamName }, { name: 'Liga', value: leagueName }).setTimestamp();
                 const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`approve_request_${interaction.user.id}_${teamName}`).setLabel("✅ Aprobar").setStyle(ButtonStyle.Success), new ButtonBuilder().setCustomId(`reject_request_${interaction.user.id}`).setLabel("❌ Rechazar").setStyle(ButtonStyle.Danger));
@@ -230,7 +229,6 @@ client.on(Events.InteractionCreate, async interaction => {
                 const manager = team.managerId ? await interaction.guild.members.fetch(team.managerId).catch(() => ({ user: { tag: 'No Asignado' } })) : { user: { tag: 'No Asignado' } };
                 
                 const embed = new EmbedBuilder().setTitle(`Gestión del Equipo: ${team.name}`).setThumbnail(team.logoUrl).addFields({ name: 'Mánager', value: manager.user.tag });
-                // Aquí se puede expandir para mostrar capitanes y jugadores
                 await interaction.reply({ embeds: [embed], ephemeral: true });
             }
         }
