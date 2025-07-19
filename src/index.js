@@ -37,7 +37,6 @@ async function processQueue() {
         return; // Si ya está procesando o la cola está vacía, no hace nada.
     }
     isProcessing = true;
-
     const message = processingQueue.shift(); // Coge el primer mensaje de la cola.
 
     try {
@@ -59,7 +58,7 @@ async function processQueue() {
                 await message.delete();
                 await webhook.send({
                     content: message.content,
-                    username: message.member.displayName,
+                    username: message.member.displayName, // Usa el apodo que ya tiene el prefijo
                     avatarURL: team.logoUrl,
                     allowedMentions: { parse: ['users', 'roles', 'everyone'] }
                 });
@@ -78,6 +77,7 @@ async function processQueue() {
 }
 
 client.on(Events.MessageCreate, async message => {
+    // La función se activa para cualquier mensaje de un usuario que no sea un bot y esté en el servidor.
     if (message.author.bot || !message.inGuild() || message.content.startsWith('/')) return;
 
     const hasTeamRole = message.member.roles.cache.has(process.env.MANAGER_ROLE_ID) ||
@@ -94,19 +94,17 @@ client.on(Events.MessageCreate, async message => {
 
 
 // =========================================================================================
-// === GESTIÓN DE INTERACCIONES (BOTONES, MODALES, MENÚS) ===
+// === GESTIÓN DE INTERACCIONES (CON APODOS CORREGIDOS) ===
 // =========================================================================================
 client.on(Events.InteractionCreate, async interaction => {
     try {
         if (!interaction.inGuild()) return;
 
-        // --- MANEJO DE COMANDOS SLASH ---
         if (interaction.isChatInputCommand()) {
             const command = client.commands.get(interaction.commandName);
             if (command) await command.execute(interaction);
         } 
         
-        // --- MANEJO DE BOTONES ---
         else if (interaction.isButton()) {
             const esAprobador = interaction.member.roles.cache.has(process.env.APPROVER_ROLE_ID) || interaction.member.permissions.has(PermissionFlagsBits.Administrator);
             
@@ -149,7 +147,7 @@ client.on(Events.InteractionCreate, async interaction => {
                 team.players.push(interaction.user.id);
                 await team.save();
                 await interaction.member.roles.add(process.env.PLAYER_ROLE_ID);
-                await interaction.member.setNickname(interaction.user.username);
+                await interaction.member.setNickname(interaction.user.username).catch(console.error); // APODO JUGADOR: SIN PREFIJO
                 await interaction.reply({ content: `¡Felicidades! Te has unido a **${team.name}**.`, ephemeral: true });
                 const manager = await client.users.fetch(team.managerId);
                 await manager.send(`✅ **${interaction.user.username}** ha aceptado tu invitación a **${team.name}**.`);
@@ -201,7 +199,7 @@ client.on(Events.InteractionCreate, async interaction => {
                 const targetMember = await interaction.guild.members.fetch(targetId);
                 await targetMember.roles.remove(process.env.PLAYER_ROLE_ID);
                 await targetMember.roles.add(process.env.CAPTAIN_ROLE_ID);
-                await targetMember.setNickname(`|C| ${targetMember.user.username}`);
+                await targetMember.setNickname(`|C| ${targetMember.user.username}`).catch(console.error); // APODO CAPITÁN: PREFIJO |C|
     
                 await interaction.update({ content: `✅ **${targetMember.user.username}** ha sido ascendido a Capitán.`, components: [] });
             }
@@ -217,7 +215,7 @@ client.on(Events.InteractionCreate, async interaction => {
                 const targetMember = await interaction.guild.members.fetch(targetId);
                 await targetMember.roles.remove(process.env.CAPTAIN_ROLE_ID);
                 await targetMember.roles.add(process.env.PLAYER_ROLE_ID);
-                await targetMember.setNickname(targetMember.user.username);
+                await targetMember.setNickname(targetMember.user.username).catch(console.error); // APODO JUGADOR: SIN PREFIJO
     
                 await interaction.update({ content: `✅ **${targetMember.user.username}** ha sido degradado a Jugador.`, components: [] });
             }
@@ -238,14 +236,13 @@ client.on(Events.InteractionCreate, async interaction => {
                 await team.save();
 
                 const targetMember = await interaction.guild.members.fetch(targetId);
-                await targetMember.roles.remove([process.env.PLAYER_ROLE_ID, process.env.CAPTAIN_ROLE_ID]);
-                await targetMember.setNickname(targetMember.user.username);
+                await targetMember.roles.remove([process.env.PLAYER_ROLE_ID, process.env.CAPTAIN_ROLE_ID]).catch(console.error);
+                await targetMember.setNickname(targetMember.user.username).catch(console.error); // APODO RESETEADO
 
                 await interaction.update({ content: `✅ **${targetMember.user.username}** ha sido expulsado del equipo.`, components: [] });
             }
         } 
         
-        // --- MANEJO DE MENÚS DESPLEGABLES ---
         else if (interaction.isStringSelectMenu()) {
             if (interaction.customId === 'roster_management_menu') {
                 const team = await Team.findOne({ guildId: interaction.guildId, $or: [{ managerId: interaction.user.id }, { captains: interaction.user.id }] });
@@ -266,7 +263,6 @@ client.on(Events.InteractionCreate, async interaction => {
             }
         }
 
-        // --- MANEJO DE MODALES (FORMULARIOS) ---
         else if (interaction.isModalSubmit()) {
             if (interaction.customId === 'manager_request_modal') {
                 const vpgUsername = interaction.fields.getTextInputValue('vpgUsername');
@@ -301,7 +297,7 @@ client.on(Events.InteractionCreate, async interaction => {
                 await newTeam.save();
                 
                 await applicant.roles.add(process.env.MANAGER_ROLE_ID);
-                await applicant.setNickname(`|MG| ${applicant.user.username}`);
+                await applicant.setNickname(`|MG| ${applicant.user.username}`).catch(console.error); // APODO MÁNAGER: PREFIJO |MG|
                 
                 const disabledRow = new ActionRowBuilder().addComponents(ButtonBuilder.from(originalRequestMessage.components[0].components[0]).setDisabled(true).setLabel('Aprobado'), ButtonBuilder.from(originalRequestMessage.components[0].components[1]).setDisabled(true));
                 await originalRequestMessage.edit({ components: [disabledRow] });
