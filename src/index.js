@@ -1,7 +1,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
-// ¡Importamos MessageFlags y lo usamos!
-const { Client, Collection, GatewayIntentBits, Events, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, MessageFlags } = require('discord.js');
+const { Client, Collection, GatewayIntentBits, Events, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
 const mongoose = require('mongoose');
 const User = require('./models/user.js');
 const { getVpgProfile } = require('./utils/scraper.js');
@@ -30,64 +29,54 @@ client.once(Events.ClientReady, () => {
     console.log(`¡Listo! El bot ${client.user.tag} está online.`);
 });
 
+// --- MANEJADOR DE INTERACCIONES A PRUEBA DE CRASHES ---
 client.on(Events.InteractionCreate, async interaction => {
-    // --- GESTIÓN DE COMANDOS ---
-    if (interaction.isChatInputCommand()) {
-        const command = client.commands.get(interaction.commandName);
-        if (!command) return;
-        try {
+    try {
+        // --- GESTIÓN DE COMANDOS ---
+        if (interaction.isChatInputCommand()) {
+            const command = client.commands.get(interaction.commandName);
+            if (!command) {
+                console.error(`No se encontró el comando ${interaction.commandName}.`);
+                return;
+            }
             await command.execute(interaction);
-        } catch (error) {
-            console.error("Error ejecutando el comando:", error);
-            // Lógica de respuesta de error segura
-            if (interaction.deferred || interaction.replied) {
-                // Si ya se difirió o respondió, usamos followUp para un nuevo mensaje
-                await interaction.followUp({ content: '¡Hubo un error al ejecutar este comando!', ephemeral: true });
-            } else {
-                // Si no, respondemos por primera vez
-                await interaction.reply({ content: '¡Hubo un error al ejecutar este comando!', ephemeral: true });
+
+        // --- GESTIÓN DE BOTONES ---
+        } else if (interaction.isButton()) {
+            if (interaction.customId === 'verify_button') {
+                const modal = new ModalBuilder().setCustomId('verify_modal').setTitle('Verificación de Virtual Pro Gaming');
+                const vpgUsernameInput = new TextInputBuilder().setCustomId('vpgUsernameInput').setLabel("Introduce tu nombre de usuario de VPG").setStyle(TextInputStyle.Short).setRequired(true);
+                const actionRow = new ActionRowBuilder().addComponents(vpgUsernameInput);
+                modal.addComponents(actionRow);
+                await interaction.showModal(modal);
             }
-        }
-    
-    // --- GESTIÓN DE BOTONES ---
-    } else if (interaction.isButton()) {
-        if (interaction.customId === 'verify_button') {
-            const modal = new ModalBuilder().setCustomId('verify_modal').setTitle('Verificación de Virtual Pro Gaming');
-            const vpgUsernameInput = new TextInputBuilder().setCustomId('vpgUsernameInput').setLabel("Introduce tu nombre de usuario de VPG").setStyle(TextInputStyle.Short).setRequired(true);
-            const actionRow = new ActionRowBuilder().addComponents(vpgUsernameInput);
-            modal.addComponents(actionRow);
-            await interaction.showModal(modal);
-        }
 
-    // --- GESTIÓN DE MODALES ---
-    } else if (interaction.isModalSubmit()) {
-        if (interaction.customId === 'verify_modal') {
-            // Diferimos la respuesta de forma efímera
-            await interaction.deferReply({ ephemeral: true });
+        // --- GESTIÓN DE MODALES ---
+        } else if (interaction.isModalSubmit()) {
+            if (interaction.customId === 'verify_modal') {
+                await interaction.deferReply({ ephemeral: true });
 
-            const vpgUsername = interaction.fields.getTextInputValue('vpgUsernameInput');
-            const profileData = await getVpgProfile(vpgUsername);
+                const vpgUsername = interaction.fields.getTextInputValue('vpgUsernameInput');
+                const profileData = await getVpgProfile(vpgUsername);
 
-            if (profileData.error) {
-                return interaction.editReply({ content: `❌ ${profileData.error}` });
-            }
-            
-            await User.findOneAndUpdate(
-                { discordId: interaction.user.id },
-                {
-                    vpgUsername: profileData.vpgUsername,
-                    teamName: profileData.teamName,
-                    teamLogoUrl: profileData.teamLogoUrl,
-                    isManager: profileData.isManager,
-                    lastUpdated: Date.now()
-                },
-                { upsert: true, new: true }
-            );
+                if (profileData.error) {
+                    return interaction.editReply({ content: `❌ ${profileData.error}` });
+                }
+                
+                await User.findOneAndUpdate(
+                    { discordId: interaction.user.id },
+                    {
+                        vpgUsername: profileData.vpgUsername,
+                        teamName: profileData.teamName,
+                        teamLogoUrl: profileData.teamLogoUrl,
+                        isManager: profileData.isManager,
+                        lastUpdated: Date.now()
+                    },
+                    { upsert: true, new: true }
+                );
 
-            try {
                 const member = interaction.member;
                 await member.setNickname(`${member.user.username} | ${profileData.teamName}`);
-
                 const managerRoleId = process.env.MANAGER_ROLE_ID;
                 if (managerRoleId) {
                     if (profileData.isManager) {
@@ -98,11 +87,19 @@ client.on(Events.InteractionCreate, async interaction => {
                 }
                 
                 await interaction.editReply({ content: `✅ ¡Verificación completada! Tu perfil ha sido vinculado con **${profileData.teamName}**.` });
-
-            } catch (err) {
-                console.error("Error actualizando perfil de Discord:", err);
-                await interaction.editReply({ content: `⚠️ Tu perfil de VPG se ha verificado, pero no he podido actualizar tu apodo o roles. Es posible que mis permisos estén por debajo de los tuyos.` });
             }
+        }
+    } catch (error) {
+        // Bloque CATCH-ALL que evita que el bot se caiga.
+        console.error("Se ha producido un error al procesar una interacción:", error);
+        try {
+            if (!interaction.replied && !interaction.deferred) {
+                await interaction.reply({ content: 'Hubo un error al procesar tu solicitud. Por favor, inténtalo de nuevo en unos segundos.', ephemeral: true });
+            } else {
+                await interaction.followUp({ content: 'Hubo un error al procesar tu solicitud. Por favor, inténtalo de nuevo en unos segundos.', ephemeral: true });
+            }
+        } catch (e) {
+            console.error("No se pudo responder al usuario sobre el error inicial:", e);
         }
     }
 });
