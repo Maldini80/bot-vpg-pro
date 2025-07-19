@@ -7,10 +7,8 @@ module.exports = {
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     
     async execute(interaction) {
-        // 1. Difiere la respuesta para ganar tiempo y evitar el crash.
         await interaction.deferReply({ ephemeral: true });
 
-        // 2. Realiza la acción principal de enviar el panel.
         const row = new ActionRowBuilder()
             .addComponents(
                 new ButtonBuilder()
@@ -24,7 +22,6 @@ module.exports = {
             components: [row]
         });
 
-        // 3. Edita la respuesta original con el mensaje de éxito.
         await interaction.editReply({ content: 'Panel de verificación creado con éxito.' });
     },
 };
