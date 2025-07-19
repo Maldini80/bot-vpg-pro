@@ -1,0 +1,13 @@
+{
+  "name": "bot-vpg-pro",
+  "version": "1.0.0",
+  "description": "Bot para VPG",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.7.1",
+    "mongoose": "^7.0.0"
+  }
+}
