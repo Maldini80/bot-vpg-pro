@@ -3,54 +3,46 @@ const cheerio = require('cheerio');
 
 async function getVpgProfile(vpgUsername) {
     try {
-        // --- PASO 1: OBTENER DATOS DE LA PÁGINA DEL USUARIO ---
+        // PASO 1: OBTENER DATOS DE LA PÁGINA DEL USUARIO
         const userUrl = `https://virtualprogaming.com/user/${vpgUsername}`;
         const userPageResponse = await axios.get(userUrl, {
-            headers: { // Nos hacemos pasar por un navegador para evitar bloqueos
+            headers: { 
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
             }
         });
         const $user = cheerio.load(userPageResponse.data);
 
-        // Buscamos el div que contiene la palabra "EQUIPO" y luego encontramos el enlace del equipo
         const teamLinkElement = $user('div.text-muted:contains("EQUIPO")').next().find('a');
-
         if (teamLinkElement.length === 0) {
             return { error: `No se pudo encontrar un equipo en el perfil de **${vpgUsername}**. Asegúrate de que estás en un equipo.` };
         }
 
         const teamName = teamLinkElement.text().trim();
         const teamUrl = teamLinkElement.attr('href');
-
         if (!teamName || !teamUrl) {
             return { error: `Se encontró la sección de equipo para **${vpgUsername}**, pero no se pudo extraer el nombre o la URL.` };
         }
 
-
-        // --- PASO 2: OBTENER DATOS DE LA PÁGINA DEL EQUIPO ---
+        // PASO 2: OBTENER DATOS DE LA PÁGINA DEL EQUIPO
         const teamPageResponse = await axios.get(teamUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } });
         const $team = cheerio.load(teamPageResponse.data);
 
-        // Extraer la URL del logo del equipo
         const teamLogoUrl = $team('.profile-team-emblem img').attr('src');
         
-        // Comprobar si el usuario es mánager
         let isManager = false;
-        // Buscamos la cabecera "MANAGER"
         const managerHeader = $team('h5:contains("MANAGER")');
         if (managerHeader.length > 0) {
-            // Buscamos en la lista de mánagers un enlace que apunte al perfil del usuario
             const managerList = managerHeader.next();
             if (managerList.find(`a[href*="/user/${vpgUsername}"]`).length > 0) {
                 isManager = true;
             }
         }
 
-        // --- PASO 3: DEVOLVER TODOS LOS DATOS RECOPILADOS ---
+        // PASO 3: DEVOLVER TODOS LOS DATOS
         return {
-            vpgUsername: vpgUsername, // Devolvemos el nombre de usuario original
+            vpgUsername: vpgUsername,
             teamName: teamName,
-            teamLogoUrl: teamLogoUrl || null, // Devolvemos null si no se encuentra
+            teamLogoUrl: teamLogoUrl || null,
             isManager: isManager
         };
 
@@ -59,7 +51,7 @@ async function getVpgProfile(vpgUsername) {
             return { error: `No se pudo encontrar al usuario de VPG **${vpgUsername}**.` };
         }
         console.error("Error detallado en el scraper:", error);
-        return { error: "Ocurrió un error inesperado al intentar obtener los datos de VPG. Revisa los logs del bot." };
+        return { error: "Ocurrió un error inesperado al obtener los datos de VPG. Revisa los logs del bot." };
     }
 }
 
