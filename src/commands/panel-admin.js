@@ -11,12 +11,9 @@ module.exports = {
             .setTitle('Panel de Control de Administrador de Equipos VPG')
             .setDescription('Usa los botones de abajo para gestionar los equipos y jugadores registrados en el sistema.')
             .setColor('#c0392b');
-
         const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('admin_search_team_button').setLabel('🔍 Gestionar Equipo').setStyle(ButtonStyle.Primary),
-            new ButtonBuilder().setCustomId('admin_search_player_button').setLabel('👤 Buscar Jugador').setStyle(ButtonStyle.Secondary)
+            new ButtonBuilder().setCustomId('admin_manage_team_button').setLabel('🔍 Gestionar Equipo').setStyle(ButtonStyle.Primary)
         );
-        
         await interaction.channel.send({ embeds: [embed], components: [row] });
         await interaction.reply({ content: 'Panel de administrador creado con éxito.', ephemeral: true });
     },
