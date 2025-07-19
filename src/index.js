@@ -1,15 +1,20 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const { Client, Collection, GatewayIntentBits, Events, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, EmbedBuilder } = require('discord.js');
+// --- LÍNEA CORREGIDA ---
+// Añadimos ButtonBuilder y EmbedBuilder a la lista de importaciones.
+const { Client, Collection, GatewayIntentBits, Events, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, ButtonBuilder, EmbedBuilder } = require('discord.js');
 const mongoose = require('mongoose');
 require('dotenv').config();
-const { CANAL_APROBACIONES_ID, ROL_APROBADOR_ID } = require('./utils/config.js'); // <-- Esta línea llama a config.js
+
+const { CANAL_APROBACIONES_ID, ROL_APROBADOR_ID } = require('./utils/config.js');
 
 mongoose.connect(process.env.DATABASE_URL)
     .then(() => console.log('Conectado a la base de datos MongoDB.'))
     .catch(err => console.error('No se pudo conectar a MongoDB:', err));
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildMessages] });
+const client = new Client({
+    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildMessages]
+});
 
 client.commands = new Collection();
 const commandsPath = path.join(__dirname, 'commands');
@@ -57,7 +62,10 @@ client.on(Events.InteractionCreate, async interaction => {
                 }
                 const applicantId = interaction.customId.split('_')[2];
                 const applicant = await interaction.guild.members.fetch(applicantId);
-                const disabledRow = new ActionRowBuilder().addComponents(interaction.message.components[0].components[0].setDisabled(true), interaction.message.components[0].components[1].setDisabled(true));
+                const disabledRow = new ActionRowBuilder().addComponents(
+                    ButtonBuilder.from(interaction.message.components[0].components[0]).setDisabled(true), // Usamos ButtonBuilder.from() para clonar el botón
+                    ButtonBuilder.from(interaction.message.components[0].components[1]).setDisabled(true)
+                );
                 await interaction.message.edit({ components: [disabledRow] });
                 await interaction.reply({ content: `La solicitud de **${applicant.user.tag}** ha sido rechazada.`, ephemeral: false });
                 await applicant.send(`Tu solicitud para registrar un equipo ha sido rechazada por un administrador.`).catch(() => {});
@@ -75,7 +83,7 @@ client.on(Events.InteractionCreate, async interaction => {
                 const embed = new EmbedBuilder().setTitle('Nueva Solicitud de Mánager').setColor('#f1c40f').addFields({ name: 'Solicitante', value: `<@${interaction.user.id}> (${interaction.user.tag})`, inline: true }, { name: 'Usuario VPG', value: vpgUsername, inline: true }, { name: 'Nombre del Equipo', value: teamName, inline: false }, { name: 'Liga', value: leagueName, inline: false }).setTimestamp();
                 const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`approve_request_${interaction.user.id}_${teamName}`).setLabel("✅ Aprobar").setStyle(ButtonStyle.Success), new ButtonBuilder().setCustomId(`reject_request_${interaction.user.id}`).setLabel("❌ Rechazar").setStyle(ButtonStyle.Danger));
                 await approvalChannel.send({ embeds: [embed], components: [row] });
-                await interaction.reply({ content: 'Tu solicitud ha sido enviada para revisión.', ephemeral: true });
+                await interaction.reply({ content: 'Tu solicitud ha sido enviada a los administradores para su revisión.', ephemeral: true });
             } else if (interaction.customId.startsWith('approve_modal_')) {
                 const parts = interaction.customId.split('_');
                 const applicantId = parts[2];
@@ -83,10 +91,21 @@ client.on(Events.InteractionCreate, async interaction => {
                 const teamLogoUrl = interaction.fields.getTextInputValue('teamLogoUrl');
                 const applicant = await interaction.guild.members.fetch(applicantId);
                 console.log(`EQUIPO APROBADO: Nombre=${teamName}, Mánager=${applicant.user.tag}, Escudo=${teamLogoUrl}`);
-                const originalRequestMessage = await interaction.channel.messages.fetch(interaction.message.reference.messageId);
-                const disabledRow = new ActionRowBuilder().addComponents(originalRequestMessage.components[0].components[0].setDisabled(true).setLabel('Aprobado'), originalRequestMessage.components[0].components[1].setDisabled(true));
-                await originalRequestMessage.edit({ components: [disabledRow] });
-                await interaction.reply({ content: `¡Equipo **${teamName}** aprobado! El mánager **${applicant.user.tag}** ha sido configurado.`, ephemeral: false });
+                
+                // La referencia al mensaje original es un poco más compleja, hay que buscarlo en el canal.
+                const approvalChannel = await client.channels.fetch(CANAL_APROBACIONES_ID);
+                const messages = await approvalChannel.messages.fetch({ limit: 50 });
+                const originalRequestMessage = messages.find(msg => msg.embeds[0]?.fields[0]?.value.includes(applicantId));
+
+                if (originalRequestMessage) {
+                    const disabledRow = new ActionRowBuilder().addComponents(
+                        ButtonBuilder.from(originalRequestMessage.components[0].components[0]).setDisabled(true).setLabel('Aprobado'),
+                        ButtonBuilder.from(originalRequestMessage.components[0].components[1]).setDisabled(true)
+                    );
+                    await originalRequestMessage.edit({ components: [disabledRow] });
+                }
+
+                await interaction.reply({ content: `¡Equipo **${teamName}** aprobado! El mánager **${applicant.user.tag}** ha sido notificado y configurado.`, ephemeral: false });
                 await applicant.send(`¡Felicidades! Tu solicitud para registrar el equipo **${teamName}** ha sido APROBADA.`).catch(() => {});
             }
         }
