@@ -22,21 +22,10 @@ for (const file of commandFiles) {
     if ('data' in command && 'execute' in command) { client.commands.set(command.data.name, command); }
 }
 
-client.once(Events.ClientReady, async () => {
+// --- LÓGICA DE INICIO SIMPLIFICADA ---
+// Ahora solo nos avisa que el bot está online, eliminando el punto de fallo.
+client.once(Events.ClientReady, () => {
     console.log(`¡Listo! ${client.user.tag} está online.`);
-    try {
-        const managerChannel = await client.channels.fetch(process.env.MANAGER_CHANNEL_ID);
-        if (managerChannel) {
-            const embed = new EmbedBuilder().setTitle('Panel de Control de Mánager').setDescription('Usa los botones de abajo para gestionar tu equipo. Tu equipo se detectará automáticamente.').setColor('#e67e22');
-            const row = new ActionRowBuilder().addComponents(
-                new ButtonBuilder().setCustomId('manager_invite_player').setLabel('📧 Invitar Jugador').setStyle(ButtonStyle.Success),
-                new ButtonBuilder().setCustomId('manager_manage_roster').setLabel('📋 Gestionar Plantilla').setStyle(ButtonStyle.Primary)
-            );
-            const messages = await managerChannel.messages.fetch({ limit: 10 });
-            if (messages.size > 0) await managerChannel.bulkDelete(messages);
-            await managerChannel.send({ embeds: [embed], components: [row] });
-        }
-    } catch (error) { console.error("Error al crear el panel de mánager:", error.message); }
 });
 
 const webhookChannelIds = process.env.WEBHOOK_CHANNEL_IDS ? process.env.WEBHOOK_CHANNEL_IDS.split(',') : [];
@@ -57,9 +46,7 @@ client.on(Events.MessageCreate, async message => {
                     avatarURL: team.logoUrl,
                     allowedMentions: { parse: ['users', 'roles', 'everyone'] }
                 });
-            } catch (error) {
-                console.error(`Error de Webhook para el equipo ${team.name}:`, error.message);
-            }
+            } catch (error) { console.error(`Error de Webhook para ${team.name}:`, error.message); }
         }
     }
 });
@@ -71,12 +58,11 @@ client.on(Events.InteractionCreate, async interaction => {
         if (interaction.isChatInputCommand()) {
             const command = client.commands.get(interaction.commandName);
             if (command) await command.execute(interaction);
-            return;
-        }
-
-        const esAprobador = interaction.member.roles.cache.has(process.env.APPROVER_ROLE_ID) || interaction.member.permissions.has(PermissionFlagsBits.Administrator);
-
-        if (interaction.isButton()) {
+        } 
+        
+        else if (interaction.isButton()) {
+            const esAprobador = interaction.member.roles.cache.has(process.env.APPROVER_ROLE_ID) || interaction.member.permissions.has(PermissionFlagsBits.Administrator);
+            
             if (interaction.customId === 'request_manager_role_button') {
                 const modal = new ModalBuilder().setCustomId('manager_request_modal').setTitle('Formulario de Solicitud de Mánager');
                 const vpgUsernameInput = new TextInputBuilder().setCustomId('vpgUsername').setLabel("Tu nombre de usuario en VPG").setStyle(TextInputStyle.Short).setRequired(true);
