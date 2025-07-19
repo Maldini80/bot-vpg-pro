@@ -1,7 +1,7 @@
 require('dotenv').config();
 
 const fs = require('node:fs');
-const path = require('node:path'); // <-- ¡LÍNEA CORREGIDA!
+const path = require('node:path');
 const { Client, Collection, GatewayIntentBits, Events, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, PermissionFlagsBits, WebhookClient, StringSelectMenuBuilder } = require('discord.js');
 const mongoose = require('mongoose');
 
@@ -26,10 +26,57 @@ client.once(Events.ClientReady, () => {
     console.log(`¡Listo! ${client.user.tag} está online.`);
 });
 
+// =========================================================================================
+// === SISTEMA DE COLA DE PROCESAMIENTO PARA EVITAR RATE LIMITS Y MENSAJES DUPLICADOS ===
+// =========================================================================================
+const processingQueue = [];
+let isProcessing = false;
 
-// =========================================================================================
-// === LÓGICA DE MENSAJES CON LOGO (CON OPTIMIZACIÓN DE PARPADEO) ===
-// =========================================================================================
+async function processQueue() {
+    if (isProcessing || processingQueue.length === 0) {
+        return; // Si ya está procesando o la cola está vacía, no hace nada.
+    }
+    isProcessing = true;
+
+    const message = processingQueue.shift(); // Coge el primer mensaje de la cola.
+
+    try {
+        const team = await Team.findOne({
+            guildId: message.guildId,
+            $or: [
+                { managerId: message.member.id },
+                { captains: message.member.id },
+                { players: message.member.id }
+            ]
+        });
+
+        if (team && team.webhookId && team.webhookToken) {
+            const botPermissions = message.channel.permissionsFor(client.user);
+            if (botPermissions && botPermissions.has('ManageWebhooks')) {
+                const webhook = new WebhookClient({ id: team.webhookId, token: team.webhookToken });
+                
+                // Procesa las acciones en orden para máxima seguridad.
+                await message.delete();
+                await webhook.send({
+                    content: message.content,
+                    username: message.member.displayName,
+                    avatarURL: team.logoUrl,
+                    allowedMentions: { parse: ['users', 'roles', 'everyone'] }
+                });
+            }
+        }
+    } catch (error) {
+        // Ignora errores si el mensaje ya fue borrado por otra razón.
+        if (error.code !== 10008) { 
+             console.error(`Error procesando mensaje de la cola:`, error.message);
+        }
+    } finally {
+        // Marca que ha terminado y llama de nuevo para procesar el siguiente mensaje en la cola.
+        isProcessing = false;
+        processQueue(); 
+    }
+}
+
 client.on(Events.MessageCreate, async message => {
     if (message.author.bot || !message.inGuild() || message.content.startsWith('/')) return;
 
@@ -37,39 +84,11 @@ client.on(Events.MessageCreate, async message => {
                         message.member.roles.cache.has(process.env.CAPTAIN_ROLE_ID) ||
                         message.member.roles.cache.has(process.env.PLAYER_ROLE_ID);
 
-    if (!hasTeamRole) return;
-
-    const team = await Team.findOne({
-        guildId: message.guildId,
-        $or: [
-            { managerId: message.member.id },
-            { captains: message.member.id },
-            { players: message.member.id }
-        ]
-    });
-
-    if (team && team.webhookId && team.webhookToken) {
-        try {
-            const botPermissions = message.channel.permissionsFor(client.user);
-            if (!botPermissions || !botPermissions.has('ManageWebhooks')) return;
-
-            const webhook = new WebhookClient({ id: team.webhookId, token: team.webhookToken });
-            
-            await Promise.all([
-                webhook.send({
-                    content: message.content,
-                    username: message.member.displayName,
-                    avatarURL: team.logoUrl,
-                    allowedMentions: { parse: ['users', 'roles', 'everyone'] }
-                }),
-                message.delete()
-            ]);
-
-        } catch (error) {
-            if (error.code !== 10015) {
-                console.error(`Error de Webhook para ${team.name}:`, error.message);
-            }
-        }
+    if (hasTeamRole) {
+        // En lugar de procesar, simplemente añade el mensaje a la cola.
+        processingQueue.push(message); 
+        // Intenta iniciar el procesador (solo funcionará si no estaba ya activo).
+        processQueue(); 
     }
 });
 
@@ -81,11 +100,13 @@ client.on(Events.InteractionCreate, async interaction => {
     try {
         if (!interaction.inGuild()) return;
 
+        // --- MANEJO DE COMANDOS SLASH ---
         if (interaction.isChatInputCommand()) {
             const command = client.commands.get(interaction.commandName);
             if (command) await command.execute(interaction);
         } 
         
+        // --- MANEJO DE BOTONES ---
         else if (interaction.isButton()) {
             const esAprobador = interaction.member.roles.cache.has(process.env.APPROVER_ROLE_ID) || interaction.member.permissions.has(PermissionFlagsBits.Administrator);
             
@@ -224,6 +245,7 @@ client.on(Events.InteractionCreate, async interaction => {
             }
         } 
         
+        // --- MANEJO DE MENÚS DESPLEGABLES ---
         else if (interaction.isStringSelectMenu()) {
             if (interaction.customId === 'roster_management_menu') {
                 const team = await Team.findOne({ guildId: interaction.guildId, $or: [{ managerId: interaction.user.id }, { captains: interaction.user.id }] });
@@ -244,6 +266,7 @@ client.on(Events.InteractionCreate, async interaction => {
             }
         }
 
+        // --- MANEJO DE MODALES (FORMULARIOS) ---
         else if (interaction.isModalSubmit()) {
             if (interaction.customId === 'manager_request_modal') {
                 const vpgUsername = interaction.fields.getTextInputValue('vpgUsername');
