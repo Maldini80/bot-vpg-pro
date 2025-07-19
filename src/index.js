@@ -3,7 +3,7 @@ const path = require('node:path');
 const { Client, Collection, GatewayIntentBits, Events, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
 const mongoose = require('mongoose');
 const User = require('./models/User.js');
-const { getVpgProfile } = require('./utils/scraper.js'); // Importamos el scraper
+const { getVpgProfile } = require('./utils/scraper.js');
 
 mongoose.connect(process.env.DATABASE_URL)
     .then(() => console.log('Conectado a la base de datos MongoDB.'))
@@ -49,45 +49,40 @@ client.on(Events.InteractionCreate, async interaction => {
             const vpgUsername = interaction.fields.getTextInputValue('vpgUsernameInput');
             await interaction.reply({ content: `Recibido. Verificando el usuario **${vpgUsername}**... Esto puede tardar unos segundos.`, ephemeral: true });
 
-            // --- ¡AQUÍ EMPIEZA LA MAGIA! ---
             const profileData = await getVpgProfile(vpgUsername);
 
-            // Si el scraper devuelve un error, se lo notificamos al usuario.
             if (profileData.error) {
                 return interaction.followUp({ content: `❌ ${profileData.error}`, ephemeral: true });
             }
             
-            // Si todo va bien, guardamos o actualizamos en la base de datos
             await User.findOneAndUpdate(
-                { discordId: interaction.user.id }, // Buscar por el ID de Discord del usuario
-                { // Datos a insertar o actualizar
+                { discordId: interaction.user.id },
+                {
                     vpgUsername: profileData.vpgUsername,
                     teamName: profileData.teamName,
                     teamLogoUrl: profileData.teamLogoUrl,
                     isManager: profileData.isManager,
                     lastUpdated: Date.now()
                 },
-                { upsert: true, new: true } // `upsert: true` crea el documento si no existe
+                { upsert: true, new: true }
             );
 
-            // Ahora, actualizamos el perfil en Discord
             try {
                 const member = interaction.member;
-
-                // Cambiar el apodo
                 await member.setNickname(`${member.user.username} | ${profileData.teamName}`);
 
-                // Gestionar Rol de Manager
-                const managerRole = interaction.guild.roles.cache.find(r => r.name === '👑 Manager');
-                if (managerRole) {
+                // --- SECCIÓN MODIFICADA ---
+                // Gestionar Rol de Manager por ID
+                const managerRoleId = process.env.MANAGER_ROLE_ID; // Leemos el ID desde Render
+                if (managerRoleId) {
                     if (profileData.isManager) {
-                        await member.roles.add(managerRole);
+                        await member.roles.add(managerRoleId);
                     } else {
-                        await member.roles.remove(managerRole);
+                        await member.roles.remove(managerRoleId).catch(() => {}); // Añadimos .catch para que no de error si el usuario no tiene el rol
                     }
                 }
+                // --- FIN DE LA SECCIÓN MODIFICADA ---
 
-                // Notificación final de éxito
                 await interaction.followUp({ content: `✅ ¡Verificación completada! Tu perfil ha sido vinculado con **${profileData.teamName}**.`, ephemeral: true });
 
             } catch (err) {
