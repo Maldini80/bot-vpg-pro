@@ -2,8 +2,10 @@ const { REST, Routes } = require('discord.js');
 const fs = require('node:fs');
 const path = require('node:path');
 
+// Carga las variables de entorno para que los scripts también puedan usarlas
+require('dotenv').config();
+
 const commands = [];
-// Ruta corregida que apunta a la carpeta 'src/commands'
 const commandsPath = path.join(__dirname, 'src', 'commands');
 const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 
@@ -12,9 +14,6 @@ for (const file of commandFiles) {
     const command = require(filePath);
     commands.push(command.data.toJSON());
 }
-
-// Carga las variables de entorno desde un archivo .env si existe
-require('dotenv').config();
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 
