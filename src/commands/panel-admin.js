@@ -1,18 +1,28 @@
+// src/commands/panel-admin.js
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('panel-admin')
-        .setDescription('Crea el panel de control para administradores de equipos en este canal.')
+        .setDescription('Crea el panel de control para administradores.')
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
     async execute(interaction) {
         const embed = new EmbedBuilder()
-            .setTitle('Panel de Control de Administrador de Equipos VPG')
-            .setDescription('Usa los botones de abajo para gestionar los equipos y jugadores registrados en el sistema.')
+            .setTitle('Panel de Control de Administrador VPG')
+            .setDescription('Usa los botones de abajo para gestionar las ligas del servidor.')
             .setColor('#c0392b');
+            
         const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('admin_manage_team_button').setLabel('🔍 Gestionar Equipo').setStyle(ButtonStyle.Primary)
+            new ButtonBuilder()
+                .setCustomId('admin_create_league_button')
+                .setLabel('➕ Crear Liga')
+                .setStyle(ButtonStyle.Success),
+            
+            new ButtonBuilder()
+                .setCustomId('admin_delete_league_button')
+                .setLabel('🗑️ Borrar Liga')
+                .setStyle(ButtonStyle.Danger)
         );
         await interaction.channel.send({ embeds: [embed], components: [row] });
         await interaction.reply({ content: 'Panel de administrador creado con éxito.', ephemeral: true });
