@@ -108,33 +108,14 @@ client.on(Events.InteractionCreate, async interaction => {
         if (interaction.isChatInputCommand()) {
             const command = client.commands.get(interaction.commandName);
             if (!command) return;
-
-            if (interaction.commandName === 'admin-gestionar-equipo') {
-                await interaction.deferReply({ ephemeral: true });
-                const teamId = interaction.options.getString('equipo');
-                const team = await Team.findById(teamId);
-                if (!team) return interaction.editReply({ content: 'No se ha encontrado un equipo con ese ID.' });
-                const embed = new EmbedBuilder().setTitle(`Panel de Gestión: ${team.name}`).setDescription('Selecciona una acción para administrar este equipo.').setThumbnail(team.logoUrl).setColor('#e74c3c');
-                const row1 = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder().setCustomId(`admin_change_name_${teamId}`).setLabel('Cambiar Nombre').setStyle(ButtonStyle.Primary),
-                    new ButtonBuilder().setCustomId(`admin_change_logo_${teamId}`).setLabel('Cambiar Logo').setStyle(ButtonStyle.Primary),
-                    new ButtonBuilder().setCustomId(`admin_change_abbr_${teamId}`).setLabel('Cambiar Abreviatura').setStyle(ButtonStyle.Primary),
-                    new ButtonBuilder().setCustomId(`admin_expel_manager_${teamId}`).setLabel('Destituir Mánager').setStyle(ButtonStyle.Danger).setDisabled(!team.managerId)
-                );
-                const row2 = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder().setCustomId(`admin_assign_manager_${teamId}`).setLabel('Asignar Mánager').setStyle(ButtonStyle.Success).setDisabled(!!team.managerId),
-                    new ButtonBuilder().setCustomId(`admin_manage_members_${teamId}`).setLabel('Gestionar Miembros').setStyle(ButtonStyle.Secondary)
-                );
-                await interaction.editReply({ embeds: [embed], components: [row1, row2] });
-            } else {
-                 await command.execute(interaction);
-            }
+            await command.execute(interaction);
             return;
         }
         
         if (interaction.isButton()) {
             const customId = interaction.customId;
 
+            // --- AMISTOSOS: ACEPTAR/RECHAZAR EN MD ---
             if (customId.startsWith('accept_challenge_') || customId.startsWith('reject_challenge_')) {
                 const parts = customId.split('_');
                 const panelId = parts[2];
@@ -173,7 +154,8 @@ client.on(Events.InteractionCreate, async interaction => {
                 return;
             }
 
-            if (customId.startsWith('accept_application_') || customId.startsWith('reject_application_')) {
+            // --- APLICACIONES DE JUGADOR: ACEPTAR/RECHAZAR EN MD ---
+            if(customId.startsWith('accept_application_') || customId.startsWith('reject_application_')) {
                 const applicationId = customId.split('_')[2];
                 await interaction.deferUpdate();
                 const application = await PlayerApplication.findById(applicationId).populate('teamId');
@@ -211,6 +193,7 @@ client.on(Events.InteractionCreate, async interaction => {
             const isAdmin = interaction.member.permissions.has(PermissionFlagsBits.Administrator);
             const esAprobador = isAdmin || interaction.member.roles.cache.has(process.env.APPROVER_ROLE_ID);
 
+            // --- AMISTOSOS: GESTIÓN DE PANELES Y DESAFÍOS ---
             if (customId === 'post_scheduled_panel' || customId === 'post_instant_panel' || customId === 'delete_my_panel') {
                 await interaction.deferReply({ ephemeral: true });
                 const team = await Team.findOne({ guildId: interaction.guildId, $or: [{ managerId: interaction.user.id }, { captains: interaction.user.id }] });
@@ -237,7 +220,7 @@ client.on(Events.InteractionCreate, async interaction => {
                     const timeOptions = timeSlots.map(time => ({ label: time, value: time }));
                     const selectMenu = new StringSelectMenuBuilder().setCustomId('select_available_times').setPlaceholder('Selecciona tus horarios disponibles').addOptions(timeOptions).setMinValues(1).setMaxValues(timeSlots.length);
                     await interaction.editReply({ content: 'Elige los horarios en los que tu equipo está disponible para jugar:', components: [new ActionRowBuilder().addComponents(selectMenu)] });
-                } else {
+                } else { // post_instant_panel
                     const channelId = '1396367574882717869';
                     const channel = await client.channels.fetch(channelId).catch(() => null);
                     if (!channel) return interaction.editReply({ content: 'Error: No se encontró el canal de amistosos instantáneos.' });
