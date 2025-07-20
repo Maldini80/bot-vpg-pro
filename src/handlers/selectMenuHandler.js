@@ -9,7 +9,7 @@ module.exports = async (client, interaction) => {
     const selectedValue = values[0];
 
     // ======================================================================
-    // == SECCIÓN 1: MENÚS QUE ABREN MODALES (RESPUESTA INSTANTÁNEA)      ==
+    // SECCIÓN 1: MENÚS QUE ABREN MODALES (RESPUESTA INSTANTÁNEA)
     // ======================================================================
 
     if (customId === 'apply_to_team_select') {
@@ -20,8 +20,19 @@ module.exports = async (client, interaction) => {
         return interaction.showModal(modal);
     }
     
+    // Nuevo flujo de registro: después de seleccionar la liga, se muestra el modal.
+    if (customId === 'select_league_for_registration') {
+        const leagueName = selectedValue;
+        const modal = new ModalBuilder().setCustomId(`manager_request_modal_${leagueName}`).setTitle(`Registrar Equipo en ${leagueName}`);
+        const vpgUsernameInput = new TextInputBuilder().setCustomId('vpgUsername').setLabel("Tu nombre de usuario en VPG").setStyle(TextInputStyle.Short).setRequired(true);
+        const teamNameInput = new TextInputBuilder().setCustomId('teamName').setLabel("Nombre de tu equipo").setStyle(TextInputStyle.Short).setRequired(true);
+        const teamAbbrInput = new TextInputBuilder().setCustomId('teamAbbr').setLabel("Abreviatura (3 letras)").setStyle(TextInputStyle.Short).setRequired(true).setMinLength(3).setMaxLength(3);
+        modal.addComponents(new ActionRowBuilder().addComponents(vpgUsernameInput), new ActionRowBuilder().addComponents(teamNameInput), new ActionRowBuilder().addComponents(teamAbbrInput));
+        return interaction.showModal(modal);
+    }
+
     // ======================================================================
-    // == SECCIÓN 2: MENÚS QUE ACTUALIZAN UN MENSAJE (USAN DEFERUPDATE)   ==
+    // SECCIÓN 2: MENÚS QUE ACTUALIZAN UN MENSAJE (USAN DEFERUPDATE)
     // ======================================================================
 
     if (customId === 'admin_select_team_to_manage' || customId === 'roster_management_menu') {
@@ -70,7 +81,7 @@ module.exports = async (client, interaction) => {
     }
 
     // ======================================================================
-    // == SECCIÓN 3: MENÚS QUE ENVÍAN RESPUESTAS PRIVADAS (DEFERREPLY)    ==
+    // SECCIÓN 3: MENÚS QUE ENVÍAN RESPUESTAS PRIVADAS (DEFERREPLY)
     // ======================================================================
 
     await interaction.deferReply({ ephemeral: true });
