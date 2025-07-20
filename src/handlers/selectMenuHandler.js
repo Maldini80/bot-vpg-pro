@@ -14,40 +14,21 @@ async function getOrCreateWebhook(channel, client) {
     return webhook;
 }
 
-async function buildPanel(panelData) {
-    const { team, postedById, timeSlots, _id, allowedLeagues } = panelData;
-    
-    let description = `**Buscando rival para jugar AHORA**\n\n*Contacto:* <@${postedById}>`;
-    if (panelData.panelType === 'SCHEDULED') {
-        description = `**Buscando rivales para los siguientes horarios:**\n\n*Contacto:* <@${postedById}>`;
-    }
-    if (allowedLeagues && allowedLeagues.length > 0) {
-        description += `\n*Filtro de Liga(s): ${allowedLeagues.join(', ')}*`;
+// MODIFICADO: La función ahora acepta el array de ligas para mostrarlo en el panel.
+async function buildScheduledPanel(team, userId, timeSlotsData, panelId, leagues = []) {
+    let description = `**Buscando rivales para los siguientes horarios:**\n\n*Contacto:* <@${userId}>`;
+    if (leagues && leagues.length > 0) {
+        description += `\n*Filtro de liga:* \`${leagues.join(', ')}\``;
     }
 
-    const embed = new EmbedBuilder()
-        .setColor(timeSlots.some(ts => ts.status === 'AVAILABLE') ? 'Green' : '#5865F2')
-        .setAuthor({ name: team.name, iconURL: team.logoUrl })
-        .setDescription(description);
-
+    const embed = new EmbedBuilder().setColor('#5865F2').setDescription(description);
     const components = [];
     let currentRow = new ActionRowBuilder();
 
-    for (const slot of timeSlots) {
-        let button;
-        if (slot.status === 'AVAILABLE') {
-            button = new ButtonBuilder().setCustomId(`challenge_${_id}_${slot.time}`).setLabel(`⚔️ Desafiar (${slot.time})`).setStyle(ButtonStyle.Success);
-        } else { // CONFIRMED
-            embed.addFields({ name: `🕕 ${slot.time}`, value: `**VS ${slot.challengerTeamName}**`, inline: true });
-            button = new ButtonBuilder().setCustomId(`contact_${postedById}_${slot.challengerUserId}`).setLabel(`MDs (${slot.time})`).setStyle(ButtonStyle.Primary);
-            const cancelButton = new ButtonBuilder().setCustomId(`cancel_match_${_id}_${slot.time}`).setLabel('Cancelar').setStyle(ButtonStyle.Danger);
-            if (currentRow.components.length > 3) {
-                components.push(currentRow);
-                currentRow = new ActionRowBuilder();
-            }
-            currentRow.addComponents(button, cancelButton);
-            continue; // Evita añadir el botón de desafío
-        }
+    for (const slot of timeSlotsData) {
+        let fieldText = `✅ **DISPONIBLE**`;
+        let button = new ButtonBuilder().setCustomId(`challenge_slot_${panelId}_${slot.time}`).setLabel(`⚔️ ${slot.time}`).setStyle(ButtonStyle.Success);
+        embed.addFields({ name: `🕕 ${slot.time}`, value: fieldText, inline: true });
         
         if (currentRow.components.length >= 5) {
             components.push(currentRow);
@@ -55,19 +36,20 @@ async function buildPanel(panelData) {
         }
         currentRow.addComponents(button);
     }
-
+    
     if (currentRow.components.length > 0) {
         components.push(currentRow);
     }
-    
-    return { embeds: [embed], components };
+    return { embed, components };
 }
 
 module.exports = async (client, interaction) => {
     const { customId, values, guild, user } = interaction;
     const selectedValue = values[0];
 
-    // --- Menús que abren modales ---
+    // ======================================================================
+    // Lógica para aplicar a un equipo (Sin cambios)
+    // ======================================================================
     if (customId === 'apply_to_team_select') {
         const teamId = selectedValue;
         const modal = new ModalBuilder().setCustomId(`application_modal_${teamId}`).setTitle('Aplicar a Equipo');
@@ -76,6 +58,9 @@ module.exports = async (client, interaction) => {
         return interaction.showModal(modal);
     }
     
+    // ======================================================================
+    // Lógica para registrar un equipo (Sin cambios)
+    // ======================================================================
     if (customId === 'select_league_for_registration') {
         await interaction.deferUpdate();
         const leagueName = selectedValue;
@@ -87,7 +72,30 @@ module.exports = async (client, interaction) => {
         return interaction.showModal(modal);
     }
 
-    // --- Menús que actualizan un mensaje ---
+    // ======================================================================
+    // AÑADIDO: Lógica para el nuevo menú de filtro de ligas de amistosos
+    // ======================================================================
+    if (customId.startsWith('select_league_filter_')) {
+        await interaction.deferUpdate();
+        const panelType = customId.split('_')[3];
+        const selectedLeagues = values;
+        
+        const leaguesString = selectedLeagues.join(',');
+        const continueButton = new ButtonBuilder()
+            .setCustomId(`continue_panel_creation_${panelType}_${leaguesString}`)
+            .setLabel('Continuar con la Creación del Panel')
+            .setStyle(ButtonStyle.Success);
+            
+        await interaction.editReply({
+            content: `Has seleccionado las ligas: **${selectedLeagues.join(', ')}**. Pulsa continuar.`,
+            components: [new ActionRowBuilder().addComponents(continueButton)]
+        });
+        return;
+    }
+
+    // ======================================================================
+    // Lógica de gestión de administradores (Sin cambios)
+    // ======================================================================
     if (customId === 'admin_select_team_to_manage' || customId === 'roster_management_menu' || customId === 'admin_change_league_menu') {
         await interaction.deferUpdate();
         
@@ -136,66 +144,72 @@ module.exports = async (client, interaction) => {
         }
         return;
     }
-    
-    // --- Lógica para el filtro de ligas en amistosos ---
-    if (customId.startsWith('friendly_league_filter')) {
-        await interaction.deferReply({ ephemeral: true });
-        const panelType = customId.split('_')[3];
-        const allowedLeagues = values;
-        
-        const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
-        if (!team) return interaction.editReply({ content: 'No se encontró tu equipo.' });
 
-        const channelId = panelType === 'SCHEDULED' ? '1396284750850949142' : '1396367574882717869';
-        const channel = await client.channels.fetch(channelId).catch(() => null);
-        if (!channel) return interaction.editReply({ content: `Error: No se encontró el canal de amistosos para ${panelType}.` });
-
-        if (panelType === 'SCHEDULED') {
-            const timeSlots = ['22:00', '22:20', '22:40', '23:00', '23:20', '23:40'];
-            const timeOptions = timeSlots.map(time => ({ label: time, value: time }));
-            const timeMenu = new StringSelectMenuBuilder().setCustomId(`select_available_times_${allowedLeagues.join(',')}`).setPlaceholder('Selecciona tus horarios disponibles').addOptions(timeOptions).setMinValues(1).setMaxValues(timeSlots.length);
-            return interaction.editReply({ content: `Filtro de liga(s) aplicado: **${allowedLeagues.join(', ')}**. Ahora, elige los horarios:`, components: [new ActionRowBuilder().addComponents(timeMenu)] });
-        } else { // INSTANT
-            const webhook = await getOrCreateWebhook(channel, client);
-            const panelData = { team, postedById: user.id, _id: new mongoose.Types.ObjectId(), allowedLeagues, panelType, timeSlots: [{ time: 'INSTANT', status: 'AVAILABLE' }] };
-            const { embeds, components } = await buildPanel(panelData);
-            const message = await webhook.send({ username: team.name, avatarURL: team.logoUrl, embeds, components });
-            const panel = new AvailabilityPanel({ guildId: guild.id, channelId, messageId: message.id, teamId: team._id, postedById: user.id, panelType, allowedLeagues, timeSlots: panelData.timeSlots });
-            await panel.save();
-            return interaction.editReply({ content: '✅ Tu panel de amistoso instantáneo con filtro de liga ha sido publicado.' });
-        }
-    }
-
-    // --- Menú de Amistosos Programados ---
+    // ======================================================================
+    // MODIFICADO: Lógica para la selección de horarios de amistosos
+    // ======================================================================
     if (customId.startsWith('select_available_times')) {
         await interaction.deferReply({ ephemeral: true });
-        const allowedLeagues = customId.substring('select_available_times_'.length).split(',');
+        
+        const parts = customId.split('_');
+        // Se extraen las ligas (si existen) del customId
+        const leaguesString = parts.slice(3).join('_');
+        const leagues = leaguesString === 'all' || !leaguesString ? [] : leaguesString.split(',');
+
         const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
         if (!team) return interaction.editReply({ content: 'No se encontró tu equipo.' });
-        const channelId = '1396284750850949142';
+        
+        const channelId = process.env.SCHEDULED_FRIENDLY_CHANNEL_ID;
         const channel = await client.channels.fetch(channelId).catch(() => null);
         if (!channel) return interaction.editReply({ content: 'Error: No se encontró el canal de amistosos programados.' });
 
         const timeSlots = values.map(time => ({ time, status: 'AVAILABLE' }));
-        const webhook = await getOrCreateWebhook(channel, client);
-        const panelData = { team, postedById: user.id, _id: new mongoose.Types.ObjectId(), allowedLeagues, panelType: 'SCHEDULED', timeSlots };
-        const { embeds, components } = await buildPanel(panelData);
-        const message = await webhook.send({ username: team.name, avatarURL: team.logoUrl, embeds, components });
         
-        const panel = new AvailabilityPanel({ guildId: guild.id, channelId, messageId: message.id, teamId: team._id, postedById: user.id, panelType: 'SCHEDULED', allowedLeagues, timeSlots });
+        const panel = new AvailabilityPanel({ 
+            guildId: guild.id, channelId, messageId: 'temp', teamId: team._id, postedById: user.id, panelType: 'SCHEDULED', 
+            leagues: leagues, // Se guardan las ligas en la BD
+            timeSlots 
+        });
+        
+        // La función ahora pasa el array de ligas para que se muestre en el panel
+        const panelContent = await buildScheduledPanel(team, user.id, timeSlots, panel._id, leagues);
+        const webhook = await getOrCreateWebhook(channel, client);
+        const message = await webhook.send({ username: team.name, avatarURL: team.logoUrl, embeds: [panelContent.embed], components: panelContent.components });
+        
+        panel.messageId = message.id;
         await panel.save();
         
         return interaction.editReply({ content: '✅ Tu panel de amistosos programados ha sido publicado.' });
     }
     
-    // --- Menús con deferReply ---
+    // ======================================================================
+    // El resto de la lógica del fichero (Sin cambios)
+    // ======================================================================
     await interaction.deferReply({ ephemeral: true });
 
     if (customId === 'view_team_roster_select') {
         const team = await Team.findById(selectedValue).lean();
         if (!team) return interaction.editReply({ content: 'Este equipo ya no existe.' });
-        // (Lógica de ver plantilla que ya funcionaba)
-        return interaction.editReply({ content: `Mostrando plantilla de ${team.name}` });
+        const allMemberIds = [team.managerId, ...team.captains, ...team.players].filter(id => id);
+        const memberProfiles = await VPGUser.find({ discordId: { $in: allMemberIds } }).lean();
+        const memberMap = new Map(memberProfiles.map(p => [p.discordId, p]));
+        let rosterString = '';
+        const fetchMemberInfo = async (ids, roleName) => {
+            if (!ids || ids.length === 0) return;
+            rosterString += `\n**${roleName}**\n`;
+            for (const memberId of ids) {
+                try {
+                   const memberData = await guild.members.fetch(memberId);
+                   const vpgUser = memberMap.get(memberId)?.vpgUsername || 'N/A';
+                   rosterString += `> ${memberData.user.username} (${vpgUser})\n`;
+                } catch (error) { rosterString += `> *Usuario no encontrado (ID: ${memberId})*\n`; }
+            }
+        };
+        await fetchMemberInfo([team.managerId].filter(Boolean), '👑 Mánager');
+        await fetchMemberInfo(team.captains, '🛡️ Capitanes');
+        await fetchMemberInfo(team.players, 'Jugadores');
+        const embed = new EmbedBuilder().setTitle(`Plantilla de ${team.name} (${team.abbreviation})`).setDescription(rosterString.trim() || 'Este equipo no tiene miembros.').setColor('#3498db').setThumbnail(team.logoUrl).setFooter({ text: `Liga: ${team.league}` });
+        return interaction.editReply({ embeds: [embed] });
     }
     
     if (customId === 'delete_league_select_menu') {
