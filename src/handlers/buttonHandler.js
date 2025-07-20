@@ -500,7 +500,6 @@ const handler = async (client, interaction) => {
             const channel = await client.channels.fetch(channelId).catch(()=>null);
             if (!channel) return interaction.editReply({ content: 'Error: No se encontró el canal de amistosos instantáneos.' });
             
-            // CORRECCIÓN: Usar el webhook para enviar el mensaje inicial y evitar el bug "atascado".
             const webhook = await getOrCreateWebhook(channel, client);
             const message = await webhook.send({ content: "Creando panel...", username: team.name, avatarURL: team.logoUrl });
 
