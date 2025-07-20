@@ -6,91 +6,97 @@ const PlayerApplication = require('../models/playerApplication.js');
 const VPGUser = require('../models/user.js');
 
 module.exports = async (client, interaction) => {
-    const { customId, fields, guild, user, member } = interaction;
+    const { customId, fields, guild, user, member, message } = interaction;
     
     await interaction.deferReply({ ephemeral: true });
 
-    // --- Lógica de Aprobación Final de Equipo ---
     if (customId.startsWith('approve_modal_')) {
         const esAprobador = member.permissions.has(PermissionFlagsBits.Administrator) || member.roles.cache.has(process.env.APPROVER_ROLE_ID);
         if (!esAprobador) return interaction.editReply({ content: 'No tienes permiso.' });
 
         try {
-            // 1. Extraer datos
             const parts = customId.split('_');
             const applicantId = parts[2];
-            const originalTeamName = parts.slice(3).join(' '); // No necesitamos el nombre del modal, lo leemos del embed original por seguridad.
             const teamLogoUrl = fields.getTextInputValue('teamLogoUrl');
-
-            // 2. Leer datos del embed original en el canal de aprobaciones
-            const originalMessage = interaction.message;
-            if (!originalMessage || !originalMessage.embeds[0]) {
-                return interaction.editReply({ content: 'Error: No se pudo encontrar la solicitud original.' });
-            }
+            
+            const originalMessage = message; // El mensaje original de la solicitud
+            if (!originalMessage || !originalMessage.embeds[0]) return interaction.editReply({ content: 'Error: No se pudo encontrar la solicitud original.' });
+            
             const embed = originalMessage.embeds[0];
             const teamName = embed.fields.find(f => f.name === 'Nombre del Equipo').value;
             const teamAbbr = embed.fields.find(f => f.name === 'Abreviatura').value;
             const vpgUsername = embed.fields.find(f => f.name === 'Usuario VPG').value;
 
-            // 3. Validaciones
             const applicantMember = await guild.members.fetch(applicantId).catch(() => null);
-            if (!applicantMember) {
-                return interaction.editReply({ content: `Error: El usuario solicitante (ID: ${applicantId}) ya no está en el servidor.` });
-            }
+            if (!applicantMember) return interaction.editReply({ content: `Error: El usuario solicitante ya no está en el servidor.` });
+            
             const existingTeam = await Team.findOne({ $or: [{ name: teamName }, { managerId: applicantId }], guildId: guild.id });
-            if (existingTeam) {
-                return interaction.editReply({ content: `Error: Ya existe un equipo con el nombre "${teamName}" o el usuario ya es mánager de otro equipo.` });
-            }
+            if (existingTeam) return interaction.editReply({ content: `Error: Ya existe un equipo con ese nombre o el usuario ya es mánager.` });
 
-            // 4. Crear el equipo en la base de datos
-            const newTeam = new Team({
-                name: teamName,
-                abbreviation: teamAbbr,
-                guildId: guild.id,
-                league: 'Por asignar', // O puedes añadir un selector de liga
-                logoUrl: teamLogoUrl,
-                managerId: applicantId,
-                captains: [],
-                players: [],
-                recruitmentOpen: true
-            });
+            const newTeam = new Team({ name: teamName, abbreviation: teamAbbr, guildId: guild.id, league: 'Por asignar', logoUrl: teamLogoUrl, managerId: applicantId });
             await newTeam.save();
 
-            // 5. Actualizar roles y apodo del nuevo mánager
             await applicantMember.roles.add(process.env.MANAGER_ROLE_ID);
-            await applicantMember.roles.add(process.env.PLAYER_ROLE_ID); // Los mánagers suelen ser también jugadores
-            await applicantMember.setNickname(`|MG| ${teamAbbr} ${applicantMember.user.username}`).catch(err => console.log(`No se pudo cambiar el apodo de ${applicantMember.user.tag}: ${err.message}`));
-
-            // 6. Deshabilitar botones en el mensaje de solicitud
-            const disabledRow = new ActionRowBuilder().addComponents(
-                ButtonBuilder.from(originalMessage.components[0].components[0]).setDisabled(true).setLabel('Aprobado'),
-                ButtonBuilder.from(originalMessage.components[0].components[1]).setDisabled(true)
-            );
+            await applicantMember.roles.add(process.env.PLAYER_ROLE_ID);
+            await applicantMember.setNickname(`|MG| ${teamAbbr} ${applicantMember.user.username}`).catch(err => console.log(`No se pudo cambiar apodo: ${err.message}`));
+            
+            const disabledRow = new ActionRowBuilder().addComponents(ButtonBuilder.from(originalMessage.components[0].components[0]).setDisabled(true).setLabel('Aprobado'), ButtonBuilder.from(originalMessage.components[0].components[1]).setDisabled(true));
             await originalMessage.edit({ components: [disabledRow] });
 
-            // 7. Notificar
-            await applicantMember.send(`¡Felicidades! Tu solicitud para el equipo **${teamName}** ha sido **aprobada**. Ahora eres el Mánager.`).catch(() => {});
-            return interaction.editReply({ content: `✅ ¡Éxito! El equipo **${teamName}** ha sido creado y ${applicantMember.user.tag} ha sido asignado como Mánager.` });
+            await applicantMember.send(`¡Felicidades! Tu solicitud para el equipo **${teamName}** ha sido **aprobada**.`).catch(() => {});
+            return interaction.editReply({ content: `✅ Equipo **${teamName}** creado. ${applicantMember.user.tag} es ahora Mánager.` });
 
         } catch (error) {
-            console.error("Error durante la aprobación final del equipo:", error);
-            return interaction.editReply({ content: 'Ocurrió un error inesperado al procesar la aprobación.' });
+            console.error("Error en aprobación de equipo:", error);
+            return interaction.editReply({ content: 'Ocurrió un error inesperado.' });
         }
     }
-    
+
+    if (customId.startsWith('edit_data_modal_')) {
+        const teamId = customId.split('_')[3];
+        const team = await Team.findById(teamId);
+        if (!team) return interaction.editReply({ content: 'El equipo ya no existe.' });
+
+        const isManager = team.managerId === user.id;
+        const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
+
+        if (!isManager && !isAdmin) return interaction.editReply({ content: 'No tienes permiso para editar este equipo.' });
+
+        const newName = fields.getTextInputValue('newName') || team.name;
+        const newAbbr = fields.getTextInputValue('newAbbr')?.toUpperCase() || team.abbreviation;
+        const newLogo = fields.getTextInputValue('newLogo') || team.logoUrl;
+
+        if (isManager && !isAdmin) {
+            const approvalChannelId = process.env.APPROVAL_CHANNEL_ID;
+            if (!approvalChannelId) return interaction.editReply({ content: 'Error: Canal de aprobaciones no configurado.' });
+            const approvalChannel = await client.channels.fetch(approvalChannelId);
+            
+            const embed = new EmbedBuilder().setTitle('✏️ Solicitud de Cambio de Datos').setAuthor({ name: user.tag, iconURL: user.displayAvatarURL() }).addFields({ name: 'Equipo', value: team.name, inline: true }, { name: 'Solicitante', value: `<@${user.id}>`, inline: true }, { name: 'Nuevo Nombre', value: newName, inline: false }, { name: 'Nueva Abreviatura', value: newAbbr, inline: false }, { name: 'Nuevo Logo', value: newLogo, inline: false }).setColor('Blue');
+            
+            await approvalChannel.send({ embeds: [embed] });
+            return interaction.editReply({ content: '✅ Tu solicitud de cambio ha sido enviada para aprobación.' });
+        } else {
+            team.name = newName;
+            team.abbreviation = newAbbr;
+            team.logoUrl = newLogo;
+            await team.save();
+            return interaction.editReply({ content: `✅ Los datos del equipo **${team.name}** han sido actualizados.` });
+        }
+    }
+
     if (customId === 'manager_request_modal') {
         const vpgUsername = fields.getTextInputValue('vpgUsername');
         const teamName = fields.getTextInputValue('teamName');
         const teamAbbr = fields.getTextInputValue('teamAbbr').toUpperCase();
         const approvalChannelId = process.env.APPROVAL_CHANNEL_ID;
-        if (!approvalChannelId) return interaction.editReply({ content: 'Error: El canal de aprobaciones no está configurado. Contacta a un administrador.' });
+        if (!approvalChannelId) return interaction.editReply({ content: 'Error: El canal de aprobaciones no está configurado.' });
         const approvalChannel = await client.channels.fetch(approvalChannelId).catch(() => null);
         if(!approvalChannel) return interaction.editReply({ content: 'Error: No se pudo encontrar el canal de aprobaciones.' });
         const normalizedTeamName = teamName.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
-        const embed = new EmbedBuilder().setTitle('📝 Nueva Solicitud de Registro de Equipo').setColor('Orange').setAuthor({ name: user.tag, iconURL: user.displayAvatarURL() }).addFields({ name: 'Solicitante', value: `<@${user.id}>`, inline: true }, { name: 'ID del Solicitante', value: `\`${user.id}\``, inline: true }, { name: 'Usuario VPG', value: vpgUsername, inline: false }, { name: 'Nombre del Equipo', value: teamName, inline: true }, { name: 'Abreviatura', value: teamAbbr, inline: true }).setTimestamp();
+        const embed = new EmbedBuilder().setTitle('📝 Nueva Solicitud de Registro').setColor('Orange').setAuthor({ name: user.tag, iconURL: user.displayAvatarURL() }).addFields({ name: 'Solicitante', value: `<@${user.id}>` }, { name: 'Usuario VPG', value: vpgUsername }, { name: 'Nombre del Equipo', value: teamName }, { name: 'Abreviatura', value: teamAbbr }).setTimestamp();
         const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`approve_request_${user.id}_${normalizedTeamName}`).setLabel('Aprobar').setStyle(ButtonStyle.Success), new ButtonBuilder().setCustomId(`reject_request_${user.id}`).setLabel('Rechazar').setStyle(ButtonStyle.Danger));
         await approvalChannel.send({ embeds: [embed], components: [row] });
-        return interaction.editReply({ content: '✅ ¡Tu solicitud ha sido enviada! Un administrador la revisará pronto.' });
+        return interaction.editReply({ content: '✅ ¡Tu solicitud ha sido enviada!' });
     }
 
     if (customId === 'create_league_modal') {
@@ -114,9 +120,9 @@ module.exports = async (client, interaction) => {
                 if (member) {
                     await member.roles.remove([process.env.MANAGER_ROLE_ID, process.env.CAPTAIN_ROLE_ID, process.env.PLAYER_ROLE_ID, process.env.MUTED_ROLE_ID]).catch(() => {});
                     if (member.id !== guild.ownerId) await member.setNickname(member.user.username).catch(() => {});
-                    await member.send(`El equipo **${team.name}** ha sido disuelto por un administrador.`).catch(() => {});
+                    await member.send(`El equipo **${team.name}** ha sido disuelto.`).catch(() => {});
                 }
-            } catch (error) { /* Ignorar si el miembro ya no está en el servidor */ }
+            } catch (error) { /* Ignorar */ }
         }
         await Team.deleteOne({ _id: teamId });
         await PlayerApplication.deleteMany({ teamId: teamId });
@@ -129,14 +135,14 @@ module.exports = async (client, interaction) => {
         const team = await Team.findById(teamId);
         if(!team || !team.recruitmentOpen) return interaction.editReply({ content: 'Este equipo ya no existe o ha cerrado su reclutamiento.' });
         const manager = await client.users.fetch(team.managerId).catch(()=>null);
-        if(!manager) return interaction.editReply({ content: 'No se pudo encontrar al mánager de este equipo.' });
+        if(!manager) return interaction.editReply({ content: 'No se pudo encontrar al mánager.' });
         const presentation = fields.getTextInputValue('presentation');
         const application = await PlayerApplication.create({ userId: user.id, teamId: teamId, presentation: presentation });
         const embed = new EmbedBuilder().setTitle(`✉️ Nueva solicitud para ${team.name}`).setAuthor({ name: user.tag, iconURL: user.displayAvatarURL() }).setDescription(presentation).setColor('Blue');
         const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`accept_application_${application._id}`).setLabel('Aceptar').setStyle(ButtonStyle.Success), new ButtonBuilder().setCustomId(`reject_application_${application._id}`).setLabel('Rechazar').setStyle(ButtonStyle.Danger));
         try {
             await manager.send({ embeds: [embed], components: [row] });
-            return interaction.editReply({ content: `✅ Tu solicitud para unirte a **${team.name}** ha sido enviada.` });
+            return interaction.editReply({ content: `✅ Tu solicitud para **${team.name}** ha sido enviada.` });
         } catch (error) {
             await PlayerApplication.findByIdAndDelete(application._id);
             return interaction.editReply({ content: `❌ No se pudo enviar la solicitud. El mánager tiene los MDs cerrados.` });
