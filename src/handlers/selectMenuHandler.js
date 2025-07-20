@@ -5,6 +5,8 @@ const VPGUser = require('../models/user.js');
 const League = require('../models/league.js');
 const AvailabilityPanel = require('../models/availabilityPanel.js');
 
+// La función 'updatePanelMessage' se mueve a buttonHandler.js para centralizarla,
+// pero mantenemos la de getOrCreateWebhook aquí por si se usa en otros menús.
 async function getOrCreateWebhook(channel, client) {
     const webhooks = await channel.fetchWebhooks();
     let webhook = webhooks.find(wh => wh.owner.id === client.user.id && wh.name.startsWith('VPG Bot'));
@@ -12,34 +14,6 @@ async function getOrCreateWebhook(channel, client) {
         webhook = await channel.createWebhook({ name: `VPG Bot Amistosos`, avatar: client.user.displayAvatarURL() });
     }
     return webhook;
-}
-
-async function buildScheduledPanel(team, userId, timeSlotsData, panelId, leagues = []) {
-    let description = `**Buscando rivales para los siguientes horarios:**\n\n*Contacto:* <@${userId}>`;
-    if (leagues && leagues.length > 0) {
-        description += `\n*Filtro de liga:* \`${leagues.join(', ')}\``;
-    }
-
-    const embed = new EmbedBuilder().setColor('#5865F2').setDescription(description);
-    const components = [];
-    let currentRow = new ActionRowBuilder();
-
-    for (const slot of timeSlotsData) {
-        let fieldText = `✅ **DISPONIBLE**`;
-        let button = new ButtonBuilder().setCustomId(`challenge_slot_${panelId}_${slot.time}`).setLabel(`⚔️ ${slot.time}`).setStyle(ButtonStyle.Success);
-        embed.addFields({ name: `🕕 ${slot.time}`, value: fieldText, inline: true });
-        
-        if (currentRow.components.length >= 5) {
-            components.push(currentRow);
-            currentRow = new ActionRowBuilder();
-        }
-        currentRow.addComponents(button);
-    }
-    
-    if (currentRow.components.length > 0) {
-        components.push(currentRow);
-    }
-    return { embed, components };
 }
 
 module.exports = async (client, interaction) => {
@@ -54,12 +28,7 @@ module.exports = async (client, interaction) => {
         return interaction.showModal(modal);
     }
     
-    // ======================================================================
-    // CORRECCIÓN APLICADA AQUÍ
-    // ======================================================================
     if (customId === 'select_league_for_registration') {
-        // CORRECCIÓN: Se elimina 'await interaction.deferUpdate();' de esta sección.
-        // La llamada a .showModal() ya es una respuesta a la interacción.
         const leagueName = selectedValue;
         const modal = new ModalBuilder().setCustomId(`manager_request_modal_${leagueName}`).setTitle(`Registrar Equipo en ${leagueName}`);
         const vpgUsernameInput = new TextInputBuilder().setCustomId('vpgUsername').setLabel("Tu nombre de usuario en VPG").setStyle(TextInputStyle.Short).setRequired(true);
@@ -74,14 +43,14 @@ module.exports = async (client, interaction) => {
         const panelType = customId.split('_')[3];
         const selectedLeagues = values;
         
-        const leaguesString = selectedLeagues.join(',');
+        const leaguesString = selectedLeagues.length > 0 ? selectedLeagues.join(',') : 'none';
         const continueButton = new ButtonBuilder()
             .setCustomId(`continue_panel_creation_${panelType}_${leaguesString}`)
             .setLabel('Continuar con la Creación del Panel')
             .setStyle(ButtonStyle.Success);
             
         await interaction.editReply({
-            content: `Has seleccionado las ligas: **${selectedLeagues.join(', ')}**. Pulsa continuar.`,
+            content: `Has seleccionado las ligas: **${selectedLeagues.join(', ') || 'Ninguna'}**. Pulsa continuar.`,
             components: [new ActionRowBuilder().addComponents(continueButton)]
         });
         return;
@@ -141,12 +110,15 @@ module.exports = async (client, interaction) => {
         
         const parts = customId.split('_');
         const leaguesString = parts.slice(3).join('_');
-        const leagues = leaguesString === 'all' || !leaguesString ? [] : leaguesString.split(',');
+        const leagues = leaguesString === 'all' || !leaguesString || leaguesString === 'none' ? [] : leaguesString.split(',');
 
         const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
         if (!team) return interaction.editReply({ content: 'No se encontró tu equipo.' });
         
+        // CORRECCIÓN: Usar la variable de entorno para el canal de amistosos programados.
         const channelId = process.env.SCHEDULED_FRIENDLY_CHANNEL_ID;
+        if (!channelId) return interaction.editReply({ content: 'Error: El ID del canal de amistosos programados no está configurado.' });
+        
         const channel = await client.channels.fetch(channelId).catch(() => null);
         if (!channel) return interaction.editReply({ content: 'Error: No se encontró el canal de amistosos programados.' });
 
@@ -158,12 +130,15 @@ module.exports = async (client, interaction) => {
             timeSlots 
         });
         
-        const panelContent = await buildScheduledPanel(team, user.id, timeSlots, panel._id, leagues);
-        const webhook = await getOrCreateWebhook(channel, client);
-        const message = await webhook.send({ username: team.name, avatarURL: team.logoUrl, embeds: [panelContent.embed], components: panelContent.components });
-        
+        const message = await channel.send({content: "Creando panel..."});
         panel.messageId = message.id;
         await panel.save();
+
+        // Se llama a la función de actualización desde el buttonHandler, que ahora está centralizada.
+        const buttonHandler = client.handlers.get('buttonHandler');
+        if (buttonHandler && typeof buttonHandler.updatePanelMessage === 'function') {
+            await buttonHandler.updatePanelMessage(client, panel._id);
+        }
         
         return interaction.editReply({ content: '✅ Tu panel de amistosos programados ha sido publicado.' });
     }
