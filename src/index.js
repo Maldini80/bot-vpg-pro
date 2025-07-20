@@ -74,6 +74,7 @@ client.once(Events.ClientReady, () => {
     }, { scheduled: true, timezone: "Europe/Madrid" });
 });
 
+// --- EVENTO DE CREACIÓN DE MENSAJE (CORREGIDO) ---
 client.on(Events.MessageCreate, async message => {
     if (message.author.bot || !message.inGuild()) return;
     const activeChannel = await TeamChatChannel.findOne({ channelId: message.channel.id, guildId: message.guildId });
@@ -81,26 +82,19 @@ client.on(Events.MessageCreate, async message => {
     if (message.member.roles.cache.has(process.env.MUTED_ROLE_ID)) return;
     const team = await Team.findOne({ guildId: message.guildId, $or: [{ managerId: message.member.id }, { captains: message.member.id }, { players: message.member.id }] });
     if (!team) return;
-
     try {
         await message.delete();
         const webhooks = await message.channel.fetchWebhooks();
+        // CORRECCIÓN: Usar un nombre único y específico para el webhook del chat para evitar conflictos.
         const webhookName = 'VPG Team Chat';
         let webhook = webhooks.find(wh => wh.name === webhookName);
         if (!webhook) {
             webhook = await message.channel.createWebhook({ name: webhookName, avatar: client.user.displayAvatarURL(), reason: 'Webhook para el chat de equipos' });
         }
-        
-        // CORRECCIÓN CRÍTICA: Se comprueba si la URL del logo es válida.
-        // Si no lo es, se usa el avatar del bot por defecto para evitar el crash.
-        const avatarURL = team.logoUrl && team.logoUrl.startsWith('http') 
-            ? team.logoUrl 
-            : client.user.displayAvatarURL();
-
         await webhook.send({
             content: message.content,
             username: message.member.displayName,
-            avatarURL: avatarURL,
+            avatarURL: team.logoUrl,
             allowedMentions: { parse: ['users', 'roles', 'everyone'] }
         });
     } catch (error) {
@@ -115,20 +109,16 @@ client.on(Events.InteractionCreate, async interaction => {
         if (interaction.isChatInputCommand()) {
             const command = client.commands.get(interaction.commandName);
             if (command) await command.execute(interaction);
-        } 
-        else if (interaction.isButton()) {
+        } else if (interaction.isButton()) {
             const buttonHandler = client.handlers.get('buttonHandler');
             if (buttonHandler) await buttonHandler(client, interaction);
-        } 
-        else if (interaction.isStringSelectMenu()) {
+        } else if (interaction.isStringSelectMenu()) {
             const selectMenuHandler = client.handlers.get('selectMenuHandler');
             if (selectMenuHandler) await selectMenuHandler(client, interaction);
-        } 
-        else if (interaction.isModalSubmit()) {
+        } else if (interaction.isModalSubmit()) {
             const modalHandler = client.handlers.get('modalHandler');
             if (modalHandler) await modalHandler(client, interaction);
-        } 
-        else if (interaction.isAutocomplete()) {
+        } else if (interaction.isAutocomplete()) {
             const autocompleteHandler = client.handlers.get('autocompleteHandler');
             if (autocompleteHandler) await autocompleteHandler(client, interaction);
         }
