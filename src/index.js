@@ -58,24 +58,11 @@ client.on(Events.MessageCreate, async message => {
 
 
 // =========================================================================================
-// === GESTIÓN DE INTERACCIONES (CON TODAS LAS NUEVAS MEJORAS) ===
+// === GESTIÓN DE INTERACCIONES (CON GESTIÓN DE LIGAS VISUAL) ===
 // =========================================================================================
 client.on(Events.InteractionCreate, async interaction => {
     try {
         if (!interaction.inGuild()) return;
-
-        // --- AUTOCOMPLETADO PARA BÚSQUEDA DE LIGAS Y MIEMBROS ---
-        if (interaction.isAutocomplete()) {
-            const commandName = interaction.commandName;
-            const focusedOption = interaction.options.getFocused(true);
-
-            if (commandName === 'admin-borrar-liga' && focusedOption.name === 'nombre_liga') {
-                const leagues = await League.find({ guildId: interaction.guildId, name: { $regex: focusedOption.value, $options: 'i' } }).limit(25);
-                await interaction.respond(
-                    leagues.map(league => ({ name: league.name, value: league.name })),
-                );
-            }
-        }
 
         if (interaction.isChatInputCommand()) {
             const command = client.commands.get(interaction.commandName);
@@ -84,10 +71,41 @@ client.on(Events.InteractionCreate, async interaction => {
         }
         
         if (interaction.isButton()) {
-            const esAprobador = interaction.member.roles.cache.has(process.env.APPROVER_ROLE_ID) || interaction.member.permissions.has(PermissionFlagsBits.Administrator);
+            const isAdmin = interaction.member.permissions.has(PermissionFlagsBits.Administrator);
             
+            // --- LÓGICA DEL BOTÓN DE CREAR LIGA ---
+            if (interaction.customId === 'admin_create_league_button') {
+                if (!isAdmin) return interaction.reply({ content: 'Solo los administradores pueden crear ligas.', ephemeral: true });
+                
+                const modal = new ModalBuilder().setCustomId('create_league_modal').setTitle('Crear Nueva Liga');
+                const leagueNameInput = new TextInputBuilder().setCustomId('leagueNameInput').setLabel("Nombre de la nueva liga").setStyle(TextInputStyle.Short).setRequired(true);
+                modal.addComponents(new ActionRowBuilder().addComponents(leagueNameInput));
+                await interaction.showModal(modal);
+            }
+
+            // --- LÓGICA DEL BOTÓN DE BORRAR LIGA ---
+            else if (interaction.customId === 'admin_delete_league_button') {
+                if (!isAdmin) return interaction.reply({ content: 'Solo los administradores pueden borrar ligas.', ephemeral: true });
+
+                const leagues = await League.find({ guildId: interaction.guildId });
+                if (leagues.length === 0) {
+                    return interaction.reply({ content: 'No hay ligas para borrar.', ephemeral: true });
+                }
+
+                const leagueOptions = leagues.map(l => ({ label: l.name, value: l.name }));
+                const selectMenu = new StringSelectMenuBuilder()
+                    .setCustomId('delete_league_select_menu')
+                    .setPlaceholder('Selecciona las ligas a eliminar')
+                    .addOptions(leagueOptions)
+                    .setMinValues(1)
+                    .setMaxValues(leagueOptions.length); // Permitir borrar varias a la vez
+
+                const row = new ActionRowBuilder().addComponents(selectMenu);
+                await interaction.reply({ content: 'Selecciona del menú las ligas que quieres borrar permanentemente:', components: [row], ephemeral: true });
+            }
+
             // --- Lógica de solicitud de Mánager ---
-            if (interaction.customId === 'request_manager_role_button') {
+            else if (interaction.customId === 'request_manager_role_button') {
                 const existingTeam = await Team.findOne({ managerId: interaction.user.id, guildId: interaction.guildId });
                 if (existingTeam) {
                     return interaction.reply({ content: `Ya eres el Mánager del equipo **${existingTeam.name}**. No puedes registrar otro.`, ephemeral: true });
@@ -176,6 +194,7 @@ client.on(Events.InteractionCreate, async interaction => {
                 );
                 await interaction.showModal(modal);
             } else if (interaction.customId.startsWith('approve_request_')) {
+                const esAprobador = interaction.member.roles.cache.has(process.env.APPROVER_ROLE_ID) || interaction.member.permissions.has(PermissionFlagsBits.Administrator);
                 if (!esAprobador) return interaction.reply({ content: 'No tienes permiso.', ephemeral: true });
                 const parts = interaction.customId.split('_');
                 const applicantId = parts[2];
@@ -185,6 +204,7 @@ client.on(Events.InteractionCreate, async interaction => {
                 modal.addComponents(new ActionRowBuilder().addComponents(teamLogoInput));
                 await interaction.showModal(modal);
             } else if (interaction.customId.startsWith('reject_request_')) {
+                const esAprobador = interaction.member.roles.cache.has(process.env.APPROVER_ROLE_ID) || interaction.member.permissions.has(PermissionFlagsBits.Administrator);
                 if (!esAprobador) return interaction.reply({ content: 'No tienes permiso.', ephemeral: true });
                 const applicantId = interaction.customId.split('_')[2];
                 const applicant = await interaction.guild.members.fetch(applicantId);
@@ -260,11 +280,20 @@ client.on(Events.InteractionCreate, async interaction => {
                 await targetMember.setNickname(targetMember.user.username).catch(err => console.error(`Fallo al resetear apodo: ${err.message}`));
                 await interaction.update({ content: `✅ **${targetMember.user.username}** ha sido expulsado del equipo.`, components: [] });
             }
-
-        } else if (interaction.isStringSelectMenu()) {
-            if (interaction.customId === 'roster_management_menu') {
+        } 
+        
+        else if (interaction.isStringSelectMenu()) {
+            if (interaction.customId === 'delete_league_select_menu') {
+                if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) return interaction.reply({ content: 'Acción no permitida.', ephemeral: true });
+                
+                const selectedLeagues = interaction.values;
+                await League.deleteMany({ guildId: interaction.guildId, name: { $in: selectedLeagues } });
+                
+                await interaction.update({ content: `✅ Ligas eliminadas con éxito: **${selectedLeagues.join(', ')}**`, components: [] });
+            }
+            else if (interaction.customId === 'roster_management_menu') {
                 const team = await Team.findOne({ guildId: interaction.guildId, $or: [{ managerId: interaction.user.id }, { captains: interaction.user.id }] });
-                if (!team) return; // Ya se gestionó el error en el botón
+                if (!team) return;
                 const isManager = team.managerId === interaction.user.id;
                 const targetId = interaction.values[0];
                 const isTargetCaptain = team.captains.includes(targetId);
@@ -275,8 +304,23 @@ client.on(Events.InteractionCreate, async interaction => {
                 if (isManager || !isTargetCaptain) row.addComponents(new ButtonBuilder().setCustomId(`kick_player_${targetId}`).setLabel('❌ Expulsar del Equipo').setStyle(ButtonStyle.Danger));
                 await interaction.reply({ content: `Gestionando a **${targetMember.user.username}**:`, components: [row], ephemeral: true });
             }
-        } else if (interaction.isModalSubmit()) {
-            if (interaction.customId === 'manager_request_modal') {
+        } 
+        
+        else if (interaction.isModalSubmit()) {
+            if (interaction.customId === 'create_league_modal') {
+                if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) return interaction.reply({ content: 'Acción no permitida.', ephemeral: true });
+                
+                const leagueName = interaction.fields.getTextInputValue('leagueNameInput');
+                const existing = await League.findOne({ name: leagueName, guildId: interaction.guildId });
+                if (existing) {
+                    return interaction.reply({ content: `La liga "${leagueName}" ya existe.`, ephemeral: true });
+                }
+
+                const newLeague = new League({ name: leagueName, guildId: interaction.guildId });
+                await newLeague.save();
+                await interaction.reply({ content: `✅ Liga "${leagueName}" creada con éxito.`, ephemeral: true });
+            }
+            else if (interaction.customId === 'manager_request_modal') {
                 const vpgUsername = interaction.fields.getTextInputValue('vpgUsername');
                 const teamName = interaction.fields.getTextInputValue('teamName');
                 const teamAbbr = interaction.fields.getTextInputValue('teamAbbr');
