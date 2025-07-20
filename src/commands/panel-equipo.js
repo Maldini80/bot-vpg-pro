@@ -12,7 +12,7 @@ module.exports = {
             .setTitle('Panel de Control de Equipo y Amistosos')
             .setDescription('Usa los botones de abajo para gestionar tu equipo y organizar partidos.')
             .setColor('#e67e22')
-            .setFooter({ text: 'Algunos botones solo son visibles para Mánagers.' });
+            .setFooter({ text: 'Algunos botones como Editar Datos y Reclutamiento son solo para Mánagers.' });
 
         // Fila 1: Gestión de Equipo
         const row1 = new ActionRowBuilder().addComponents(
@@ -26,8 +26,8 @@ module.exports = {
         const row2 = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId('post_scheduled_panel').setLabel('🗓️ Programar Amistoso').setStyle(ButtonStyle.Primary),
             new ButtonBuilder().setCustomId('post_instant_panel').setLabel('⚡ Amistoso (Ahora)').setStyle(ButtonStyle.Success),
-            new ButtonBuilder().setCustomId('delete_friendly_panel').setLabel('🗑️ Borrar Búsqueda').setStyle(ButtonStyle.Danger),
-            new ButtonBuilder().setCustomId('team_toggle_recruitment_button').setLabel('📢 Reclutamiento').setStyle(ButtonStyle.Secondary)
+            new ButtonBuilder().setCustomId('delete_friendly_panel').setLabel('🗑️ Borrar mi Búsqueda').setStyle(ButtonStyle.Danger),
+            new ButtonBuilder().setCustomId('team_toggle_recruitment_button').setLabel('📢 Reclutamiento (MG)').setStyle(ButtonStyle.Secondary)
         );
         
         await interaction.channel.send({ embeds: [embed], components: [row1, row2] });
