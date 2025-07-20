@@ -10,23 +10,23 @@ module.exports = {
     async execute(interaction) {
         const embed = new EmbedBuilder()
             .setTitle('Búsqueda de Partidos Amistosos')
-            .setDescription('¿Tu equipo está listo para competir? Publica aquí tu oferta de partido.')
-            .addFields(
-                { name: '🗓️ Programar Amistoso', value: 'Busca un rival para una hora específica.' },
-                { name: '⚡ Amistoso (Ahora)', value: 'Encuentra un oponente para jugar inmediatamente.' }
-            )
+            .setDescription('¿Tu equipo está listo para competir? Publica aquí tu panel de disponibilidad.')
             .setColor('#5865F2')
             .setFooter({ text: 'Solo los Mánagers y Capitanes pueden usar estos botones.'});
 
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
-                .setCustomId('post_scheduled_friendly')
-                .setLabel('Programar Amistoso')
+                .setCustomId('post_scheduled_panel')
+                .setLabel('🗓️ Programar Disponibilidad')
                 .setStyle(ButtonStyle.Primary),
             new ButtonBuilder()
-                .setCustomId('post_instant_friendly')
-                .setLabel('Amistoso (Ahora)')
-                .setStyle(ButtonStyle.Success)
+                .setCustomId('post_instant_panel')
+                .setLabel('⚡ Buscar Partido (Ahora)')
+                .setStyle(ButtonStyle.Success),
+            new ButtonBuilder()
+                .setCustomId('delete_my_panel')
+                .setLabel('🗑️ Borrar mi Panel')
+                .setStyle(ButtonStyle.Danger)
         );
 
         await interaction.channel.send({ embeds: [embed], components: [row] });
