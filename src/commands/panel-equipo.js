@@ -8,8 +8,8 @@ module.exports = {
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
     async execute(interaction) {
-        // CORRECCIÓN: Respondemos primero
-        await interaction.reply({ content: 'Creando el panel de equipo y amistosos...', ephemeral: true });
+        // CORRECCIÓN CLAVE: Deferir la respuesta INMEDIATAMENTE.
+        await interaction.deferReply({ ephemeral: true });
 
         const embed = new EmbedBuilder()
             .setTitle('Panel de Control de Equipo y Amistosos')
@@ -34,7 +34,7 @@ module.exports = {
         // Enviamos el panel al canal
         await interaction.channel.send({ embeds: [embed], components: [row1, row2] });
 
-        // Editamos la respuesta original para confirmar
+        // Editamos la respuesta deferida para confirmar al admin
         await interaction.editReply({ content: '✅ Panel de equipo y amistosos creado con éxito.' });
     },
 };
