@@ -7,7 +7,9 @@ const mongoose = require('mongoose');
 
 // --- CARGA DE MODELOS ---
 const Team = require('./models/team.js');
-const TeamChatChannel = require('./models/teamChatChannel.js'); // <-- El modelo para el chat automático
+const League = require('./models/league.js');
+const VPGUser = require('./models/user.js');
+const TeamChatChannel = require('./models/teamChatChannel.js');
 
 mongoose.connect(process.env.DATABASE_URL).then(() => console.log('Conectado a MongoDB.')).catch(err => console.error('Error MongoDB:', err));
 
@@ -29,69 +31,149 @@ client.once(Events.ClientReady, () => {
     console.log(`¡Listo! ${client.user.tag} está online.`);
 });
 
-// =========================================================================================
-// === NUEVA LÓGICA DE CHAT AUTOMÁTICO (CON "BORRAR PRIMERO") ===
-// =========================================================================================
+// --- LÓGICA DE CHAT AUTOMÁTICO POR CANAL ---
 client.on(Events.MessageCreate, async message => {
     if (message.author.bot || !message.inGuild()) return;
 
-    // 1. Comprobar si el CANAL está en la lista de canales activos
     const activeChannel = await TeamChatChannel.findOne({ channelId: message.channel.id, guildId: message.guildId });
-    if (!activeChannel) return; // Si el canal no está activado, no hacer nada.
+    if (!activeChannel) return;
 
-    // 2. Si el canal está activado, comprobar si el USUARIO pertenece a un equipo
     const team = await Team.findOne({ guildId: message.guildId, $or: [{ managerId: message.member.id }, { captains: message.member.id }, { players: message.member.id }] });
-    if (!team) return; // Si no es de un equipo, no hacer nada.
+    if (!team) return;
 
-    // 3. Si se cumplen las condiciones, borrar el mensaje original primero para la mejor experiencia
     try {
         await message.delete();
-    } catch (deleteError) {
-        console.error(`No se pudo borrar el mensaje original de ${message.author.tag}: ${deleteError.message}`);
-        return; // Salir si el borrado falla para evitar mensajes duplicados.
-    }
-
-    // 4. Con el canal limpio, enviar el mensaje a través del Webhook
-    try {
         const webhooks = await message.channel.fetchWebhooks();
         let webhook = webhooks.find(wh => wh.owner.id === client.user.id && wh.name.startsWith('VPG Bot'));
         if (!webhook) {
             webhook = await message.channel.createWebhook({ name: `VPG Bot - Chat`, avatar: client.user.displayAvatarURL() });
         }
-
-        await webhook.send({
-            content: message.content,
-            username: message.member.displayName,
-            avatarURL: team.logoUrl,
-            allowedMentions: { parse: ['users', 'roles', 'everyone'] }
-        });
+        await webhook.send({ content: message.content, username: message.member.displayName, avatarURL: team.logoUrl, allowedMentions: { parse: ['users', 'roles', 'everyone'] } });
     } catch (error) {
-        console.error(`Fallo al enviar el webhook después de borrar: ${error.message}`);
-        message.author.send(`Tu mensaje en #${message.channel.name} no se pudo enviar. Por favor, inténtalo de nuevo.`).catch(() => {});
+        if (error.code !== 10008) {
+            console.error(`Error en chat de equipo:`, error.message);
+        }
     }
 });
 
 
 // =========================================================================================
-// === GESTIÓN DE INTERACCIONES (SE MANTIENE IGUAL PARA EL RESTO DE FUNCIONES) ===
+// === GESTIÓN DE INTERACCIONES (CON TODAS LAS NUEVAS MEJORAS) ===
 // =========================================================================================
 client.on(Events.InteractionCreate, async interaction => {
     try {
         if (!interaction.inGuild()) return;
 
+        // --- AUTOCOMPLETADO PARA BÚSQUEDA DE LIGAS Y MIEMBROS ---
+        if (interaction.isAutocomplete()) {
+            const commandName = interaction.commandName;
+            const focusedOption = interaction.options.getFocused(true);
+
+            if (commandName === 'admin-borrar-liga' && focusedOption.name === 'nombre_liga') {
+                const leagues = await League.find({ guildId: interaction.guildId, name: { $regex: focusedOption.value, $options: 'i' } }).limit(25);
+                await interaction.respond(
+                    leagues.map(league => ({ name: league.name, value: league.name })),
+                );
+            }
+        }
+
         if (interaction.isChatInputCommand()) {
             const command = client.commands.get(interaction.commandName);
             if (command) await command.execute(interaction);
-        } else if (interaction.isButton()) {
-            // El resto de la lógica de tus botones va aquí...
+            return;
+        }
+        
+        if (interaction.isButton()) {
             const esAprobador = interaction.member.roles.cache.has(process.env.APPROVER_ROLE_ID) || interaction.member.permissions.has(PermissionFlagsBits.Administrator);
             
+            // --- Lógica de solicitud de Mánager ---
             if (interaction.customId === 'request_manager_role_button') {
+                const existingTeam = await Team.findOne({ managerId: interaction.user.id, guildId: interaction.guildId });
+                if (existingTeam) {
+                    return interaction.reply({ content: `Ya eres el Mánager del equipo **${existingTeam.name}**. No puedes registrar otro.`, ephemeral: true });
+                }
+
+                const leagues = await League.find({ guildId: interaction.guildId });
+                if (leagues.length === 0) {
+                    return interaction.reply({ content: 'No hay ligas registradas en este momento. Por favor, contacta a un administrador.', ephemeral: true });
+                }
+                const leagueOptions = leagues.map(l => ({ label: l.name, value: l.name }));
+
                 const modal = new ModalBuilder().setCustomId('manager_request_modal').setTitle('Formulario de Solicitud de Mánager');
                 const vpgUsernameInput = new TextInputBuilder().setCustomId('vpgUsername').setLabel("Tu nombre de usuario en VPG").setStyle(TextInputStyle.Short).setRequired(true);
                 const teamNameInput = new TextInputBuilder().setCustomId('teamName').setLabel("Nombre de tu equipo en VPG").setStyle(TextInputStyle.Short).setRequired(true);
-                const leagueNameInput = new TextInputBuilder().setCustomId('leagueName').setLabel("Liga de VPG en la que compites").setStyle(TextInputStyle.Short).setRequired(true);
-                modal.addComponents(new ActionRowBuilder().addComponents(vpgUsernameInput), new ActionRowBuilder().addComponents(teamNameInput), new ActionRowBuilder().addComponents(leagueNameInput));
+                const teamAbbrInput = new TextInputBuilder().setCustomId('teamAbbr').setLabel("Abreviatura del equipo (3-4 letras)").setStyle(TextInputStyle.Short).setRequired(true).setMinLength(3).setMaxLength(4);
+                
+                const leagueSelect = new StringSelectMenuBuilder()
+                    .setCustomId('leagueSelect')
+                    .setPlaceholder('Selecciona la liga en la que compites')
+                    .addOptions(leagueOptions);
+
+                modal.addComponents(
+                    new ActionRowBuilder().addComponents(vpgUsernameInput),
+                    new ActionRowBuilder().addComponents(teamNameInput),
+                    new ActionRowBuilder().addComponents(teamAbbrInput),
+                    new ActionRowBuilder().addComponents(leagueSelect)
+                );
+                await interaction.showModal(modal);
+
+            // --- Botón para abandonar equipo ---
+            } else if (interaction.customId === 'leave_team_button') {
+                const team = await Team.findOne({ guildId: interaction.guildId, $or: [{ managerId: interaction.user.id }, { captains: interaction.user.id }, { players: interaction.user.id }] });
+
+                if (!team) {
+                    return interaction.reply({ content: 'No perteneces a ningún equipo para poder abandonarlo.', ephemeral: true });
+                }
+                if (team.managerId === interaction.user.id) {
+                    return interaction.reply({ content: 'Los Mánagers no pueden abandonar su equipo. Debes disolverlo o transferirlo (función futura).', ephemeral: true });
+                }
+                
+                team.players = team.players.filter(p => p !== interaction.user.id);
+                team.captains = team.captains.filter(c => c !== interaction.user.id);
+                await team.save();
+
+                await interaction.member.roles.remove([process.env.PLAYER_ROLE_ID, process.env.CAPTAIN_ROLE_ID]).catch(() => {});
+                
+                await interaction.reply({ content: `Has abandonado el equipo **${team.name}**.`, ephemeral: true });
+                
+                const manager = await client.users.fetch(team.managerId).catch(() => null);
+                if (manager) {
+                    await manager.send(`El jugador **${interaction.user.tag}** ha abandonado tu equipo.`);
+                }
+            
+            // --- Aceptar invitación muestra un formulario ---
+            } else if (interaction.customId.startsWith('accept_invite_')) {
+                const teamId = interaction.customId.split('_')[2];
+                const team = await Team.findById(teamId);
+                if (!team) return interaction.reply({ content: 'Este equipo ya no existe.', ephemeral: true });
+
+                const existingTeamMembership = await Team.findOne({ guildId: interaction.guildId, $or: [{ players: interaction.user.id }, { captains: interaction.user.id }] });
+                if (existingTeamMembership) {
+                    existingTeamMembership.players = existingTeamMembership.players.filter(p => p !== interaction.user.id);
+                    existingTeamMembership.captains = existingTeamMembership.captains.filter(c => c !== interaction.user.id);
+                    await existingTeamMembership.save();
+                }
+
+                const modal = new ModalBuilder().setCustomId(`player_join_modal_${teamId}`).setTitle(`Únete a ${team.name}`);
+                const vpgUsernameInput = new TextInputBuilder().setCustomId('vpgUsername').setLabel("Tu nombre de usuario en VPG").setStyle(TextInputStyle.Short).setRequired(true);
+                
+                const positionSelect = new StringSelectMenuBuilder()
+                    .setCustomId('positionSelect')
+                    .setPlaceholder('Selecciona tu posición principal')
+                    .addOptions([
+                        { label: 'Portero (GK)', value: 'GK' },
+                        { label: 'Defensa Central (DFC/CB)', value: 'DFC' },
+                        { label: 'Carrilero (CARR/RB/LB)', value: 'CARR' },
+                        { label: 'Medio Defensivo (MCD/CDM)', value: 'MCD' },
+                        { label: 'Mediocentro (MC/CM)', value: 'MC' },
+                        { label: 'Medio Ofensivo (MCO/CAM)', value: 'MCO' },
+                        { label: 'Delantero Centro (DC/ST)', value: 'DC' },
+                    ]);
+                
+                modal.addComponents(
+                    new ActionRowBuilder().addComponents(vpgUsernameInput),
+                    new ActionRowBuilder().addComponents(positionSelect)
+                );
                 await interaction.showModal(modal);
             } else if (interaction.customId.startsWith('approve_request_')) {
                 if (!esAprobador) return interaction.reply({ content: 'No tienes permiso.', ephemeral: true });
@@ -110,23 +192,6 @@ client.on(Events.InteractionCreate, async interaction => {
                 await interaction.message.edit({ components: [disabledRow] });
                 await interaction.reply({ content: `La solicitud de **${applicant.user.tag}** ha sido rechazada.`, ephemeral: false });
                 await applicant.send(`Tu solicitud para registrar un equipo ha sido rechazada.`).catch(() => {});
-            } else if (interaction.customId.startsWith('accept_invite_')) {
-                const teamId = interaction.customId.split('_')[2];
-                const team = await Team.findById(teamId);
-                if (!team) return interaction.reply({ content: 'Este equipo ya no existe.', ephemeral: true });
-                const isAlreadyInTeam = await Team.findOne({ guildId: interaction.guildId, $or: [{ managerId: interaction.user.id }, { captains: interaction.user.id }, { players: interaction.user.id }] });
-                if (isAlreadyInTeam) {
-                    await interaction.message.delete();
-                    return interaction.reply({ content: `Ya perteneces al equipo **${isAlreadyInTeam.name}**.`, ephemeral: true });
-                }
-                team.players.push(interaction.user.id);
-                await team.save();
-                await interaction.member.roles.add(process.env.PLAYER_ROLE_ID);
-                await interaction.member.setNickname(interaction.user.username).catch(err => console.error(`Fallo al cambiar apodo de Jugador: ${err.message}`));
-                await interaction.reply({ content: `¡Felicidades! Te has unido a **${team.name}**.`, ephemeral: true });
-                const manager = await client.users.fetch(team.managerId);
-                await manager.send(`✅ **${interaction.user.username}** ha aceptado tu invitación a **${team.name}**.`);
-                await interaction.message.edit({ components: [] });
             } else if (interaction.customId.startsWith('reject_invite_')) {
                 const teamId = interaction.customId.split('_')[2];
                 const team = await Team.findById(teamId);
@@ -197,9 +262,9 @@ client.on(Events.InteractionCreate, async interaction => {
             }
 
         } else if (interaction.isStringSelectMenu()) {
-            // Lógica de menús...
             if (interaction.customId === 'roster_management_menu') {
                 const team = await Team.findOne({ guildId: interaction.guildId, $or: [{ managerId: interaction.user.id }, { captains: interaction.user.id }] });
+                if (!team) return; // Ya se gestionó el error en el botón
                 const isManager = team.managerId === interaction.user.id;
                 const targetId = interaction.values[0];
                 const isTargetCaptain = team.captains.includes(targetId);
@@ -211,48 +276,92 @@ client.on(Events.InteractionCreate, async interaction => {
                 await interaction.reply({ content: `Gestionando a **${targetMember.user.username}**:`, components: [row], ephemeral: true });
             }
         } else if (interaction.isModalSubmit()) {
-            // Lógica de modales...
             if (interaction.customId === 'manager_request_modal') {
                 const vpgUsername = interaction.fields.getTextInputValue('vpgUsername');
                 const teamName = interaction.fields.getTextInputValue('teamName');
-                const leagueName = interaction.fields.getTextInputValue('leagueName');
+                const teamAbbr = interaction.fields.getTextInputValue('teamAbbr');
+                const leagueName = interaction.fields.getTextInputValue('leagueSelect');
+
                 const approvalChannel = await client.channels.fetch(process.env.APPROVAL_CHANNEL_ID);
                 if (!approvalChannel) return interaction.reply({ content: 'Error: Canal de aprobaciones no encontrado.', ephemeral: true });
-                const embed = new EmbedBuilder().setTitle('Nueva Solicitud de Mánager').setColor('#f1c40f').addFields({ name: 'Solicitante', value: `<@${interaction.user.id}> (${interaction.user.tag})` }, { name: 'Usuario VPG', value: vpgUsername }, { name: 'Nombre del Equipo', value: teamName }, { name: 'Liga', value: leagueName }).setTimestamp();
+
+                const embed = new EmbedBuilder().setTitle('Nueva Solicitud de Mánager').setColor('#f1c40f')
+                    .addFields(
+                        { name: 'Solicitante', value: `<@${interaction.user.id}> (${interaction.user.tag})` },
+                        { name: 'Usuario VPG', value: vpgUsername },
+                        { name: 'Nombre del Equipo', value: teamName },
+                        { name: 'Abreviatura', value: teamAbbr },
+                        { name: 'Liga', value: leagueName }
+                    ).setTimestamp();
                 const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`approve_request_${interaction.user.id}_${teamName}`).setLabel("✅ Aprobar").setStyle(ButtonStyle.Success), new ButtonBuilder().setCustomId(`reject_request_${interaction.user.id}`).setLabel("❌ Rechazar").setStyle(ButtonStyle.Danger));
+                
                 await approvalChannel.send({ embeds: [embed], components: [row] });
                 await interaction.reply({ content: 'Tu solicitud ha sido enviada para revisión.', ephemeral: true });
             } 
+            
+            else if (interaction.customId.startsWith('player_join_modal_')) {
+                const teamId = interaction.customId.split('_')[2];
+                const team = await Team.findById(teamId);
+                if (!team) return interaction.reply({ content: 'Error: El equipo ya no existe.', ephemeral: true });
+
+                const vpgUsername = interaction.fields.getTextInputValue('vpgUsername');
+                const position = interaction.fields.getTextInputValue('positionSelect');
+                
+                await VPGUser.findOneAndUpdate(
+                    { discordId: interaction.user.id },
+                    { discordId: interaction.user.id, vpgUsername, position, teamName: team.name, isManager: false, lastUpdated: new Date() },
+                    { upsert: true, new: true }
+                );
+
+                team.players.push(interaction.user.id);
+                await team.save();
+
+                await interaction.member.roles.add(process.env.PLAYER_ROLE_ID);
+                await interaction.member.setNickname(interaction.user.username).catch(err => console.error(`Fallo al cambiar apodo de Jugador: ${err.message}`));
+                
+                await interaction.reply({ content: `¡Felicidades! Te has unido a **${team.name}** como ${position}.`, ephemeral: true });
+                
+                const manager = await client.users.fetch(team.managerId);
+                await manager.send(`✅ **${interaction.user.username}** (Usuario VPG: ${vpgUsername}) ha aceptado tu invitación a **${team.name}** y jugará de ${position}.`);
+
+                interaction.message.delete().catch(() => {});
+            }
             
             else if (interaction.customId.startsWith('approve_modal_')) {
                 const applicantId = interaction.customId.split('_')[2];
                 const originalRequestMessage = (await interaction.channel.messages.fetch({ limit: 100 })).find(msg => msg.embeds[0]?.fields[0]?.value.includes(applicantId) && !msg.components[0]?.components[0]?.disabled);
                 if (!originalRequestMessage) return interaction.reply({ content: 'Error: No se pudo encontrar el mensaje de solicitud original.', ephemeral: true });
+                
                 const teamName = originalRequestMessage.embeds[0].fields.find(f => f.name === 'Nombre del Equipo').value;
+                const teamAbbr = originalRequestMessage.embeds[0].fields.find(f => f.name === 'Abreviatura').value;
                 const leagueName = originalRequestMessage.embeds[0].fields.find(f => f.name === 'Liga').value;
                 const teamLogoUrl = interaction.fields.getTextInputValue('teamLogoUrl');
+                
                 let applicant;
                 try {
                     applicant = await interaction.guild.members.fetch(applicantId);
                 } catch (fetchError) {
                     return interaction.reply({ content: 'Error: No se pudo encontrar al miembro solicitante en el servidor.', ephemeral: true });
                 }
+
                 const existingTeam = await Team.findOne({ name: teamName, guildId: interaction.guildId });
                 if (existingTeam) return interaction.reply({ content: `Error: Ya existe un equipo llamado **${teamName}**.`, ephemeral: true });
                 const isAlreadyManaged = await Team.findOne({ managerId: applicant.id });
                 if (isAlreadyManaged) return interaction.reply({ content: `Error: Este usuario ya es mánager del equipo **${isAlreadyManaged.name}**.`, ephemeral: true });
-                const newTeam = new Team({ name: teamName, guildId: interaction.guildId, league: leagueName, logoUrl: teamLogoUrl, managerId: applicant.id });
+                
+                const newTeam = new Team({ name: teamName, abbreviation: teamAbbr, guildId: interaction.guildId, league: leagueName, logoUrl: teamLogoUrl, managerId: applicant.id });
                 await newTeam.save();
+                
                 await applicant.roles.add(process.env.MANAGER_ROLE_ID);
                 try {
                     await applicant.setNickname(`|MG| ${applicant.user.username}`);
                 } catch (nicknameError) {
                     console.error(`FALLO AL CAMBIAR APODO: ${nicknameError.message}`);
                 }
-                if(originalRequestMessage) {
-                    const disabledRow = new ActionRowBuilder().addComponents(ButtonBuilder.from(originalRequestMessage.components[0].components[0]).setDisabled(true).setLabel('Aprobado'), ButtonBuilder.from(originalRequestMessage.components[0].components[1]).setDisabled(true));
-                    await originalRequestMessage.edit({ components: [disabledRow] });
-                }
+                
+                const disabledRow = new ActionRowBuilder().addComponents(ButtonBuilder.from(originalRequestMessage.components[0].components[0]).setDisabled(true).setLabel('Aprobado'), ButtonBuilder.from(originalRequestMessage.components[0].components[1]).setDisabled(true));
+                await originalRequestMessage.edit({ components: [disabledRow] });
+
                 await interaction.reply({ content: `¡Equipo **${teamName}** aprobado! **${applicant.user.tag}** es ahora Mánager.`, ephemeral: false });
                 await applicant.send(`¡Felicidades! Tu equipo **${teamName}** ha sido APROBADO.`).catch(() => {});
             }
@@ -260,9 +369,9 @@ client.on(Events.InteractionCreate, async interaction => {
     } catch (error) {
         console.error("Fallo crítico de interacción:", error);
         if (interaction.replied || interaction.deferred) {
-            await interaction.followUp({ content: 'Ha ocurrido un error al procesar tu solicitud.', ephemeral: true });
+            await interaction.followUp({ content: 'Ha ocurrido un error al procesar tu solicitud.', ephemeral: true }).catch(()=>{});
         } else {
-            await interaction.reply({ content: 'Ha ocurrido un error al procesar tu solicitud.', ephemeral: true });
+            await interaction.reply({ content: 'Ha ocurrido un error al procesar tu solicitud.', ephemeral: true }).catch(()=>{});
         }
     }
 });
