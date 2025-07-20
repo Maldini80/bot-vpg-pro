@@ -25,7 +25,7 @@ const client = new Client({
     ]
 });
 
-// --- CARGA DE COMANDOS (Sin cambios) ---
+// --- CARGA DE COMANDOS ---
 client.commands = new Collection();
 const commandsPath = path.join(__dirname, 'commands');
 const commandFilesToExclude = ['panel-amistosos.js', 'admin-gestionar-equipo.js'];
@@ -38,7 +38,7 @@ for (const file of commandFiles) {
     }
 }
 
-// --- CARGA DE HANDLERS DE INTERACCIONES (Sin cambios) ---
+// --- CARGA DE HANDLERS DE INTERACCIONES ---
 client.handlers = new Map();
 const handlersPath = path.join(__dirname, 'handlers');
 if (fs.existsSync(handlersPath)) {
@@ -48,6 +48,7 @@ if (fs.existsSync(handlersPath)) {
         client.handlers.set(handlerName, require(path.join(handlersPath, file)));
     }
 }
+
 
 // --- EVENTO CLIENT READY ---
 client.once(Events.ClientReady, () => {
@@ -102,7 +103,7 @@ client.once(Events.ClientReady, () => {
     });
 });
 
-// --- EVENTO DE CREACIÓN DE MENSAJE (Sin cambios) ---
+// --- EVENTO DE CREACIÓN DE MENSAJE ---
 client.on(Events.MessageCreate, async message => {
     if (message.author.bot || !message.inGuild()) return;
     const activeChannel = await TeamChatChannel.findOne({ channelId: message.channel.id, guildId: message.guildId });
@@ -130,7 +131,8 @@ client.on(Events.MessageCreate, async message => {
     }
 });
 
-// --- DESPACHADOR CENTRAL DE INTERACCIONES (Sin cambios) ---
+
+// --- DESPACHADOR CENTRAL DE INTERACCIONES ---
 client.on(Events.InteractionCreate, async interaction => {
     try {
         if (interaction.isChatInputCommand()) {
@@ -167,46 +169,4 @@ client.on(Events.InteractionCreate, async interaction => {
 });
 
 // --- INICIO DE SESIÓN DEL BOT ---
-client.login(process.env.DISCORD_TOKEN);```
-
-#### Archivo 2: `src/models/availabilityPanel.js` (Actualizado)
-
-He modificado el modelo de la base de datos para que un mismo horario pueda recibir múltiples desafíos pendientes a la vez.
-
-**Acción:** Reemplaza el contenido de tu archivo `src/models/availabilityPanel.js` con este.
-
-```javascript
-// src/models/availabilityPanel.js
-const mongoose = require('mongoose');
-const { Schema } = mongoose;
-
-// AÑADIDO: Schema para guardar las peticiones pendientes por separado
-const pendingChallengeSchema = new Schema({
-    _id: { type: Schema.Types.ObjectId, required: true, default: () => new mongoose.Types.ObjectId() },
-    teamId: { type: Schema.Types.ObjectId, ref: 'Team', required: true },
-    userId: { type: String, required: true }
-});
-
-const timeSlotSchema = new Schema({
-    time: { type: String, required: true },
-    status: { type: String, required: true, default: 'AVAILABLE', enum: ['AVAILABLE', 'CONFIRMED'] }, // MODIFICADO: 'PENDING' ya no es un estado del slot
-    challengerTeamId: { type: Schema.Types.ObjectId, ref: 'Team', default: null },
-    // MODIFICADO: Array para múltiples desafíos pendientes
-    pendingChallenges: [pendingChallengeSchema]
-});
-
-const availabilityPanelSchema = new Schema({
-    guildId: { type: String, required: true },
-    channelId: { type: String, required: true },
-    messageId: { type: String, required: true, unique: true },
-    teamId: { type: Schema.Types.ObjectId, ref: 'Team', required: true },
-    postedById: { type: String, required: true },
-    panelType: { type: String, required: true, enum: ['SCHEDULED', 'INSTANT'] },
-    leagues: [{ type: String }], // AÑADIDO: Para guardar las ligas filtradas
-    timeSlots: [timeSlotSchema]
-}, { timestamps: true });
-
-// MODIFICADO: Se elimina 'unique: true' del campo teamId para permitir varios paneles, pero se añade un índice compuesto.
-availabilityPanelSchema.index({ teamId: 1, panelType: 1 }, { unique: true });
-
-module.exports = mongoose.model('AvailabilityPanel', availabilityPanelSchema);
+client.login(process.env.DISCORD_TOKEN);
