@@ -8,6 +8,9 @@ module.exports = {
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
     async execute(interaction) {
+        // CORRECCIÓN: Respondemos primero
+        await interaction.reply({ content: 'Creando el panel de administrador...', ephemeral: true });
+
         const embed = new EmbedBuilder()
             .setTitle('Panel de Control de Administrador VPG')
             .setDescription('Usa los botones de abajo para gestionar la comunidad.')
@@ -20,7 +23,10 @@ module.exports = {
             new ButtonBuilder().setCustomId('admin_view_pending_requests').setLabel('⏳ Ver Solicitudes').setStyle(ButtonStyle.Secondary)
         );
         
+        // Enviamos el panel al canal
         await interaction.channel.send({ embeds: [embed], components: [row] });
-        await interaction.reply({ content: 'Panel de administrador creado con éxito.', ephemeral: true });
+        
+        // Editamos la respuesta original para confirmar
+        await interaction.editReply({ content: '✅ Panel de administrador creado con éxito.' });
     },
 };
