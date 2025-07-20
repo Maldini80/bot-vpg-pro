@@ -18,7 +18,6 @@ module.exports = async (client, interaction) => {
     if (customId === 'request_manager_role_button') {
         const existingTeam = await Team.findOne({ $or: [{ managerId: user.id }, { captains: user.id }, { players: user.id }], guildId: guild.id });
         if (existingTeam) return interaction.reply({ content: `Ya perteneces al equipo **${existingTeam.name}**.`, ephemeral: true });
-        
         const modal = new ModalBuilder().setCustomId('manager_request_modal').setTitle('Formulario de Solicitud de Mánager');
         const vpgUsernameInput = new TextInputBuilder().setCustomId('vpgUsername').setLabel("Tu nombre de usuario en VPG").setStyle(TextInputStyle.Short).setRequired(true);
         const teamNameInput = new TextInputBuilder().setCustomId('teamName').setLabel("Nombre de tu equipo").setStyle(TextInputStyle.Short).setRequired(true);
@@ -204,6 +203,43 @@ module.exports = async (client, interaction) => {
         const selectMenu = new StringSelectMenuBuilder().setCustomId('admin_select_team_to_manage').setPlaceholder('Selecciona un equipo para gestionar').addOptions(teamOptions);
         return interaction.editReply({ content: 'Selecciona el equipo que deseas gestionar desde el menú:', components: [new ActionRowBuilder().addComponents(selectMenu)] });
     }
+
+    // --- **LÓGICA CORREGIDA Y OPTIMIZADA** ---
+    if (customId.startsWith('admin_manage_members_') || customId === 'team_manage_roster_button') {
+        let teamToManage;
+        if (customId.startsWith('admin_manage_members_')) {
+            if (!isAdmin) return interaction.editReply({ content: 'Acción restringida.' });
+            const teamId = customId.split('_')[3];
+            teamToManage = await Team.findById(teamId);
+        } else {
+            teamToManage = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
+        }
+
+        if (!teamToManage) return interaction.editReply({ content: 'No se encontró el equipo o no tienes permisos.' });
+
+        const memberIds = [teamToManage.managerId, ...teamToManage.captains, ...teamToManage.players].filter(id => id);
+        if (memberIds.length === 0) return interaction.editReply({ content: 'Este equipo no tiene miembros.' });
+
+        // Búsqueda Optimizada: Una sola petición a la API
+        const membersCollection = await guild.members.fetch({ user: memberIds });
+
+        const memberOptions = membersCollection.map(member => {
+            let description = 'Jugador';
+            if (teamToManage.managerId === member.id) description = 'Mánager';
+            else if (teamToManage.captains.includes(member.id)) description = 'Capitán';
+            return {
+                label: member.user.username,
+                description: description,
+                value: member.id,
+            };
+        });
+
+        if (memberOptions.length === 0) return interaction.editReply({ content: 'No se encontraron miembros válidos en el servidor.' });
+        
+        const selectMenu = new StringSelectMenuBuilder().setCustomId('roster_management_menu').setPlaceholder('Selecciona un miembro para gestionar').addOptions(memberOptions);
+        return interaction.editReply({ content: 'Gestionando miembros de **' + teamToManage.name + '**:', components: [new ActionRowBuilder().addComponents(selectMenu)] });
+    }
+
 
     if (customId === 'admin_view_pending_requests') {
         if (!isAdmin) return interaction.editReply({content: 'Acción restringida.'});
