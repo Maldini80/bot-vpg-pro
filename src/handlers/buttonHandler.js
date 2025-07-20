@@ -8,17 +8,15 @@ const VPGUser = require('../models/user.js');
 
 module.exports = async (client, interaction) => {
     const { customId, member, guild, user } = interaction;
-
-    // ======================================================================
-    // == DEFINICIÓN DE PERMISOS (ACCESIBLE PARA TODO EL ARCHIVO) ==
-    // ======================================================================
     const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
     const esAprobador = isAdmin || member.roles.cache.has(process.env.APPROVER_ROLE_ID);
 
     // ======================================================================
-    // == LÓGICA DE BOTONES QUE ABREN MODALES (NO NECESITAN DEFERENCIA) ==
+    // == SECCIÓN 1: BOTONES QUE ABREN UN MODAL O ACTUALIZAN UN MENSAJE    ==
+    // == (No usan deferReply y deben ir primero para evitar conflictos)    ==
     // ======================================================================
-
+    
+    // --- Botones que abren un modal ---
     if (customId === 'request_manager_role_button') {
         const existingTeam = await Team.findOne({ $or: [{ managerId: user.id }, { captains: user.id }, { players: user.id }], guildId: guild.id });
         if (existingTeam) return interaction.reply({ content: `Ya perteneces al equipo **${existingTeam.name}**.`, ephemeral: true });
@@ -26,57 +24,43 @@ module.exports = async (client, interaction) => {
         const modal = new ModalBuilder().setCustomId('manager_request_modal').setTitle('Formulario de Solicitud de Mánager');
         const vpgUsernameInput = new TextInputBuilder().setCustomId('vpgUsername').setLabel("Tu nombre de usuario en VPG").setStyle(TextInputStyle.Short).setRequired(true);
         const teamNameInput = new TextInputBuilder().setCustomId('teamName').setLabel("Nombre de tu equipo").setStyle(TextInputStyle.Short).setRequired(true);
-        const teamAbbrInput = new TextInputBuilder().setCustomId('teamAbbr').setLabel("Abreviatura del equipo (3 letras)").setStyle(TextInputStyle.Short).setRequired(true).setMinLength(3).setMaxLength(3);
+        const teamAbbrInput = new TextInputBuilder().setCustomId('teamAbbr').setLabel("Abreviatura (3 letras)").setStyle(TextInputStyle.Short).setRequired(true).setMinLength(3).setMaxLength(3);
         
         modal.addComponents(new ActionRowBuilder().addComponents(vpgUsernameInput), new ActionRowBuilder().addComponents(teamNameInput), new ActionRowBuilder().addComponents(teamAbbrInput));
-        await interaction.showModal(modal);
-        return;
+        return interaction.showModal(modal);
     }
-
+    
     if (customId === 'admin_create_league_button') {
-        if (!isAdmin) return interaction.reply({ content: 'Acción restringida a administradores.', ephemeral: true });
+        if (!isAdmin) return interaction.reply({ content: 'Acción restringida.', ephemeral: true });
         const modal = new ModalBuilder().setCustomId('create_league_modal').setTitle('Crear Nueva Liga');
         const leagueNameInput = new TextInputBuilder().setCustomId('leagueNameInput').setLabel("Nombre de la nueva liga").setStyle(TextInputStyle.Short).setRequired(true);
         modal.addComponents(new ActionRowBuilder().addComponents(leagueNameInput));
-        await interaction.showModal(modal);
-        return;
+        return interaction.showModal(modal);
     }
-    
+
     if (customId.startsWith('admin_dissolve_team_')) {
-        if (!isAdmin) return interaction.reply({ content: 'Acción restringida a administradores.', ephemeral: true });
+        if (!isAdmin) return interaction.reply({ content: 'Acción restringida.', ephemeral: true });
         const teamId = customId.split('_')[3];
         const team = await Team.findById(teamId);
         if (!team) return interaction.reply({ content: 'Equipo no encontrado.', ephemeral: true });
         const modal = new ModalBuilder().setCustomId(`confirm_dissolve_modal_${teamId}`).setTitle(`Disolver Equipo: ${team.name}`);
         const confirmationInput = new TextInputBuilder().setCustomId('confirmation_text').setLabel(`Escribe "${team.name}" para confirmar`).setStyle(TextInputStyle.Short).setRequired(true).setPlaceholder(team.name);
         modal.addComponents(new ActionRowBuilder().addComponents(confirmationInput));
-        await interaction.showModal(modal);
-        return;
+        return interaction.showModal(modal);
     }
-    
-    if (customId.startsWith('admin_change_data_')) {
-        if (!isAdmin) return interaction.reply({ content: 'Acción restringida a administradores.', ephemeral: true });
-        // Lógica para el modal de cambiar datos por admin
-    }
-    
+
     if (customId.startsWith('approve_request_')) {
         if (!esAprobador) return interaction.reply({ content: 'No tienes permiso.', ephemeral: true });
-
         const parts = customId.split('_');
         const applicantId = parts[2];
         const teamName = parts.slice(3).join(' ').replace(/-/g, ' ');
-
         const modal = new ModalBuilder().setCustomId(`approve_modal_${applicantId}_${teamName}`).setTitle(`Aprobar Equipo: ${teamName}`);
         const teamLogoInput = new TextInputBuilder().setCustomId('teamLogoUrl').setLabel("URL del Escudo del Equipo").setStyle(TextInputStyle.Short).setRequired(true);
         modal.addComponents(new ActionRowBuilder().addComponents(teamLogoInput));
-        await interaction.showModal(modal);
-        return;
+        return interaction.showModal(modal);
     }
     
-    // ======================================================================
-    // == LÓGICA DE BOTONES QUE ACTUALIZAN MENSAJES (USAN DEFERUPDATE) ==
-    // ======================================================================
-
+    // --- Botones que actualizan un mensaje ---
     if (customId.startsWith('reject_request_') || customId.startsWith('accept_application_') || customId.startsWith('reject_application_') || customId.startsWith('promote_player_') || customId.startsWith('demote_captain_') || customId.startsWith('kick_player_') || customId.startsWith('toggle_mute_player_')) {
         await interaction.deferUpdate();
         
@@ -84,10 +68,7 @@ module.exports = async (client, interaction) => {
             if (!esAprobador) return interaction.followUp({ content: 'No tienes permiso.', ephemeral: true });
             const applicantId = customId.split('_')[2];
             const applicant = await guild.members.fetch(applicantId).catch(()=>null);
-            const disabledRow = new ActionRowBuilder().addComponents(
-                ButtonBuilder.from(interaction.message.components[0].components[0]).setDisabled(true),
-                ButtonBuilder.from(interaction.message.components[0].components[1]).setDisabled(true)
-            );
+            const disabledRow = new ActionRowBuilder().addComponents(ButtonBuilder.from(interaction.message.components[0].components[0]).setDisabled(true), ButtonBuilder.from(interaction.message.components[0].components[1]).setDisabled(true));
             await interaction.message.edit({ components: [disabledRow] });
             await interaction.followUp({ content: `La solicitud de **${applicant ? applicant.user.tag : 'un usuario'}** ha sido rechazada.`, ephemeral: true });
             if (applicant) await applicant.send(`Tu solicitud para registrar un equipo ha sido rechazada.`).catch(() => {});
@@ -98,7 +79,6 @@ module.exports = async (client, interaction) => {
             const application = await PlayerApplication.findById(applicationId).populate('teamId');
             if(!application || application.status !== 'pending') return interaction.editReply({ content: 'Esta solicitud ya no es válida o ya ha sido gestionada.', components: [], embeds: [] });
             const applicantUser = await client.users.fetch(application.userId).catch(()=>null);
-            
             if (customId.startsWith('accept_application_')) {
                 application.status = 'accepted';
                 if (applicantUser) {
@@ -127,7 +107,6 @@ module.exports = async (client, interaction) => {
             if(!team) return interaction.editReply({ content: 'No tienes permisos sobre este equipo.', components: []});
             const targetMember = await interaction.guild.members.fetch(targetId).catch(() => null);
             if(!targetMember) return interaction.editReply({ content: 'Miembro no encontrado.', components: []});
-            
             const isManagerAction = team.managerId === user.id;
 
             if(customId.startsWith('kick_player_')) {
@@ -167,39 +146,36 @@ module.exports = async (client, interaction) => {
             }
             await team.save();
         }
-        return;
+        return; // Detiene la ejecución aquí.
     }
     
     // ======================================================================
-    // == LÓGICA DE BOTONES QUE ENVÍAN RESPUESTAS PRIVADAS (USAN DEFERREPLY) ==
+    // == SECCIÓN 2: BOTONES QUE ENVÍAN RESPUESTAS PRIVADAS (DEFERREPLY)   ==
     // ======================================================================
     
     await interaction.deferReply({ ephemeral: true });
 
-    // --- Panel de Solicitud ---
     if (customId === 'view_teams_button') {
         const teams = await Team.find({ guildId: guild.id }).limit(25).sort({ name: 1 });
         if (teams.length === 0) return interaction.editReply({ content: 'No hay equipos registrados en este servidor.' });
         const teamOptions = teams.map(t => ({ label: `${t.name} (${t.abbreviation})`, description: `Liga: ${t.league}`, value: t._id.toString() }));
         const selectMenu = new StringSelectMenuBuilder().setCustomId('view_team_roster_select').setPlaceholder('Selecciona un equipo para ver su plantilla').addOptions(teamOptions);
-        await interaction.editReply({ content: 'Elige un equipo del menú desplegable:', components: [new ActionRowBuilder().addComponents(selectMenu)] });
-        return;
+        return interaction.editReply({ content: 'Elige un equipo del menú desplegable:', components: [new ActionRowBuilder().addComponents(selectMenu)] });
     }
 
     if (customId === 'apply_to_team_button') {
         const existingApplication = await PlayerApplication.findOne({ userId: user.id, status: 'pending' });
-        if (existingApplication) return interaction.editReply({ content: 'Ya tienes una solicitud de aplicación pendiente. Debes esperar a que sea gestionada o cancelarla.' });
+        if (existingApplication) return interaction.editReply({ content: 'Ya tienes una solicitud de aplicación pendiente.' });
         const openTeams = await Team.find({ guildId: guild.id, recruitmentOpen: true }).sort({ name: 1 });
-        if (openTeams.length === 0) return interaction.editReply({ content: 'No hay equipos con reclutamiento abierto en este momento.' });
+        if (openTeams.length === 0) return interaction.editReply({ content: 'No hay equipos con reclutamiento abierto.' });
         const teamOptions = openTeams.map(t => ({ label: t.name, value: t._id.toString() }));
         const selectMenu = new StringSelectMenuBuilder().setCustomId('apply_to_team_select').setPlaceholder('Elige un equipo').addOptions(teamOptions);
-        await interaction.editReply({ content: 'Selecciona el equipo al que quieres aplicar:', components: [new ActionRowBuilder().addComponents(selectMenu)] });
-        return;
+        return interaction.editReply({ content: 'Selecciona el equipo al que quieres aplicar:', components: [new ActionRowBuilder().addComponents(selectMenu)] });
     }
 
     if (customId === 'leave_team_button') {
         const teamToLeave = await Team.findOne({ guildId: guild.id, $or: [{ captains: user.id }, { players: user.id }] });
-        if (!teamToLeave) return interaction.editReply({ content: 'No perteneces a un equipo como jugador o capitán. Los Mánagers deben disolver el equipo o transferir el liderato.' });
+        if (!teamToLeave) return interaction.editReply({ content: 'No perteneces a un equipo como jugador o capitán.' });
         teamToLeave.players = teamToLeave.players.filter(p => p !== user.id);
         teamToLeave.captains = teamToLeave.captains.filter(c => c !== user.id);
         await teamToLeave.save();
@@ -210,16 +186,14 @@ module.exports = async (client, interaction) => {
         if (manager) await manager.send(`El jugador **${user.tag}** ha abandonado tu equipo.`);
         return;
     }
-    
-    // --- Panel de Admin ---
+
     if (customId === 'admin_delete_league_button') {
         if (!isAdmin) return interaction.editReply({content: 'Acción restringida.'});
         const leagues = await League.find({ guildId: guild.id });
         if (leagues.length === 0) return interaction.editReply({ content: 'No hay ligas para borrar.' });
         const leagueOptions = leagues.map(l => ({ label: l.name, value: l.name }));
         const selectMenu = new StringSelectMenuBuilder().setCustomId('delete_league_select_menu').setPlaceholder('Selecciona las ligas a eliminar').addOptions(leagueOptions).setMinValues(1).setMaxValues(leagues.length);
-        await interaction.editReply({ content: 'Selecciona del menú las ligas que quieres borrar permanentemente:', components: [new ActionRowBuilder().addComponents(selectMenu)] });
-        return;
+        return interaction.editReply({ content: 'Selecciona del menú las ligas que quieres borrar:', components: [new ActionRowBuilder().addComponents(selectMenu)] });
     }
 
     if (customId === 'admin_manage_team_button') {
@@ -228,8 +202,7 @@ module.exports = async (client, interaction) => {
         if (teams.length === 0) return interaction.editReply({ content: 'No hay equipos registrados para gestionar.' });
         const teamOptions = teams.map(t => ({ label: `${t.name} (${t.abbreviation})`, value: t._id.toString() }));
         const selectMenu = new StringSelectMenuBuilder().setCustomId('admin_select_team_to_manage').setPlaceholder('Selecciona un equipo para gestionar').addOptions(teamOptions);
-        await interaction.editReply({ content: 'Selecciona el equipo que deseas gestionar desde el menú:', components: [new ActionRowBuilder().addComponents(selectMenu)] });
-        return;
+        return interaction.editReply({ content: 'Selecciona el equipo que deseas gestionar desde el menú:', components: [new ActionRowBuilder().addComponents(selectMenu)] });
     }
 
     if (customId === 'admin_view_pending_requests') {
@@ -237,11 +210,10 @@ module.exports = async (client, interaction) => {
         const approvalChannelId = process.env.APPROVAL_CHANNEL_ID;
         if (!approvalChannelId) return interaction.editReply({ content: 'El canal de aprobaciones no está configurado.' });
         const embed = new EmbedBuilder().setTitle('⏳ Solicitudes Pendientes').setColor('Yellow').setDescription(`Esta función te recuerda que debes revisar el canal de aprobaciones. Todas las solicitudes aparecen en <#${approvalChannelId}>.`);
-        await interaction.editReply({ embeds: [embed] });
-        return;
+        return interaction.editReply({ embeds: [embed] });
     }
-
-    // --- Panel de Equipo y Amistosos ---
+    
+    // --- Lógica del Panel de Equipo (requiere que el usuario esté en un equipo) ---
     const userTeam = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
     if (!userTeam) return interaction.editReply({content: 'Debes ser mánager o capitán para usar este botón.'});
     
@@ -249,8 +221,7 @@ module.exports = async (client, interaction) => {
         if (userTeam.managerId !== user.id) return interaction.editReply({ content: 'Solo los mánagers pueden cambiar el estado de reclutamiento.' });
         userTeam.recruitmentOpen = !userTeam.recruitmentOpen;
         await userTeam.save();
-        await interaction.editReply({ content: `El reclutamiento de tu equipo ahora está **${userTeam.recruitmentOpen ? 'ABIERTO' : 'CERRADO'}**.` });
-        return;
+        return interaction.editReply({ content: `El reclutamiento de tu equipo ahora está **${userTeam.recruitmentOpen ? 'ABIERTO' : 'CERRADO'}**.` });
     }
 
     if (customId === 'delete_friendly_panel') {
@@ -258,8 +229,7 @@ module.exports = async (client, interaction) => {
             new ButtonBuilder().setCustomId(`confirm_delete_panel_SCHEDULED_${userTeam._id}`).setLabel('Borrar Panel Programado').setStyle(ButtonStyle.Danger),
             new ButtonBuilder().setCustomId(`confirm_delete_panel_INSTANT_${userTeam._id}`).setLabel('Borrar Panel Instantáneo').setStyle(ButtonStyle.Danger)
         );
-        await interaction.editReply({ content: '¿Qué tipo de búsqueda de amistoso quieres borrar?', components: [row] });
-        return;
+        return interaction.editReply({ content: '¿Qué tipo de búsqueda de amistoso quieres borrar?', components: [row] });
     }
     
     if (customId.startsWith('confirm_delete_panel_')) {
@@ -268,13 +238,12 @@ module.exports = async (client, interaction) => {
         const teamId = parts[4];
         if(userTeam._id.toString() !== teamId) return interaction.editReply({content: "No puedes borrar el panel de otro equipo."});
         const existingPanel = await AvailabilityPanel.findOneAndDelete({ teamId: userTeam._id, panelType });
-        if (!existingPanel) return interaction.editReply({ content: `Tu equipo no tiene un panel de tipo **${panelType}** activo para borrar.` });
+        if (!existingPanel) return interaction.editReply({ content: `Tu equipo no tiene un panel de tipo **${panelType}** activo.` });
         try {
             const channel = await client.channels.fetch(existingPanel.channelId);
             const message = await channel.messages.fetch(existingPanel.messageId);
             await message.delete();
         } catch(e) { /* No hacer nada si el mensaje ya no existe */ }
-        await interaction.editReply({ content: `✅ Tu panel de amistosos de tipo **${panelType}** ha sido eliminado.` });
-        return;
+        return interaction.editReply({ content: `✅ Tu panel de amistosos de tipo **${panelType}** ha sido eliminado.` });
     }
 };
