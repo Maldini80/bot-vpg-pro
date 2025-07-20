@@ -10,7 +10,6 @@ module.exports = async (client, interaction) => {
     
     await interaction.deferReply({ ephemeral: true });
 
-    // --- Lógica para el modal de registro de equipo ---
     if (customId.startsWith('manager_request_modal_')) {
         const leagueName = customId.split('_')[3];
         const vpgUsername = fields.getTextInputValue('vpgUsername');
@@ -26,7 +25,6 @@ module.exports = async (client, interaction) => {
         return interaction.editReply({ content: '✅ ¡Tu solicitud ha sido enviada!' });
     }
     
-    // --- Lógica de Aprobación Final de Equipo ---
     if (customId.startsWith('approve_modal_')) {
         const esAprobador = member.permissions.has(PermissionFlagsBits.Administrator) || member.roles.cache.has(process.env.APPROVER_ROLE_ID);
         if (!esAprobador) return interaction.editReply({ content: 'No tienes permiso.' });
@@ -59,7 +57,6 @@ module.exports = async (client, interaction) => {
         }
     }
     
-    // --- Lógica para editar datos de equipo ---
     if (customId.startsWith('edit_data_modal_')) {
         const teamId = customId.split('_')[3];
         const team = await Team.findById(teamId);
@@ -86,7 +83,6 @@ module.exports = async (client, interaction) => {
         }
     }
 
-    // --- Lógica para invitar jugador ---
     if (customId.startsWith('invite_player_modal_')) {
         const teamId = customId.split('_')[3];
         const team = await Team.findById(teamId);
@@ -151,6 +147,42 @@ module.exports = async (client, interaction) => {
         } catch (error) {
             await PlayerApplication.findByIdAndDelete(application._id);
             return interaction.editReply({ content: `❌ No se pudo enviar la solicitud. El mánager tiene los MDs cerrados.` });
+        }
+    }
+    
+    // --- Lógica para el modal de desafío de amistoso ---
+    if (customId.startsWith('challenge_modal_')) {
+        const parts = customId.split('_');
+        const panelId = parts[2];
+        const time = parts[3];
+        const challengerTeamId = parts[4];
+        
+        const presentation = fields.getTextInputValue('presentation');
+        const panel = await AvailabilityPanel.findOne({ _id: panelId }).populate('teamId');
+        if (!panel) return interaction.editReply({ content: 'Este panel de amistosos ya no existe.' });
+        
+        const hostManager = await client.users.fetch(panel.postedById).catch(() => null);
+        if (!hostManager) return interaction.editReply({ content: 'No se pudo encontrar al creador del panel.' });
+        
+        const challengerTeam = await Team.findById(challengerTeamId);
+        
+        const embed = new EmbedBuilder()
+            .setTitle(`⚔️ ¡Nuevo Desafío para las ${time}!`)
+            .setAuthor({ name: challengerTeam.name, iconURL: challengerTeam.logoUrl })
+            .setDescription(`**El equipo ${challengerTeam.name} quiere jugar contra vosotros.**\n\nMensaje:\n>>> ${presentation}`)
+            .setColor('Yellow')
+            .setFooter({ text: `Puedes aceptar o rechazar este desafío a continuación.` });
+            
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId(`accept_challenge_${panel._id}_${time}_${challengerTeamId}_${user.id}`).setLabel('Aceptar Desafío').setStyle(ButtonStyle.Success),
+            new ButtonBuilder().setCustomId(`reject_challenge_${panel._id}_${time}_${challengerTeamId}_${user.id}`).setLabel('Rechazar').setStyle(ButtonStyle.Danger)
+        );
+        
+        try {
+            await hostManager.send({ embeds: [embed], components: [row] });
+            return interaction.editReply({ content: `✅ Tu desafío para las **${time}** ha sido enviado a **${panel.teamId.name}**.` });
+        } catch (error) {
+            return interaction.editReply({ content: `❌ No se pudo enviar el desafío. El mánager de ${panel.teamId.name} podría tener los MDs cerrados.` });
         }
     }
 };
