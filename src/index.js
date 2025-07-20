@@ -1,3 +1,4 @@
+// src/index.js
 require('dotenv').config();
 const fs = require('node:fs');
 const path = require('node:path');
@@ -24,7 +25,7 @@ const client = new Client({
     ]
 });
 
-// --- CARGA DE COMANDOS ---
+// --- CARGA DE COMANDOS (Sin cambios) ---
 client.commands = new Collection();
 const commandsPath = path.join(__dirname, 'commands');
 const commandFilesToExclude = ['panel-amistosos.js', 'admin-gestionar-equipo.js'];
@@ -37,38 +38,40 @@ for (const file of commandFiles) {
     }
 }
 
-// --- CARGA DE HANDLERS DE INTERACCIONES ---
+// --- CARGA DE HANDLERS DE INTERACCIONES (Sin cambios) ---
 client.handlers = new Map();
 const handlersPath = path.join(__dirname, 'handlers');
-// Comprobamos si la carpeta handlers existe antes de intentar leerla.
 if (fs.existsSync(handlersPath)) {
     const handlerFiles = fs.readdirSync(handlersPath).filter(file => file.endsWith('.js'));
     for (const file of handlerFiles) {
-        // Carga cada handler y lo almacena en un mapa para acceso rápido.
         const handlerName = path.basename(file, '.js');
         client.handlers.set(handlerName, require(path.join(handlersPath, file)));
     }
 }
 
-
 // --- EVENTO CLIENT READY ---
 client.once(Events.ClientReady, () => {
     console.log(`¡Listo! ${client.user.tag} está online.`);
 
-    // Tarea programada de limpieza diaria de amistosos
+    // ======================================================================
+    // AÑADIDO: TAREA PROGRAMADA DE LIMPIEZA DIARIA DE AMISTOSOS
+    // ======================================================================
     cron.schedule('0 6 * * *', async () => {
-        console.log('Ejecutando limpieza diaria de amistosos a las 6:00 AM...');
+        console.log('Ejecutando limpieza diaria de amistosos a las 6:00 AM (Madrid)...');
         try {
-            // Limpia la base de datos de paneles
+            // 1. Limpia la base de datos de paneles de disponibilidad
             await AvailabilityPanel.deleteMany({});
-            console.log('Base de datos de paneles de disponibilidad limpiada.');
+            console.log(`Base de datos de paneles de disponibilidad limpiada.`);
             
-            // Define los IDs de los canales desde las variables de entorno
+            // 2. Lee los IDs de los canales desde las variables de entorno
             const scheduledChannelId = process.env.SCHEDULED_FRIENDLY_CHANNEL_ID;
             const instantChannelId = process.env.INSTANT_FRIENDLY_CHANNEL_ID;
 
-            const clearChannel = async (channelId) => {
-                if (!channelId) return; // No hace nada si el ID no está definido
+            const clearChannel = async (channelId, channelName) => {
+                if (!channelId) {
+                    console.log(`No se ha configurado el ID para el canal de ${channelName}, se omite la limpieza.`);
+                    return;
+                }
                 try {
                     const channel = await client.channels.fetch(channelId);
                     if (!channel || !channel.isTextBased()) return;
@@ -80,18 +83,18 @@ client.once(Events.ClientReady, () => {
                             await channel.bulkDelete(fetched, true);
                         }
                     } while (fetched.size > 0);
-                    console.log(`Canal ${channel.name} limpiado.`);
+                    console.log(`Canal de ${channelName} limpiado con éxito.`);
                 } catch (e) {
-                    console.error(`Error limpiando el canal ${channelId}:`, e.message);
+                    console.error(`Error limpiando el canal de ${channelName} (${channelId}):`, e.message);
                 }
             };
             
-            await clearChannel(scheduledChannelId);
-            await clearChannel(instantChannelId);
+            await clearChannel(scheduledChannelId, "Amistosos Programados");
+            await clearChannel(instantChannelId, "Amistosos Instantáneos");
 
             console.log('Limpieza diaria completada.');
         } catch (error) {
-            console.error('Error durante la limpieza diaria:', error);
+            console.error('Error fatal durante la limpieza diaria:', error);
         }
     }, {
         scheduled: true,
@@ -99,21 +102,14 @@ client.once(Events.ClientReady, () => {
     });
 });
 
-// --- EVENTO DE CREACIÓN DE MENSAJE (PARA CHAT DE EQUIPO) ---
+// --- EVENTO DE CREACIÓN DE MENSAJE (Sin cambios) ---
 client.on(Events.MessageCreate, async message => {
     if (message.author.bot || !message.inGuild()) return;
-
-    // Comprueba si es un canal de chat de equipo
     const activeChannel = await TeamChatChannel.findOne({ channelId: message.channel.id, guildId: message.guildId });
     if (!activeChannel) return;
-
-    // No reenvía mensajes si el usuario está muteado
     if (message.member.roles.cache.has(process.env.MUTED_ROLE_ID)) return;
-
-    // Busca el equipo del usuario
     const team = await Team.findOne({ guildId: message.guildId, $or: [{ managerId: message.member.id }, { captains: message.member.id }, { players: message.member.id }] });
     if (!team) return;
-
     try {
         await message.delete();
         const webhooks = await message.channel.fetchWebhooks();
@@ -128,15 +124,13 @@ client.on(Events.MessageCreate, async message => {
             allowedMentions: { parse: ['users', 'roles', 'everyone'] }
         });
     } catch (error) {
-        // Ignora errores comunes como "Unknown Message" si el mensaje ya fue borrado.
         if (error.code !== 10008) {
             console.error(`Error en la lógica del chat de equipo:`, error.message);
         }
     }
 });
 
-
-// --- DESPACHADOR CENTRAL DE INTERACCIONES ---
+// --- DESPACHADOR CENTRAL DE INTERACCIONES (Sin cambios) ---
 client.on(Events.InteractionCreate, async interaction => {
     try {
         if (interaction.isChatInputCommand()) {
@@ -162,11 +156,9 @@ client.on(Events.InteractionCreate, async interaction => {
         }
     } catch (error) {
         console.error("Fallo crítico durante el procesamiento de una interacción:", error);
-        // Manejo de errores mejorado para responder al usuario.
         if (interaction.replied || interaction.deferred) {
             await interaction.followUp({ content: 'Ha ocurrido un error inesperado al procesar tu solicitud.', ephemeral: true }).catch(() => {});
         } else {
-            // Evita el error "Interaction has already been acknowledged"
             if (error.code !== 10062) {
                 await interaction.reply({ content: 'Ha ocurrido un error inesperado al procesar tu solicitud.', ephemeral: true }).catch(() => {});
             }
@@ -175,4 +167,46 @@ client.on(Events.InteractionCreate, async interaction => {
 });
 
 // --- INICIO DE SESIÓN DEL BOT ---
-client.login(process.env.DISCORD_TOKEN);
+client.login(process.env.DISCORD_TOKEN);```
+
+#### Archivo 2: `src/models/availabilityPanel.js` (Actualizado)
+
+He modificado el modelo de la base de datos para que un mismo horario pueda recibir múltiples desafíos pendientes a la vez.
+
+**Acción:** Reemplaza el contenido de tu archivo `src/models/availabilityPanel.js` con este.
+
+```javascript
+// src/models/availabilityPanel.js
+const mongoose = require('mongoose');
+const { Schema } = mongoose;
+
+// AÑADIDO: Schema para guardar las peticiones pendientes por separado
+const pendingChallengeSchema = new Schema({
+    _id: { type: Schema.Types.ObjectId, required: true, default: () => new mongoose.Types.ObjectId() },
+    teamId: { type: Schema.Types.ObjectId, ref: 'Team', required: true },
+    userId: { type: String, required: true }
+});
+
+const timeSlotSchema = new Schema({
+    time: { type: String, required: true },
+    status: { type: String, required: true, default: 'AVAILABLE', enum: ['AVAILABLE', 'CONFIRMED'] }, // MODIFICADO: 'PENDING' ya no es un estado del slot
+    challengerTeamId: { type: Schema.Types.ObjectId, ref: 'Team', default: null },
+    // MODIFICADO: Array para múltiples desafíos pendientes
+    pendingChallenges: [pendingChallengeSchema]
+});
+
+const availabilityPanelSchema = new Schema({
+    guildId: { type: String, required: true },
+    channelId: { type: String, required: true },
+    messageId: { type: String, required: true, unique: true },
+    teamId: { type: Schema.Types.ObjectId, ref: 'Team', required: true },
+    postedById: { type: String, required: true },
+    panelType: { type: String, required: true, enum: ['SCHEDULED', 'INSTANT'] },
+    leagues: [{ type: String }], // AÑADIDO: Para guardar las ligas filtradas
+    timeSlots: [timeSlotSchema]
+}, { timestamps: true });
+
+// MODIFICADO: Se elimina 'unique: true' del campo teamId para permitir varios paneles, pero se añade un índice compuesto.
+availabilityPanelSchema.index({ teamId: 1, panelType: 1 }, { unique: true });
+
+module.exports = mongoose.model('AvailabilityPanel', availabilityPanelSchema);
