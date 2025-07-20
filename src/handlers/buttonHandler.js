@@ -71,7 +71,7 @@ async function getOrCreateWebhook(channel, client) {
     return webhook;
 }
 
-module.exports = async (client, interaction) => {
+const handler = async (client, interaction) => {
     if (!interaction.inGuild()) {
         const { customId } = interaction;
         if (customId.startsWith('accept_challenge_') || customId.startsWith('reject_challenge_')) {
@@ -149,10 +149,8 @@ module.exports = async (client, interaction) => {
     const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
     const esAprobador = isAdmin || member.roles.cache.has(process.env.APPROVER_ROLE_ID);
     
-    // CORRECCIÓN: Se usa la nueva sintaxis para eliminar la advertencia de 'ephemeral'.
-    // En lugar de { ephemeral: true }, se usa { flags: [ 'Ephemeral' ] } para los deferReply.
     if (customId.startsWith('challenge_slot_')) {
-        await interaction.deferReply({ flags: [ 'Ephemeral' ] });
+        await interaction.deferReply({ ephemeral: true });
         const challengerTeam = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }, { players: user.id }] });
         if (!challengerTeam) return interaction.editReply({ content: 'Debes pertenecer a un equipo para desafiar.' });
         const [, , panelId, time] = customId.split('_');
@@ -190,7 +188,7 @@ module.exports = async (client, interaction) => {
     }
 
     if (customId.startsWith('abandon_challenge_')) {
-        await interaction.deferReply({ flags: [ 'Ephemeral' ] });
+        await interaction.deferReply({ ephemeral: true });
         const [, , panelId, time] = customId.split('_');
         const panel = await AvailabilityPanel.findById(panelId);
         if (!panel) return interaction.editReply({ content: 'Este panel ya no existe.' });
@@ -213,7 +211,7 @@ module.exports = async (client, interaction) => {
     }
 
     if (customId.startsWith('contact_opponent_')) {
-        await interaction.deferReply({ flags: [ 'Ephemeral' ] });
+        await interaction.deferReply({ ephemeral: true });
         const [, , teamId1, teamId2] = customId.split('_');
         const userTeam = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
         if (!userTeam) return interaction.editReply({ content: 'No tienes permisos.' });
@@ -501,12 +499,15 @@ module.exports = async (client, interaction) => {
             if (!channelId) return interaction.editReply({ content: 'Error: El ID del canal de amistosos instantáneos no está configurado.' });
             const channel = await client.channels.fetch(channelId).catch(()=>null);
             if (!channel) return interaction.editReply({ content: 'Error: No se encontró el canal de amistosos instantáneos.' });
+            
+            // CORRECCIÓN: Usar el webhook para enviar el mensaje inicial y evitar el bug "atascado".
+            const webhook = await getOrCreateWebhook(channel, client);
+            const message = await webhook.send({ content: "Creando panel...", username: team.name, avatarURL: team.logoUrl });
+
             const panel = new AvailabilityPanel({ 
-                guildId: guild.id, channelId, messageId: 'temp', teamId: team._id, postedById: user.id, panelType: 'INSTANT', leagues,
+                guildId: guild.id, channelId, messageId: message.id, teamId: team._id, postedById: user.id, panelType: 'INSTANT', leagues,
                 timeSlots: [{ time: 'INSTANT', status: 'AVAILABLE' }] 
             });
-            const message = await channel.send({content: "Creando panel..."});
-            panel.messageId = message.id;
             await panel.save();
             await updatePanelMessage(client, panel._id);
             return interaction.editReply({ content: '✅ Tu panel de amistoso instantáneo ha sido publicado.' });
@@ -542,4 +543,6 @@ module.exports = async (client, interaction) => {
     }
 };
 
-module.exports.updatePanelMessage = updatePanelMessage;
+handler.updatePanelMessage = updatePanelMessage;
+handler.getOrCreateWebhook = getOrCreateWebhook;
+module.exports = handler;
