@@ -8,8 +8,8 @@ module.exports = {
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     
     async execute(interaction) {
-        // CORRECCIÓN: Respondemos primero para evitar "Unknown Interaction"
-        await interaction.reply({ content: 'Creando el panel de solicitud...', ephemeral: true });
+        // CORRECCIÓN CLAVE: Deferir la respuesta INMEDIATAMENTE.
+        await interaction.deferReply({ ephemeral: true });
 
         const embed = new EmbedBuilder()
             .setTitle('Centro de Control de Jugador VPG')
@@ -26,7 +26,7 @@ module.exports = {
         // Enviamos el panel al canal
         await interaction.channel.send({ embeds: [embed], components: [row] });
 
-        // Editamos la respuesta original para confirmar
+        // Editamos la respuesta deferida para confirmar al admin
         await interaction.editReply({ content: '✅ Panel de solicitud creado con éxito.' });
     },
 };
