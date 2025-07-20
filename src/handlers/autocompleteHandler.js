@@ -7,4 +7,20 @@ module.exports = async (client, interaction) => {
     // pero mantenemos la estructura para futuras implementaciones.
 
     /*
-    EJEMPLO DE USO FUT
+    EJEMPLO DE USO FUTURO:
+    Si tuvieras un comando como /ver-equipo con una opción "nombre" que se autocompleta:
+
+    const focusedOption = interaction.options.getFocused(true);
+
+    if (focusedOption.name === 'nombre') {
+        const teams = await Team.find({ 
+            guildId: interaction.guildId, 
+            name: { $regex: focusedOption.value, $options: 'i' } 
+        }).limit(25);
+        
+        await interaction.respond(
+            teams.map(team => ({ name: `${team.name} (${team.abbreviation})`, value: team._id.toString() }))
+        );
+    }
+    */
+};
