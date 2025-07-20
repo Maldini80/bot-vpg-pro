@@ -110,10 +110,9 @@ module.exports = async (client, interaction) => {
         await interaction.deferReply({ ephemeral: true });
         const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
         if (!team) return interaction.editReply({ content: 'No se encontró tu equipo.' });
-        const channelId = process.env.SCHEDULED_FRIENDLY_CHANNEL_ID;
-        if (!channelId) return interaction.editReply({ content: 'El canal de amistosos programados no está configurado.' });
-        const channel = await client.channels.fetch(channelId);
-        if (!channel) return interaction.editReply({ content: 'No se encontró el canal de amistosos programados.' });
+        const channelId = '1396284750850949142'; // ID Canal Programados
+        const channel = await client.channels.fetch(channelId).catch(() => null);
+        if (!channel) return interaction.editReply({ content: 'Error: No se encontró el canal de amistosos programados.' });
         const timeSlots = values.map(time => ({ time, status: 'AVAILABLE' }));
         const panel = new AvailabilityPanel({ guildId: guild.id, channelId, messageId: 'temp', teamId: team._id, postedById: user.id, panelType: 'SCHEDULED', timeSlots });
         const panelContent = await buildScheduledPanel(team, user.id, timeSlots, panel._id);
