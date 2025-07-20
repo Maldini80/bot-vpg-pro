@@ -10,21 +10,18 @@ module.exports = {
     async execute(interaction) {
         const embed = new EmbedBuilder()
             .setTitle('Panel de Control de Administrador VPG')
-            .setDescription('Usa los botones de abajo para gestionar las ligas del servidor.')
+            .setDescription('Usa los botones de abajo para gestionar la comunidad.')
             .setColor('#c0392b');
             
-        const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                .setCustomId('admin_create_league_button')
-                .setLabel('➕ Crear Liga')
-                .setStyle(ButtonStyle.Success),
-            
-            new ButtonBuilder()
-                .setCustomId('admin_delete_league_button')
-                .setLabel('🗑️ Borrar Liga')
-                .setStyle(ButtonStyle.Danger)
+        const row1 = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId('admin_create_league_button').setLabel('➕ Crear Liga').setStyle(ButtonStyle.Success),
+            new ButtonBuilder().setCustomId('admin_delete_league_button').setLabel('🗑️ Borrar Liga').setStyle(ButtonStyle.Danger),
+            new ButtonBuilder().setCustomId('admin_manage_team_button').setLabel('🔍 Gestionar Equipo').setStyle(ButtonStyle.Primary)
         );
-        await interaction.channel.send({ embeds: [embed], components: [row] });
+        const row2 = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId('admin_view_pending_requests').setLabel('⏳ Ver Solicitudes Pendientes').setStyle(ButtonStyle.Secondary)
+        );
+        await interaction.channel.send({ embeds: [embed], components: [row1, row2] });
         await interaction.reply({ content: 'Panel de administrador creado con éxito.', ephemeral: true });
     },
 };
