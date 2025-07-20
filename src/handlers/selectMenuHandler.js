@@ -43,6 +43,18 @@ module.exports = async (client, interaction) => {
             const team = await Team.findById(teamId).lean();
             if (!team) return interaction.editReply({ content: 'Este equipo ya no existe.', components: [] });
 
+            const leagues = await League.find({ guildId: guild.id });
+            const leagueOptions = leagues.map(l => ({
+                label: l.name,
+                value: `admin_set_league_${teamId}_${l._id}`,
+                default: team.league === l.name // Marca la liga actual como seleccionada
+            }));
+
+            const leagueMenu = new StringSelectMenuBuilder()
+                .setCustomId('admin_change_league_menu')
+                .setPlaceholder('Cambiar la liga del equipo')
+                .addOptions(leagueOptions);
+
             const embed = new EmbedBuilder().setTitle(`Gestión: ${team.name}`).setColor('DarkRed').setThumbnail(team.logoUrl);
             const row1 = new ActionRowBuilder().addComponents(
                 new ButtonBuilder().setCustomId(`admin_change_data_${teamId}`).setLabel('Cambiar Datos').setStyle(ButtonStyle.Secondary),
@@ -51,7 +63,9 @@ module.exports = async (client, interaction) => {
             const row2 = new ActionRowBuilder().addComponents(
                 new ButtonBuilder().setCustomId(`admin_dissolve_team_${teamId}`).setLabel('DISOLVER EQUIPO').setStyle(ButtonStyle.Danger)
             );
-            return interaction.editReply({ content: '', embeds: [embed], components: [row1, row2] });
+            const row3 = new ActionRowBuilder().addComponents(leagueMenu);
+
+            return interaction.editReply({ content: '', embeds: [embed], components: [row1, row2, row3] });
         }
         
         if (customId === 'roster_management_menu') {
@@ -78,6 +92,23 @@ module.exports = async (client, interaction) => {
             return interaction.editReply({ content: `Acciones para **${targetMember.user.username}**:`, components: [row] });
         }
         return;
+    }
+
+    if (customId.startsWith('admin_change_league_menu')) {
+        await interaction.deferUpdate();
+        const parts = selectedValue.split('_');
+        const action = parts[0];
+        const command = parts[1];
+        const teamId = parts[2];
+        const leagueId = parts[3];
+
+        const team = await Team.findById(teamId);
+        const league = await League.findById(leagueId);
+        if (!team || !league) return interaction.followUp({ content: 'El equipo o la liga ya no existen.', ephemeral: true });
+
+        team.league = league.name;
+        await team.save();
+        return interaction.followUp({ content: `✅ La liga del equipo **${team.name}** ha sido cambiada a **${league.name}**.`, ephemeral: true });
     }
 
     // ======================================================================
