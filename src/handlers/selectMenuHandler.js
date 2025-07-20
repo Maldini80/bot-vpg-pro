@@ -14,7 +14,6 @@ async function getOrCreateWebhook(channel, client) {
     return webhook;
 }
 
-// MODIFICADO: La función ahora acepta el array de ligas para mostrarlo en el panel.
 async function buildScheduledPanel(team, userId, timeSlotsData, panelId, leagues = []) {
     let description = `**Buscando rivales para los siguientes horarios:**\n\n*Contacto:* <@${userId}>`;
     if (leagues && leagues.length > 0) {
@@ -47,9 +46,6 @@ module.exports = async (client, interaction) => {
     const { customId, values, guild, user } = interaction;
     const selectedValue = values[0];
 
-    // ======================================================================
-    // Lógica para aplicar a un equipo (Sin cambios)
-    // ======================================================================
     if (customId === 'apply_to_team_select') {
         const teamId = selectedValue;
         const modal = new ModalBuilder().setCustomId(`application_modal_${teamId}`).setTitle('Aplicar a Equipo');
@@ -59,10 +55,11 @@ module.exports = async (client, interaction) => {
     }
     
     // ======================================================================
-    // Lógica para registrar un equipo (Sin cambios)
+    // CORRECCIÓN APLICADA AQUÍ
     // ======================================================================
     if (customId === 'select_league_for_registration') {
-        await interaction.deferUpdate();
+        // CORRECCIÓN: Se elimina 'await interaction.deferUpdate();' de esta sección.
+        // La llamada a .showModal() ya es una respuesta a la interacción.
         const leagueName = selectedValue;
         const modal = new ModalBuilder().setCustomId(`manager_request_modal_${leagueName}`).setTitle(`Registrar Equipo en ${leagueName}`);
         const vpgUsernameInput = new TextInputBuilder().setCustomId('vpgUsername').setLabel("Tu nombre de usuario en VPG").setStyle(TextInputStyle.Short).setRequired(true);
@@ -72,9 +69,6 @@ module.exports = async (client, interaction) => {
         return interaction.showModal(modal);
     }
 
-    // ======================================================================
-    // AÑADIDO: Lógica para el nuevo menú de filtro de ligas de amistosos
-    // ======================================================================
     if (customId.startsWith('select_league_filter_')) {
         await interaction.deferUpdate();
         const panelType = customId.split('_')[3];
@@ -93,9 +87,6 @@ module.exports = async (client, interaction) => {
         return;
     }
 
-    // ======================================================================
-    // Lógica de gestión de administradores (Sin cambios)
-    // ======================================================================
     if (customId === 'admin_select_team_to_manage' || customId === 'roster_management_menu' || customId === 'admin_change_league_menu') {
         await interaction.deferUpdate();
         
@@ -145,14 +136,10 @@ module.exports = async (client, interaction) => {
         return;
     }
 
-    // ======================================================================
-    // MODIFICADO: Lógica para la selección de horarios de amistosos
-    // ======================================================================
     if (customId.startsWith('select_available_times')) {
         await interaction.deferReply({ ephemeral: true });
         
         const parts = customId.split('_');
-        // Se extraen las ligas (si existen) del customId
         const leaguesString = parts.slice(3).join('_');
         const leagues = leaguesString === 'all' || !leaguesString ? [] : leaguesString.split(',');
 
@@ -167,11 +154,10 @@ module.exports = async (client, interaction) => {
         
         const panel = new AvailabilityPanel({ 
             guildId: guild.id, channelId, messageId: 'temp', teamId: team._id, postedById: user.id, panelType: 'SCHEDULED', 
-            leagues: leagues, // Se guardan las ligas en la BD
+            leagues: leagues,
             timeSlots 
         });
         
-        // La función ahora pasa el array de ligas para que se muestre en el panel
         const panelContent = await buildScheduledPanel(team, user.id, timeSlots, panel._id, leagues);
         const webhook = await getOrCreateWebhook(channel, client);
         const message = await webhook.send({ username: team.name, avatarURL: team.logoUrl, embeds: [panelContent.embed], components: panelContent.components });
@@ -182,9 +168,6 @@ module.exports = async (client, interaction) => {
         return interaction.editReply({ content: '✅ Tu panel de amistosos programados ha sido publicado.' });
     }
     
-    // ======================================================================
-    // El resto de la lógica del fichero (Sin cambios)
-    // ======================================================================
     await interaction.deferReply({ ephemeral: true });
 
     if (customId === 'view_team_roster_select') {
