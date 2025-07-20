@@ -118,6 +118,7 @@ client.on(Events.InteractionCreate, async interaction => {
                 const row1 = new ActionRowBuilder().addComponents(
                     new ButtonBuilder().setCustomId(`admin_change_name_${teamId}`).setLabel('Cambiar Nombre').setStyle(ButtonStyle.Primary),
                     new ButtonBuilder().setCustomId(`admin_change_logo_${teamId}`).setLabel('Cambiar Logo').setStyle(ButtonStyle.Primary),
+                    new ButtonBuilder().setCustomId(`admin_change_abbr_${teamId}`).setLabel('Cambiar Abreviatura').setStyle(ButtonStyle.Primary),
                     new ButtonBuilder().setCustomId(`admin_expel_manager_${teamId}`).setLabel('Destituir Mánager').setStyle(ButtonStyle.Danger).setDisabled(!team.managerId)
                 );
                 const row2 = new ActionRowBuilder().addComponents(
@@ -227,8 +228,11 @@ client.on(Events.InteractionCreate, async interaction => {
                 switch (action) {
                     case 'change': {
                         const subAction = parts[2];
-                        const modal = new ModalBuilder().setCustomId(`admin_edit_${subAction}_${teamId}`).setTitle(`Cambiar ${subAction === 'name' ? 'Nombre' : 'Logo'} del Equipo`);
-                        const input = new TextInputBuilder().setCustomId('newValue').setLabel(`Nuevo ${subAction === 'name' ? 'nombre' : 'URL del logo'}`).setStyle(TextInputStyle.Short).setRequired(true);
+                        const modal = new ModalBuilder().setCustomId(`admin_edit_${subAction}_${teamId}`).setTitle(`Cambiar ${subAction === 'name' ? 'Nombre' : subAction === 'logo' ? 'Logo' : 'Abreviatura'} del Equipo`);
+                        const input = new TextInputBuilder().setCustomId('newValue').setLabel(`Nuevo ${subAction === 'name' ? 'nombre' : subAction === 'logo' ? 'URL del logo' : 'abreviatura'}`).setStyle(TextInputStyle.Short).setRequired(true);
+                        if (subAction === 'abbr') {
+                            input.setMinLength(3).setMaxLength(3);
+                        }
                         modal.addComponents(new ActionRowBuilder().addComponents(input));
                         await interaction.showModal(modal);
                         break;
@@ -295,14 +299,14 @@ client.on(Events.InteractionCreate, async interaction => {
                             team.captains.push(targetId);
                             await targetMember.roles.remove(process.env.PLAYER_ROLE_ID).catch(()=>{});
                             await targetMember.roles.add(process.env.CAPTAIN_ROLE_ID);
-                            if (targetMember.id !== interaction.guild.ownerId) await targetMember.setNickname(`|C| ${targetMember.user.username}`).catch(()=>{});
+                            if (targetMember.id !== interaction.guild.ownerId) await targetMember.setNickname(`|C| ${team.abbreviation} ${targetMember.user.username}`).catch(()=>{});
                             await interaction.update({ content: `✅ **${targetMember.user.username}** ascendido a Capitán.`, components: [] });
                         } else if (action === 'demote') {
                             team.captains = team.captains.filter(c => c !== targetId);
                             team.players.push(targetId);
                             await targetMember.roles.remove(process.env.CAPTAIN_ROLE_ID).catch(()=>{});
                             await targetMember.roles.add(process.env.PLAYER_ROLE_ID);
-                            if (targetMember.id !== interaction.guild.ownerId) await targetMember.setNickname(targetMember.user.username).catch(()=>{});
+                            if (targetMember.id !== interaction.guild.ownerId) await targetMember.setNickname(`${team.abbreviation} ${targetMember.user.username}`).catch(()=>{});
                             await interaction.update({ content: `✅ **${targetMember.user.username}** degradado a Jugador.`, components: [] });
                         } else if (action === 'make') {
                             if(team.managerId) {
@@ -314,7 +318,7 @@ client.on(Events.InteractionCreate, async interaction => {
                             team.captains = team.captains.filter(c => c !== targetId);
                             await targetMember.roles.remove([process.env.PLAYER_ROLE_ID, process.env.CAPTAIN_ROLE_ID, process.env.MUTED_ROLE_ID]);
                             await targetMember.roles.add(process.env.MANAGER_ROLE_ID);
-                            if (targetMember.id !== interaction.guild.ownerId) await targetMember.setNickname(`|MG| ${targetMember.user.username}`).catch(()=>{});
+                            if (targetMember.id !== interaction.guild.ownerId) await targetMember.setNickname(`|MG| ${team.abbreviation} ${targetMember.user.username}`).catch(()=>{});
                             await interaction.update({ content: `👑 **${targetMember.user.username}** es ahora el nuevo Mánager.`, components: [] });
                         }
                         await team.save();
@@ -373,7 +377,7 @@ client.on(Events.InteractionCreate, async interaction => {
                 const modal = new ModalBuilder().setCustomId('manager_request_modal').setTitle('Formulario de Solicitud de Mánager');
                 const vpgUsernameInput = new TextInputBuilder().setCustomId('vpgUsername').setLabel("Tu nombre de usuario en VPG").setStyle(TextInputStyle.Short).setRequired(true);
                 const teamNameInput = new TextInputBuilder().setCustomId('teamName').setLabel("Nombre de tu equipo en VPG").setStyle(TextInputStyle.Short).setRequired(true);
-                const teamAbbrInput = new TextInputBuilder().setCustomId('teamAbbr').setLabel("Abreviatura del equipo (3-4 letras)").setStyle(TextInputStyle.Short).setRequired(true).setMinLength(3).setMaxLength(4);
+                const teamAbbrInput = new TextInputBuilder().setCustomId('teamAbbr').setLabel("Abreviatura del equipo (3 letras)").setStyle(TextInputStyle.Short).setRequired(true).setMinLength(3).setMaxLength(3);
                 const leagueSelect = new StringSelectMenuBuilder().setCustomId('leagueSelect').setPlaceholder('Selecciona la liga').addOptions(leagueOptions);
                 modal.addComponents(new ActionRowBuilder().addComponents(vpgUsernameInput), new ActionRowBuilder().addComponents(teamNameInput), new ActionRowBuilder().addComponents(teamAbbrInput), new ActionRowBuilder().addComponents(leagueSelect));
                 await interaction.showModal(modal);
@@ -490,7 +494,7 @@ client.on(Events.InteractionCreate, async interaction => {
                 const targetMember = await interaction.guild.members.fetch(targetId);
                 await targetMember.roles.remove(process.env.PLAYER_ROLE_ID);
                 await targetMember.roles.add(process.env.CAPTAIN_ROLE_ID);
-                if (targetMember.id !== interaction.guild.ownerId) await targetMember.setNickname(`|C| ${targetMember.user.username}`).catch(err => console.error(`Fallo al cambiar apodo de Capitán: ${err.message}`));
+                if (targetMember.id !== interaction.guild.ownerId) await targetMember.setNickname(`|C| ${team.abbreviation} ${targetMember.user.username}`).catch(err => console.error(`Fallo al cambiar apodo de Capitán: ${err.message}`));
                 await interaction.update({ content: `✅ **${targetMember.user.username}** ha sido ascendido a Capitán.`, components: [] });
             }
             else if (customId.startsWith('demote_captain_')) {
@@ -503,7 +507,7 @@ client.on(Events.InteractionCreate, async interaction => {
                 const targetMember = await interaction.guild.members.fetch(targetId);
                 await targetMember.roles.remove(process.env.CAPTAIN_ROLE_ID);
                 await targetMember.roles.add(process.env.PLAYER_ROLE_ID);
-                if (targetMember.id !== interaction.guild.ownerId) await targetMember.setNickname(targetMember.user.username).catch(err => console.error(`Fallo al cambiar apodo a Jugador: ${err.message}`));
+                if (targetMember.id !== interaction.guild.ownerId) await targetMember.setNickname(`${team.abbreviation} ${targetMember.user.username}`).catch(err => console.error(`Fallo al cambiar apodo a Jugador: ${err.message}`));
                 await interaction.update({ content: `✅ **${targetMember.user.username}** ha sido degradado a Jugador.`, components: [] });
             }
             else if (customId.startsWith('kick_player_')) {
@@ -622,9 +626,10 @@ client.on(Events.InteractionCreate, async interaction => {
                 const teamId = parts[3];
                 const newValue = interaction.fields.getTextInputValue('newValue');
                 const update = {};
-                update[action === 'name' ? 'name' : 'logoUrl'] = newValue;
+                const fieldName = action === 'name' ? 'name' : action === 'logo' ? 'logoUrl' : 'abbreviation';
+                update[fieldName] = newValue;
                 await Team.findByIdAndUpdate(teamId, { $set: update });
-                await interaction.reply({ content: `✅ El ${action === 'name' ? 'nombre' : 'logo'} del equipo ha sido actualizado.`, ephemeral: true });
+                await interaction.reply({ content: `✅ La propiedad del equipo ha sido actualizada.`, ephemeral: true });
             }
             else if (customId.startsWith('admin_assign_manager_modal_')) {
                 const teamId = customId.split('_')[4];
@@ -641,13 +646,13 @@ client.on(Events.InteractionCreate, async interaction => {
                 team.managerId = targetMember.id;
                 await team.save();
                 await targetMember.roles.add(process.env.MANAGER_ROLE_ID);
-                if (targetMember.id !== interaction.guild.ownerId) await targetMember.setNickname(`|MG| ${targetMember.user.username}`).catch(()=>{});
+                if (targetMember.id !== interaction.guild.ownerId) await targetMember.setNickname(`|MG| ${team.abbreviation} ${targetMember.user.username}`).catch(()=>{});
                 await interaction.reply({ content: `✅ **${targetMember.user.tag}** es ahora el nuevo Mánager de **${team.name}**.`, ephemeral: true });
             }
             else if (customId === 'manager_request_modal') {
                 const vpgUsername = interaction.fields.getTextInputValue('vpgUsername');
                 const teamName = interaction.fields.getTextInputValue('teamName');
-                const teamAbbr = interaction.fields.getTextInputValue('teamAbbr');
+                const teamAbbr = interaction.fields.getTextInputValue('teamAbbr').toUpperCase();
                 const leagueName = interaction.fields.getTextInputValue('leagueSelect');
                 const approvalChannel = await client.channels.fetch(process.env.APPROVAL_CHANNEL_ID);
                 if (!approvalChannel) return interaction.reply({ content: 'Error: Canal de aprobaciones no encontrado.', ephemeral: true });
@@ -690,7 +695,7 @@ client.on(Events.InteractionCreate, async interaction => {
                 team.players.push(interaction.user.id);
                 await team.save();
                 await interaction.member.roles.add(process.env.PLAYER_ROLE_ID);
-                if (interaction.member.id !== interaction.guild.ownerId) await interaction.member.setNickname(interaction.user.username).catch(err => console.error(`Fallo al cambiar apodo de Jugador: ${err.message}`));
+                if (interaction.member.id !== interaction.guild.ownerId) await interaction.member.setNickname(`${team.abbreviation} ${interaction.user.username}`).catch(err => console.error(`Fallo al cambiar apodo de Jugador: ${err.message}`));
                 await interaction.reply({ content: `¡Felicidades! Te has unido a **${team.name}** como ${position}.`, ephemeral: true });
                 const manager = await client.users.fetch(team.managerId);
                 await manager.send(`✅ **${interaction.user.username}** (Usuario VPG: ${vpgUsername}) ha aceptado tu invitación a **${team.name}** y jugará de ${position}.`);
@@ -719,7 +724,7 @@ client.on(Events.InteractionCreate, async interaction => {
                 await applicant.roles.add(process.env.MANAGER_ROLE_ID);
                 if (applicant.id !== interaction.guild.ownerId) {
                     try {
-                        await applicant.setNickname(`|MG| ${applicant.user.username}`);
+                        await applicant.setNickname(`|MG| ${newTeam.abbreviation} ${applicant.user.username}`);
                     } catch (nicknameError) {
                         console.error(`FALLO AL CAMBIAR APODO: ${nicknameError.message}`);
                     }
