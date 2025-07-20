@@ -1,5 +1,5 @@
 // src/handlers/selectMenuHandler.js
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, InteractionResponseFlags } = require('discord.js');
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const Team = require('../models/team.js');
 const VPGUser = require('../models/user.js');
 const League = require('../models/league.js');
@@ -8,7 +8,10 @@ module.exports = async (client, interaction) => {
     const { customId, values, guild, user } = interaction;
     const selectedValue = values[0];
 
-    // --- Menú que abre un modal ---
+    // ======================================================================
+    // == SECCIÓN 1: MENÚS QUE ABREN MODALES (RESPUESTA INSTANTÁNEA)      ==
+    // ======================================================================
+
     if (customId === 'apply_to_team_select') {
         const teamId = selectedValue;
         const modal = new ModalBuilder().setCustomId(`application_modal_${teamId}`).setTitle('Aplicar a Equipo');
@@ -17,7 +20,10 @@ module.exports = async (client, interaction) => {
         return interaction.showModal(modal);
     }
     
-    // --- Menús que actualizan el mensaje ---
+    // ======================================================================
+    // == SECCIÓN 2: MENÚS QUE ACTUALIZAN UN MENSAJE (USAN DEFERUPDATE)   ==
+    // ======================================================================
+
     if (customId === 'admin_select_team_to_manage' || customId === 'roster_management_menu') {
         await interaction.deferUpdate();
         
@@ -63,8 +69,11 @@ module.exports = async (client, interaction) => {
         return;
     }
 
-    // --- Menús que envían una nueva respuesta ---
-    await interaction.deferReply({ flags: [InteractionResponseFlags.Ephemeral] });
+    // ======================================================================
+    // == SECCIÓN 3: MENÚS QUE ENVÍAN RESPUESTAS PRIVADAS (DEFERREPLY)    ==
+    // ======================================================================
+
+    await interaction.deferReply({ ephemeral: true });
 
     if (customId === 'view_team_roster_select') {
         const team = await Team.findById(selectedValue).lean();
