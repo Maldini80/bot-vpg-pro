@@ -5,17 +5,6 @@ const VPGUser = require('../models/user.js');
 const League = require('../models/league.js');
 const AvailabilityPanel = require('../models/availabilityPanel.js');
 
-// La función 'updatePanelMessage' se mueve a buttonHandler.js para centralizarla,
-// pero mantenemos la de getOrCreateWebhook aquí por si se usa en otros menús.
-async function getOrCreateWebhook(channel, client) {
-    const webhooks = await channel.fetchWebhooks();
-    let webhook = webhooks.find(wh => wh.owner.id === client.user.id && wh.name.startsWith('VPG Bot'));
-    if (!webhook) {
-        webhook = await channel.createWebhook({ name: `VPG Bot Amistosos`, avatar: client.user.displayAvatarURL() });
-    }
-    return webhook;
-}
-
 module.exports = async (client, interaction) => {
     const { customId, values, guild, user } = interaction;
     const selectedValue = values[0];
@@ -50,7 +39,7 @@ module.exports = async (client, interaction) => {
             .setStyle(ButtonStyle.Success);
             
         await interaction.editReply({
-            content: `Has seleccionado las ligas: **${selectedLeagues.join(', ') || 'Ninguna'}**. Pulsa continuar.`,
+            content: `Has seleccionado las ligas: **${selectedLeagues.length > 0 ? selectedLeagues.join(', ') : 'Ninguna'}**. Pulsa continuar.`,
             components: [new ActionRowBuilder().addComponents(continueButton)]
         });
         return;
@@ -134,7 +123,6 @@ module.exports = async (client, interaction) => {
         panel.messageId = message.id;
         await panel.save();
 
-        // Se llama a la función de actualización desde el buttonHandler, que ahora está centralizada.
         const buttonHandler = client.handlers.get('buttonHandler');
         if (buttonHandler && typeof buttonHandler.updatePanelMessage === 'function') {
             await buttonHandler.updatePanelMessage(client, panel._id);
