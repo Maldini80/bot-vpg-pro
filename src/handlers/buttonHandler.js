@@ -499,10 +499,8 @@ const handler = async (client, interaction) => {
             if (!channelId) return interaction.editReply({ content: 'Error: El ID del canal de amistosos instantáneos no está configurado.' });
             const channel = await client.channels.fetch(channelId).catch(()=>null);
             if (!channel) return interaction.editReply({ content: 'Error: No se encontró el canal de amistosos instantáneos.' });
-            
             const webhook = await getOrCreateWebhook(channel, client);
             const message = await webhook.send({ content: "Creando panel...", username: team.name, avatarURL: team.logoUrl });
-
             const panel = new AvailabilityPanel({ 
                 guildId: guild.id, channelId, messageId: message.id, teamId: team._id, postedById: user.id, panelType: 'INSTANT', leagues,
                 timeSlots: [{ time: 'INSTANT', status: 'AVAILABLE' }] 
