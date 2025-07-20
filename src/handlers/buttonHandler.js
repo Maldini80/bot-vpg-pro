@@ -55,6 +55,27 @@ module.exports = async (client, interaction) => {
         modal.addComponents(new ActionRowBuilder().addComponents(teamLogoInput));
         return interaction.showModal(modal);
     }
+
+    if (customId.startsWith('admin_change_data_') || customId === 'team_edit_data_button') {
+        let team;
+        if (customId.startsWith('admin_change_data_')) {
+            if (!isAdmin) return interaction.reply({ content: 'Acción restringida.', ephemeral: true });
+            const teamId = customId.split('_')[3];
+            team = await Team.findById(teamId);
+        } else {
+            team = await Team.findOne({ guildId: guild.id, managerId: user.id });
+            if (!team) return interaction.reply({ content: 'Solo los mánagers pueden editar los datos de su equipo.', ephemeral: true });
+        }
+        
+        if (!team) return interaction.reply({ content: 'No se encontró el equipo.', ephemeral: true });
+
+        const modal = new ModalBuilder().setCustomId(`edit_data_modal_${team._id}`).setTitle(`Editar Datos de ${team.name}`);
+        const newNameInput = new TextInputBuilder().setCustomId('newName').setLabel("Nuevo Nombre (opcional)").setStyle(TextInputStyle.Short).setRequired(false).setValue(team.name);
+        const newAbbrInput = new TextInputBuilder().setCustomId('newAbbr').setLabel("Nueva Abreviatura (opcional, 3 letras)").setStyle(TextInputStyle.Short).setRequired(false).setValue(team.abbreviation).setMinLength(3).setMaxLength(3);
+        const newLogoInput = new TextInputBuilder().setCustomId('newLogo').setLabel("Nueva URL del Logo (opcional)").setStyle(TextInputStyle.Short).setRequired(false);
+        modal.addComponents(new ActionRowBuilder().addComponents(newNameInput), new ActionRowBuilder().addComponents(newAbbrInput), new ActionRowBuilder().addComponents(newLogoInput));
+        return interaction.showModal(modal);
+    }
     
     // ======================================================================
     // == SECCIÓN 2: BOTONES QUE ACTUALIZAN UN MENSAJE (DEFERUPDATE)     ==
@@ -204,7 +225,6 @@ module.exports = async (client, interaction) => {
         return interaction.editReply({ content: 'Selecciona el equipo que deseas gestionar desde el menú:', components: [new ActionRowBuilder().addComponents(selectMenu)] });
     }
 
-    // --- **LÓGICA CORREGIDA Y OPTIMIZADA** ---
     if (customId.startsWith('admin_manage_members_') || customId === 'team_manage_roster_button') {
         let teamToManage;
         if (customId.startsWith('admin_manage_members_')) {
@@ -214,32 +234,20 @@ module.exports = async (client, interaction) => {
         } else {
             teamToManage = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
         }
-
         if (!teamToManage) return interaction.editReply({ content: 'No se encontró el equipo o no tienes permisos.' });
-
         const memberIds = [teamToManage.managerId, ...teamToManage.captains, ...teamToManage.players].filter(id => id);
         if (memberIds.length === 0) return interaction.editReply({ content: 'Este equipo no tiene miembros.' });
-
-        // Búsqueda Optimizada: Una sola petición a la API
         const membersCollection = await guild.members.fetch({ user: memberIds });
-
         const memberOptions = membersCollection.map(member => {
             let description = 'Jugador';
             if (teamToManage.managerId === member.id) description = 'Mánager';
             else if (teamToManage.captains.includes(member.id)) description = 'Capitán';
-            return {
-                label: member.user.username,
-                description: description,
-                value: member.id,
-            };
+            return { label: member.user.username, description: description, value: member.id, };
         });
-
         if (memberOptions.length === 0) return interaction.editReply({ content: 'No se encontraron miembros válidos en el servidor.' });
-        
         const selectMenu = new StringSelectMenuBuilder().setCustomId('roster_management_menu').setPlaceholder('Selecciona un miembro para gestionar').addOptions(memberOptions);
         return interaction.editReply({ content: 'Gestionando miembros de **' + teamToManage.name + '**:', components: [new ActionRowBuilder().addComponents(selectMenu)] });
     }
-
 
     if (customId === 'admin_view_pending_requests') {
         if (!isAdmin) return interaction.editReply({content: 'Acción restringida.'});
@@ -249,7 +257,6 @@ module.exports = async (client, interaction) => {
         return interaction.editReply({ embeds: [embed] });
     }
     
-    // --- Lógica del Panel de Equipo ---
     const userTeam = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
     if (!userTeam) return interaction.editReply({content: 'Debes ser mánager o capitán para usar este botón.'});
     
