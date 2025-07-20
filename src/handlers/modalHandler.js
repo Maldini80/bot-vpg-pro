@@ -1,5 +1,5 @@
 // src/handlers/modalHandler.js
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, InteractionResponseFlags } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const Team = require('../models/team.js');
 const League = require('../models/league.js');
 const PlayerApplication = require('../models/playerApplication.js');
@@ -8,7 +8,9 @@ const VPGUser = require('../models/user.js');
 module.exports = async (client, interaction) => {
     const { customId, fields, guild, user } = interaction;
     
-    await interaction.deferReply({ flags: [InteractionResponseFlags.Ephemeral] });
+    // Todos los modales necesitan una respuesta, así que deferimos al principio.
+    // CORRECCIÓN: Volvemos a usar 'ephemeral: true' que es estable.
+    await interaction.deferReply({ ephemeral: true });
 
     if (customId === 'create_league_modal') {
         const leagueName = fields.getTextInputValue('leagueNameInput');
