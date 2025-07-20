@@ -1,15 +1,49 @@
 // src/handlers/modalHandler.js
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits } = require('discord.js');
 const Team = require('../models/team.js');
 const League = require('../models/league.js');
 const PlayerApplication = require('../models/playerApplication.js');
 const VPGUser = require('../models/user.js');
 
 module.exports = async (client, interaction) => {
-    const { customId, fields, guild, user } = interaction;
+    const { customId, fields, guild, user, member } = interaction;
     
-    // CORRECCIÓN: Usamos ephemeral: true, que es la sintaxis estable.
     await interaction.deferReply({ ephemeral: true });
+
+    if (customId === 'manager_request_modal') {
+        const vpgUsername = fields.getTextInputValue('vpgUsername');
+        const teamName = fields.getTextInputValue('teamName');
+        const teamAbbr = fields.getTextInputValue('teamAbbr').toUpperCase();
+        
+        const approvalChannelId = process.env.APPROVAL_CHANNEL_ID;
+        if (!approvalChannelId) return interaction.editReply({ content: 'Error: El canal de aprobaciones no está configurado. Contacta a un administrador.' });
+        
+        const approvalChannel = await client.channels.fetch(approvalChannelId).catch(() => null);
+        if(!approvalChannel) return interaction.editReply({ content: 'Error: No se pudo encontrar el canal de aprobaciones.' });
+
+        const normalizedTeamName = teamName.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+
+        const embed = new EmbedBuilder()
+            .setTitle('📝 Nueva Solicitud de Registro de Equipo')
+            .setColor('Orange')
+            .setAuthor({ name: user.tag, iconURL: user.displayAvatarURL() })
+            .addFields(
+                { name: 'Solicitante', value: `<@${user.id}>`, inline: true },
+                { name: 'ID del Solicitante', value: `\`${user.id}\``, inline: true },
+                { name: 'Usuario VPG', value: vpgUsername, inline: false },
+                { name: 'Nombre del Equipo', value: teamName, inline: true },
+                { name: 'Abreviatura', value: teamAbbr, inline: true },
+            )
+            .setTimestamp();
+        
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId(`approve_request_${user.id}_${normalizedTeamName}`).setLabel('Aprobar').setStyle(ButtonStyle.Success),
+            new ButtonBuilder().setCustomId(`reject_request_${user.id}`).setLabel('Rechazar').setStyle(ButtonStyle.Danger)
+        );
+
+        await approvalChannel.send({ embeds: [embed], components: [row] });
+        return interaction.editReply({ content: '✅ ¡Tu solicitud ha sido enviada! Un administrador la revisará pronto.' });
+    }
 
     if (customId === 'create_league_modal') {
         const leagueName = fields.getTextInputValue('leagueNameInput');
