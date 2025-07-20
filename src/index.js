@@ -132,7 +132,7 @@ client.on(Events.InteractionCreate, async interaction => {
                     }
                     case 'assign': {
                         const modal = new ModalBuilder().setCustomId(`admin_assign_manager_modal_${teamId}`).setTitle('Asignar Nuevo Mánager');
-                        const userIdInput = new TextInputBuilder().setCustomId('userId').setLabel('ID del nuevo Mánager').setStyle(TextInputStyle.Short).setRequired(true);
+                        const userIdInput = new TextInputBuilder().setCustomId('userId').setLabel('ID o Nombre del nuevo Mánager').setStyle(TextInputStyle.Short).setRequired(true);
                         modal.addComponents(new ActionRowBuilder().addComponents(userIdInput));
                         await interaction.showModal(modal);
                         break;
@@ -159,7 +159,7 @@ client.on(Events.InteractionCreate, async interaction => {
                     }
                     case 'promote':
                     case 'demote':
-                    case 'make': // make manager
+                    case 'make':
                     case 'kick': {
                         const targetId = parts[parts.length - 1];
                         const team = await Team.findById(teamId);
@@ -170,22 +170,24 @@ client.on(Events.InteractionCreate, async interaction => {
                             team.players = team.players.filter(p => p !== targetId);
                             team.captains = team.captains.filter(c => c !== targetId);
                             if(team.managerId === targetId) team.managerId = null;
-                            await targetMember.roles.remove([process.env.PLAYER_ROLE_ID, process.env.CAPTAIN_ROLE_ID, process.env.MANAGER_ROLE_ID]);
+                            await targetMember.roles.remove([process.env.PLAYER_ROLE_ID, process.env.CAPTAIN_ROLE_ID, process.env.MANAGER_ROLE_ID, process.env.MUTED_ROLE_ID]).catch(()=>{});
+                            if (targetMember.id !== interaction.guild.ownerId) await targetMember.setNickname(targetMember.user.username).catch(()=>{});
                             await interaction.update({ content: `✅ **${targetMember.user.username}** expulsado.`, components: [] });
                         } else if (action === 'promote') {
                             team.players = team.players.filter(p => p !== targetId);
                             team.captains.push(targetId);
                             await targetMember.roles.remove(process.env.PLAYER_ROLE_ID).catch(()=>{});
                             await targetMember.roles.add(process.env.CAPTAIN_ROLE_ID);
+                            if (targetMember.id !== interaction.guild.ownerId) await targetMember.setNickname(`|C| ${targetMember.user.username}`).catch(()=>{});
                             await interaction.update({ content: `✅ **${targetMember.user.username}** ascendido a Capitán.`, components: [] });
                         } else if (action === 'demote') {
                             team.captains = team.captains.filter(c => c !== targetId);
                             team.players.push(targetId);
                             await targetMember.roles.remove(process.env.CAPTAIN_ROLE_ID).catch(()=>{});
                             await targetMember.roles.add(process.env.PLAYER_ROLE_ID);
+                            if (targetMember.id !== interaction.guild.ownerId) await targetMember.setNickname(targetMember.user.username).catch(()=>{});
                             await interaction.update({ content: `✅ **${targetMember.user.username}** degradado a Jugador.`, components: [] });
-                        } else if (action === 'make') { // make manager
-                            // Quitar al antiguo manager si lo hay
+                        } else if (action === 'make') {
                             if(team.managerId) {
                                 const oldManager = await interaction.guild.members.fetch(team.managerId).catch(()=>{});
                                 if(oldManager) await oldManager.roles.remove(process.env.MANAGER_ROLE_ID).catch(()=>{});
@@ -193,8 +195,9 @@ client.on(Events.InteractionCreate, async interaction => {
                             team.managerId = targetId;
                             team.players = team.players.filter(p => p !== targetId);
                             team.captains = team.captains.filter(c => c !== targetId);
-                            await targetMember.roles.remove([process.env.PLAYER_ROLE_ID, process.env.CAPTAIN_ROLE_ID]);
+                            await targetMember.roles.remove([process.env.PLAYER_ROLE_ID, process.env.CAPTAIN_ROLE_ID, process.env.MUTED_ROLE_ID]);
                             await targetMember.roles.add(process.env.MANAGER_ROLE_ID);
+                            if (targetMember.id !== interaction.guild.ownerId) await targetMember.setNickname(`|MG| ${targetMember.user.username}`).catch(()=>{});
                             await interaction.update({ content: `👑 **${targetMember.user.username}** es ahora el nuevo Mánager.`, components: [] });
                         }
                         await team.save();
@@ -204,13 +207,10 @@ client.on(Events.InteractionCreate, async interaction => {
                 return;
             }
 
-            // --- BOTÓN DE MUTEAR/DESMUTEAR ---
             if (customId.startsWith('toggle_mute_player_')) {
-                const parts = customId.split('_');
-                const targetId = parts[parts.length - 1];
+                const targetId = customId.substring(customId.lastIndexOf('_') + 1);
                 const team = await Team.findOne({ guildId: interaction.guildId, $or: [{ managerId: interaction.user.id }, { captains: interaction.user.id }] });
                 if (!team) return interaction.reply({ content: 'No tienes permiso para esta acción.', ephemeral: true });
-
                 const targetMember = await interaction.guild.members.fetch(targetId).catch(() => null);
                 if (!targetMember) return interaction.update({ content: 'No se encontró al miembro.', components: [] });
                 if (team.captains.includes(targetId)) return interaction.update({ content: 'No puedes mutear a un capitán.', components: [] });
@@ -226,8 +226,7 @@ client.on(Events.InteractionCreate, async interaction => {
                 return;
             }
             
-            // --- EL RESTO DE BOTONES ---
-            const esAprobador = interaction.member.roles.cache.has(process.env.APPROVER_ROLE_ID) || isAdmin;
+            const esAprobador = isAdmin || interaction.member.roles.cache.has(process.env.APPROVER_ROLE_ID);
             
             if (customId === 'admin_create_league_button') {
                 if (!isAdmin) return interaction.reply({ content: 'Solo los administradores pueden usar este botón.', ephemeral: true });
@@ -273,7 +272,7 @@ client.on(Events.InteractionCreate, async interaction => {
                 team.players = team.players.filter(p => p !== interaction.user.id);
                 team.captains = team.captains.filter(c => c !== interaction.user.id);
                 await team.save();
-                await interaction.member.roles.remove([process.env.PLAYER_ROLE_ID, process.env.CAPTAIN_ROLE_ID]).catch(() => {});
+                await interaction.member.roles.remove([process.env.PLAYER_ROLE_ID, process.env.CAPTAIN_ROLE_ID, process.env.MUTED_ROLE_ID]).catch(() => {});
                 if (interaction.member.id !== interaction.guild.ownerId) await interaction.member.setNickname(interaction.member.user.username).catch(()=>{});
                 await interaction.reply({ content: `Has abandonado el equipo **${team.name}**.`, ephemeral: true });
                 const manager = await client.users.fetch(team.managerId).catch(() => null);
@@ -324,12 +323,12 @@ client.on(Events.InteractionCreate, async interaction => {
                 }
                 await interaction.message.edit({ components: [] });
             }
-            else if (customId === 'manager_invite_player') {
-                const team = await Team.findOne({ guildId: interaction.guildId, managerId: interaction.user.id });
-                if (!team) return interaction.reply({ content: 'Solo los mánagers registrados pueden invitar.', ephemeral: true });
-                const modal = new ModalBuilder().setCustomId('manager_invite_modal').setTitle(`Invitar Jugador a ${team.name}`);
-                const playerIdInput = new TextInputBuilder().setCustomId('playerId').setLabel("ID del usuario de Discord a invitar").setStyle(TextInputStyle.Short).setRequired(true);
-                modal.addComponents(new ActionRowBuilder().addComponents(playerIdInput));
+            else if (customId === 'manager_invite_player_button') {
+                const isManager = await Team.findOne({ guildId: interaction.guildId, managerId: interaction.user.id });
+                if (!isManager) return interaction.reply({ content: 'Solo los mánagers de equipo pueden invitar a jugadores.', ephemeral: true });
+                const modal = new ModalBuilder().setCustomId('invite_player_modal').setTitle('Invitar Jugador por Nombre');
+                const playerNameInput = new TextInputBuilder().setCustomId('playerName').setLabel("Nombre de usuario (o parte) del jugador").setStyle(TextInputStyle.Short).setRequired(true);
+                modal.addComponents(new ActionRowBuilder().addComponents(playerNameInput));
                 await interaction.showModal(modal);
             }
             else if (customId === 'manager_manage_roster') {
@@ -346,23 +345,45 @@ client.on(Events.InteractionCreate, async interaction => {
                 const selectMenu = new StringSelectMenuBuilder().setCustomId('roster_management_menu').setPlaceholder('Selecciona un jugador para gestionar').addOptions(memberOptions);
                 await interaction.reply({ content: 'Selecciona un miembro de tu plantilla:', components: [new ActionRowBuilder().addComponents(selectMenu)], ephemeral: true });
             }
+            else if (customId === 'manager_view_roster') {
+                const team = await Team.findOne({ guildId: interaction.guildId, $or: [{ managerId: interaction.user.id }, { captains: interaction.user.id }] });
+                if (!team) return interaction.reply({ content: 'Debes pertenecer a un equipo para ver su plantilla.', ephemeral: true });
+                const allMemberIds = [team.managerId, ...team.captains, ...team.players].filter(id => id);
+                if (allMemberIds.length === 0) return interaction.reply({ content: 'Tu equipo no tiene miembros.', ephemeral: true });
+                const memberProfiles = await VPGUser.find({ discordId: { $in: allMemberIds } });
+                const memberMap = new Map(memberProfiles.map(p => [p.discordId, p]));
+                let rosterString = '';
+                for (const memberId of allMemberIds) {
+                    const member = await interaction.guild.members.fetch(memberId).catch(()=>null);
+                    if(member) {
+                        const vpgUser = memberMap.get(memberId)?.vpgUsername || 'N/A';
+                        const position = memberMap.get(memberId)?.position || 'N/A';
+                        let role = 'Jugador';
+                        if (team.managerId === memberId) role = '👑 Mánager';
+                        else if (team.captains.includes(memberId)) role = '🛡️ Capitán';
+                        rosterString += `**${member.user.username}** (${vpgUser}) - ${position} - *${role}*\n`;
+                    }
+                }
+                const embed = new EmbedBuilder().setTitle(`Plantilla de ${team.name}`).setDescription(rosterString || 'No se pudo obtener la información de la plantilla.').setColor('#3498db');
+                await interaction.reply({ embeds: [embed], ephemeral: true });
+            }
             else if (customId.startsWith('promote_player_')) {
+                const targetId = customId.split('_')[2];
                 const team = await Team.findOne({ guildId: interaction.guildId, managerId: interaction.user.id });
                 if (!team) return interaction.reply({ content: 'Solo el mánager puede ascender.', ephemeral: true });
-                const targetId = customId.split('_')[2];
                 team.players = team.players.filter(p => p !== targetId);
                 team.captains.push(targetId);
                 await team.save();
                 const targetMember = await interaction.guild.members.fetch(targetId);
                 await targetMember.roles.remove(process.env.PLAYER_ROLE_ID);
                 await targetMember.roles.add(process.env.CAPTAIN_ROLE_ID);
-                await targetMember.setNickname(`|C| ${targetMember.user.username}`).catch(err => console.error(`Fallo al cambiar apodo de Capitán: ${err.message}`));
+                if (targetMember.id !== interaction.guild.ownerId) await targetMember.setNickname(`|C| ${targetMember.user.username}`).catch(err => console.error(`Fallo al cambiar apodo de Capitán: ${err.message}`));
                 await interaction.update({ content: `✅ **${targetMember.user.username}** ha sido ascendido a Capitán.`, components: [] });
             }
             else if (customId.startsWith('demote_captain_')) {
+                const targetId = customId.split('_')[2];
                 const team = await Team.findOne({ guildId: interaction.guildId, managerId: interaction.user.id });
                 if (!team) return interaction.reply({ content: 'Solo el mánager puede degradar.', ephemeral: true });
-                const targetId = customId.split('_')[2];
                 team.captains = team.captains.filter(c => c !== targetId);
                 team.players.push(targetId);
                 await team.save();
@@ -373,9 +394,9 @@ client.on(Events.InteractionCreate, async interaction => {
                 await interaction.update({ content: `✅ **${targetMember.user.username}** ha sido degradado a Jugador.`, components: [] });
             }
             else if (customId.startsWith('kick_player_')) {
+                const targetId = customId.split('_')[2];
                 const team = await Team.findOne({ guildId: interaction.guildId, $or: [{ managerId: interaction.user.id }, { captains: interaction.user.id }] });
                 if (!team) return interaction.reply({ content: 'No tienes permiso para expulsar.', ephemeral: true });
-                const targetId = customId.split('_')[2];
                 const isTargetCaptain = team.captains.includes(targetId);
                 const isManager = team.managerId === interaction.user.id;
                 if (isTargetCaptain && !isManager) return interaction.update({ content: '❌ Los capitanes no pueden expulsar a otros capitanes.', components: [] });
@@ -383,7 +404,7 @@ client.on(Events.InteractionCreate, async interaction => {
                 team.captains = team.captains.filter(c => c !== targetId);
                 await team.save();
                 const targetMember = await interaction.guild.members.fetch(targetId);
-                await targetMember.roles.remove([process.env.PLAYER_ROLE_ID, process.env.CAPTAIN_ROLE_ID]).catch(() => {});
+                await targetMember.roles.remove([process.env.PLAYER_ROLE_ID, process.env.CAPTAIN_ROLE_ID, process.env.MUTED_ROLE_ID]).catch(() => {});
                 if (targetMember.id !== interaction.guild.ownerId) await targetMember.setNickname(targetMember.user.username).catch(err => console.error(`Fallo al resetear apodo: ${err.message}`));
                 await interaction.update({ content: `✅ **${targetMember.user.username}** ha sido expulsado del equipo.`, components: [] });
             }
@@ -433,7 +454,7 @@ client.on(Events.InteractionCreate, async interaction => {
                 if (isManager && !isTargetCaptain) row.addComponents(new ButtonBuilder().setCustomId(`promote_player_${targetId}`).setLabel('⬆️ Ascender a Capitán').setStyle(ButtonStyle.Success));
                 if (isManager && isTargetCaptain) row.addComponents(new ButtonBuilder().setCustomId(`demote_captain_${targetId}`).setLabel('⬇️ Degradar a Jugador').setStyle(ButtonStyle.Secondary));
                 const isMuted = targetMember.roles.cache.has(process.env.MUTED_ROLE_ID);
-                if (!isTargetCaptain) row.addComponents(new ButtonBuilder().setCustomId(`toggle_mute_player_${team._id}_${targetId}`).setLabel(isMuted ? '🔊 Desmutear' : '🔇 Mutear').setStyle(isMuted ? ButtonStyle.Success : ButtonStyle.Secondary));
+                if (!isTargetCaptain) row.addComponents(new ButtonBuilder().setCustomId(`toggle_mute_player_${targetId}`).setLabel(isMuted ? '🔊 Desmutear' : '🔇 Mutear').setStyle(isMuted ? ButtonStyle.Success : ButtonStyle.Secondary));
                 if (isManager || !isTargetCaptain) row.addComponents(new ButtonBuilder().setCustomId(`kick_player_${targetId}`).setLabel('❌ Expulsar').setStyle(ButtonStyle.Danger));
                 await interaction.reply({ content: `Gestionando a **${targetMember.user.username}**:`, components: [row], ephemeral: true });
             }
@@ -476,18 +497,21 @@ client.on(Events.InteractionCreate, async interaction => {
             }
             else if (customId.startsWith('admin_assign_manager_modal_')) {
                 const teamId = customId.split('_')[4];
-                const newManagerId = interaction.fields.getTextInputValue('userId');
+                const userInput = interaction.fields.getTextInputValue('userId');
+                let targetMember;
                 try {
-                    const newManagerMember = await interaction.guild.members.fetch(newManagerId);
-                    const team = await Team.findById(teamId);
-                    team.managerId = newManagerId;
-                    await team.save();
-                    await newManagerMember.roles.add(process.env.MANAGER_ROLE_ID);
-                    if (newManagerMember.id !== interaction.guild.ownerId) await newManagerMember.setNickname(`|MG| ${newManagerMember.user.username}`).catch(()=>{});
-                    await interaction.reply({ content: `✅ **${newManagerMember.user.tag}** es ahora el nuevo Mánager de **${team.name}**.`, ephemeral: true });
-                } catch (e) {
-                    await interaction.reply({ content: `Error: No se pudo encontrar o asignar al usuario con ID ${newManagerId}.`, ephemeral: true });
+                    const members = await interaction.guild.members.search({ query: userInput, limit: 1 });
+                    targetMember = members.first();
+                    if (!targetMember) throw new Error();
+                } catch(e) {
+                     return interaction.reply({ content: `Error: No se pudo encontrar al usuario que coincida con "${userInput}".`, ephemeral: true });
                 }
+                const team = await Team.findById(teamId);
+                team.managerId = targetMember.id;
+                await team.save();
+                await targetMember.roles.add(process.env.MANAGER_ROLE_ID);
+                if (targetMember.id !== interaction.guild.ownerId) await targetMember.setNickname(`|MG| ${targetMember.user.username}`).catch(()=>{});
+                await interaction.reply({ content: `✅ **${targetMember.user.tag}** es ahora el nuevo Mánager de **${team.name}**.`, ephemeral: true });
             }
             else if (customId === 'manager_request_modal') {
                 const vpgUsername = interaction.fields.getTextInputValue('vpgUsername');
@@ -501,6 +525,30 @@ client.on(Events.InteractionCreate, async interaction => {
                 await approvalChannel.send({ embeds: [embed], components: [row] });
                 await interaction.reply({ content: 'Tu solicitud ha sido enviada para revisión.', ephemeral: true });
             } 
+            else if (customId === 'invite_player_modal') {
+                const team = await Team.findOne({ guildId: interaction.guildId, managerId: interaction.user.id });
+                if (!team) return interaction.reply({ content: 'Ha ocurrido un error, no se encontró tu equipo.', ephemeral: true });
+
+                const playerName = interaction.fields.getTextInputValue('playerName');
+                const members = await interaction.guild.members.search({ query: playerName, limit: 1 });
+                const targetMember = members.first();
+
+                if (!targetMember) return interaction.reply({ content: `No se encontró ningún usuario que coincida con "${playerName}".`, ephemeral: true });
+                if (targetMember.user.bot) return interaction.reply({ content: 'No puedes invitar a un bot.', ephemeral: true });
+                if (targetMember.id === interaction.user.id) return interaction.reply({ content: 'No puedes invitarte a ti mismo.', ephemeral: true });
+                const isManager = await Team.findOne({ guildId: interaction.guildId, managerId: targetMember.id });
+                if (isManager) return interaction.reply({ content: `**${targetMember.user.username}** ya es mánager de otro equipo.`, ephemeral: true });
+
+                const embed = new EmbedBuilder().setTitle('💌 Tienes una invitación').setDescription(`**${interaction.user.username}**, mánager de **${team.name}**, te ha invitado a unirte.`).setColor('#3498db').setThumbnail(team.logoUrl);
+                const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`accept_invite_${team._id}`).setLabel('✅ Aceptar').setStyle(ButtonStyle.Success), new ButtonBuilder().setCustomId(`reject_invite_${team._id}`).setLabel('❌ Rechazar').setStyle(ButtonStyle.Danger));
+
+                try {
+                    await targetMember.send({ embeds: [embed], components: [row] });
+                    await interaction.reply({ content: `✅ Invitación enviada a **${targetMember.user.username}**.`, ephemeral: true });
+                } catch (error) {
+                    await interaction.reply({ content: `❌ No se pudo enviar la invitación a **${targetMember.user.username}**. Puede que tenga los MDs bloqueados.`, ephemeral: true });
+                }
+            }
             else if (customId.startsWith('player_join_modal_')) {
                 const teamId = customId.split('_')[2];
                 const team = await Team.findById(teamId);
