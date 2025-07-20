@@ -4,12 +4,14 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { Client, Collection, GatewayIntentBits, Events, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, PermissionFlagsBits, WebhookClient, StringSelectMenuBuilder } = require('discord.js');
 const mongoose = require('mongoose');
+const cron = require('node-cron');
 
 // --- CARGA DE MODELOS ---
 const Team = require('./models/team.js');
 const League = require('./models/league.js');
 const VPGUser = require('./models/user.js');
 const TeamChatChannel = require('./models/teamChatChannel.js');
+const FriendlyMatch = require('./models/friendlyMatch.js');
 
 mongoose.connect(process.env.DATABASE_URL).then(() => console.log('Conectado a MongoDB.')).catch(err => console.error('Error MongoDB:', err));
 
@@ -29,9 +31,46 @@ for (const file of commandFiles) {
 
 client.once(Events.ClientReady, () => {
     console.log(`¡Listo! ${client.user.tag} está online.`);
+
+    // --- LIMPIEZA DIARIA AUTOMÁTICA ---
+    cron.schedule('0 6 * * *', async () => {
+        console.log('Ejecutando limpieza diaria de amistosos a las 6:00 AM...');
+        try {
+            await FriendlyMatch.deleteMany({});
+            console.log('Base de datos de amistosos limpiada.');
+
+            const clearChannel = async (channelId) => {
+                try {
+                    const channel = await client.channels.fetch(channelId);
+                    if (!channel || !channel.isTextBased()) return;
+                    
+                    let fetched;
+                    do {
+                        fetched = await channel.messages.fetch({ limit: 100 });
+                        if (fetched.size > 0) {
+                            await channel.bulkDelete(fetched, true);
+                        }
+                    } while (fetched.size > 0);
+                    console.log(`Canal ${channel.name} limpiado.`);
+                } catch (e) {
+                    console.error(`Error limpiando el canal ${channelId}:`, e.message);
+                }
+            };
+            
+            await clearChannel('1396284750850949142'); // Programados
+            await clearChannel('1396367574882717869'); // Instantáneos
+
+            console.log('Limpieza diaria completada.');
+        } catch (error) {
+            console.error('Error durante la limpieza diaria:', error);
+        }
+    }, {
+        scheduled: true,
+        timezone: "Europe/Madrid"
+    });
 });
 
-// --- LÓGICA DE CHAT AUTOMÁTICO (CON COMPROBACIÓN DE MUTEO) ---
+// --- LÓGICA DE CHAT AUTOMÁTICO ---
 client.on(Events.MessageCreate, async message => {
     if (message.author.bot || !message.inGuild()) return;
     const activeChannel = await TeamChatChannel.findOne({ channelId: message.channel.id, guildId: message.guildId });
@@ -50,15 +89,13 @@ client.on(Events.MessageCreate, async message => {
     }
 });
 
-
 // =========================================================================================
-// === GESTIÓN DE INTERACCIONES (COMPLETA) ===
+// === GESTIÓN DE INTERACCIONES (CON SISTEMA DE AMISTOSOS) ===
 // =========================================================================================
 client.on(Events.InteractionCreate, async interaction => {
     try {
         if (!interaction.inGuild()) return;
 
-        // --- AUTOCOMPLETADO ---
         if (interaction.isAutocomplete()) {
             const commandName = interaction.commandName;
             const focusedOption = interaction.options.getFocused(true);
@@ -95,20 +132,101 @@ client.on(Events.InteractionCreate, async interaction => {
         }
         
         if (interaction.isButton()) {
-            const isAdmin = interaction.member.permissions.has(PermissionFlagsBits.Administrator);
             const customId = interaction.customId;
+            const isAdmin = interaction.member.permissions.has(PermissionFlagsBits.Administrator);
+            const esAprobador = isAdmin || interaction.member.roles.cache.has(process.env.APPROVER_ROLE_ID);
 
-            // --- BOTONES DEL PANEL DE GESTIÓN DEL ADMIN ---
+            // --- AMISTOSOS ---
+            if (customId === 'post_scheduled_friendly' || customId === 'post_instant_friendly') {
+                const team = await Team.findOne({ guildId: interaction.guildId, $or: [{ managerId: interaction.user.id }, { captains: interaction.user.id }] });
+                if (!team) return interaction.reply({ content: 'Solo los Mánagers y Capitanes pueden publicar ofertas de amistoso.', ephemeral: true });
+
+                if (customId === 'post_scheduled_friendly') {
+                    const timeSlots = ['22:00', '22:20', '22:40', '23:00', '23:20', '23:40'];
+                    const timeOptions = timeSlots.map(time => ({ label: time, value: time }));
+                    const selectMenu = new StringSelectMenuBuilder().setCustomId('schedule_time_select').setPlaceholder('Selecciona un horario').addOptions(timeOptions);
+                    await interaction.reply({ content: 'Elige la hora para tu amistoso programado:', components: [new ActionRowBuilder().addComponents(selectMenu)], ephemeral: true });
+                } else { // Amistoso Instantáneo
+                    const channelId = '1396367574882717869';
+                    await interaction.deferReply({ ephemeral: true });
+                    const channel = await client.channels.fetch(channelId).catch(() => null);
+                    if (!channel) return interaction.editReply({ content: 'Error: No se encontró el canal de amistosos instantáneos.' });
+
+                    const embed = new EmbedBuilder().setAuthor({ name: `${team.name} busca amistoso AHORA`, iconURL: team.logoUrl }).setTitle(`⚡ ¡Partido Sobre la Marcha!`).setDescription(`Nuestro equipo está listo para jugar.\n**Publicado por:** <@${interaction.user.id}>`).setColor('Green');
+                    const offerMessage = await channel.send({ embeds: [embed] });
+                    const match = new FriendlyMatch({ guildId: interaction.guildId, channelId, messageId: offerMessage.id, teamId: team._id, postedById: interaction.user.id, matchType: 'INSTANT' });
+                    const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`challenge_friendly_${match._id}`).setLabel('⚔️ Desafiar').setStyle(ButtonStyle.Primary));
+                    await offerMessage.edit({ components: [row] });
+                    await match.save();
+                    await interaction.editReply({ content: '✅ Tu oferta ha sido publicada en el canal de amistosos.'});
+                }
+                return;
+            }
+            if (customId.startsWith('challenge_friendly_')) {
+                const matchId = customId.split('_')[2];
+                const challengerTeam = await Team.findOne({ guildId: interaction.guildId, $or: [{ managerId: interaction.user.id }, { captains: interaction.user.id }] });
+                if (!challengerTeam) return interaction.reply({ content: 'Solo Mánagers o Capitanes pueden desafiar.', ephemeral: true });
+                const match = await FriendlyMatch.findById(matchId).populate('teamId');
+                if (!match || match.status !== 'OPEN') return interaction.reply({ content: 'Esta oferta ya no está disponible.', ephemeral: true });
+                if (match.teamId._id.equals(challengerTeam._id)) return interaction.reply({ content: 'No puedes desafiar a tu propio equipo.', ephemeral: true });
+                await interaction.deferReply({ephemeral: true});
+                match.status = 'PENDING_APPROVAL';
+                match.challengerTeamId = challengerTeam._id;
+                match.challengerUserId = interaction.user.id;
+                await match.save();
+                const originalChannel = await client.channels.fetch(match.channelId);
+                const originalMessage = await originalChannel.messages.fetch(match.messageId);
+                const challengeButton = ButtonBuilder.from(originalMessage.components[0].components[0]).setDisabled(true).setLabel('Desafío Pendiente');
+                await originalMessage.edit({ components: [new ActionRowBuilder().addComponents(challengeButton)] });
+                const originalPoster = await client.users.fetch(match.postedById);
+                const approvalEmbed = new EmbedBuilder().setTitle('⚔️ ¡Has recibido un desafío!').setDescription(`El equipo **${challengerTeam.name}** quiere jugar contra vosotros.\n**Partido:** ${match.matchType === 'INSTANT' ? 'Ahora Mismo' : `a las ${match.scheduledTime}`}`).setColor('Yellow');
+                const approvalRow = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder().setCustomId(`accept_challenge_${match._id}`).setLabel('✅ Aceptar').setStyle(ButtonStyle.Success),
+                    new ButtonBuilder().setCustomId(`reject_challenge_${match._id}`).setLabel('❌ Rechazar').setStyle(ButtonStyle.Danger)
+                );
+                await originalPoster.send({ embeds: [approvalEmbed], components: [approvalRow] });
+                await interaction.editReply({content: 'Tu desafío ha sido enviado al mánager del equipo rival.'});
+                return;
+            }
+            if (customId.startsWith('accept_challenge_') || customId.startsWith('reject_challenge_')) {
+                const matchId = customId.split('_')[2];
+                const match = await FriendlyMatch.findById(matchId).populate(['teamId', 'challengerTeamId']);
+                if (!match || match.status === 'CONFIRMED') return interaction.update({ content: 'Este desafío ya fue gestionado.', components: [], embeds: [] });
+                const originalChannel = await client.channels.fetch(match.channelId).catch(() => null);
+                const originalMessage = originalChannel ? await originalChannel.messages.fetch(match.messageId).catch(() => null) : null;
+                if (customId.startsWith('accept_challenge_')) {
+                    match.status = 'CONFIRMED';
+                    await match.save();
+                    const challenger = await client.users.fetch(match.challengerUserId);
+                    await challenger.send(`✅ ¡Vuestro desafío ha sido **ACEPTADO**! Vais a jugar contra **${match.teamId.name}**.\n\nPoneos en contacto con <@${match.postedById}> para organizar los detalles.`);
+                    if (originalMessage) {
+                        const confirmedEmbed = EmbedBuilder.from(originalMessage.embeds[0]).setColor('#2ECC71').setTitle(`✅ AMISTOSO CONFIRMADO`).setDescription(`**${match.teamId.name}** vs **${match.challengerTeamId.name}**\n\n**Hora:** ${match.matchType === 'INSTANT' ? 'Ahora Mismo' : match.scheduledTime}`);
+                        await originalMessage.edit({ embeds: [confirmedEmbed], components: [] });
+                    }
+                    await interaction.update({ content: 'Has aceptado el desafío. Se ha notificado al otro equipo.', components: [], embeds: [] });
+                } else { // Rechazar
+                    const challenger = await client.users.fetch(match.challengerUserId);
+                    await challenger.send(`❌ Vuestro desafío contra **${match.teamId.name}** ha sido rechazado.`);
+                    if (originalMessage) {
+                        const challengeButton = ButtonBuilder.from(originalMessage.components[0].components[0]).setDisabled(false).setLabel('⚔️ Desafiar');
+                        await originalMessage.edit({ components: [new ActionRowBuilder().addComponents(challengeButton)] });
+                    }
+                    await FriendlyMatch.findByIdAndUpdate(matchId, { status: 'OPEN', challengerTeamId: null, challengerUserId: null });
+                    await interaction.update({ content: 'Has rechazado el desafío. La oferta vuelve a estar abierta.', components: [], embeds: [] });
+                }
+                return;
+            }
+            
+            // --- GESTIÓN DE EQUIPOS, USUARIOS Y MODERACIÓN ---
             if (customId.startsWith('admin_')) {
                 if (!isAdmin) return interaction.reply({ content: 'Solo los administradores pueden usar estos botones.', ephemeral: true });
-
                 const parts = customId.split('_');
                 const action = parts[1];
                 const teamId = customId.substring(customId.lastIndexOf('_') + 1);
 
                 switch (action) {
                     case 'change': {
-                        const subAction = parts[2]; // name o logo
+                        const subAction = parts[2];
                         const modal = new ModalBuilder().setCustomId(`admin_edit_${subAction}_${teamId}`).setTitle(`Cambiar ${subAction === 'name' ? 'Nombre' : 'Logo'} del Equipo`);
                         const input = new TextInputBuilder().setCustomId('newValue').setLabel(`Nuevo ${subAction === 'name' ? 'nombre' : 'URL del logo'}`).setStyle(TextInputStyle.Short).setRequired(true);
                         modal.addComponents(new ActionRowBuilder().addComponents(input));
@@ -165,7 +283,6 @@ client.on(Events.InteractionCreate, async interaction => {
                         const team = await Team.findById(teamId);
                         if(!team) return interaction.update({content: 'Equipo no encontrado.', components: []});
                         const targetMember = await interaction.guild.members.fetch(targetId);
-                        
                         if (action === 'kick') {
                             team.players = team.players.filter(p => p !== targetId);
                             team.captains = team.captains.filter(c => c !== targetId);
@@ -206,7 +323,6 @@ client.on(Events.InteractionCreate, async interaction => {
                 }
                 return;
             }
-
             if (customId.startsWith('toggle_mute_player_')) {
                 const targetId = customId.substring(customId.lastIndexOf('_') + 1);
                 const team = await Team.findOne({ guildId: interaction.guildId, $or: [{ managerId: interaction.user.id }, { captains: interaction.user.id }] });
@@ -214,7 +330,6 @@ client.on(Events.InteractionCreate, async interaction => {
                 const targetMember = await interaction.guild.members.fetch(targetId).catch(() => null);
                 if (!targetMember) return interaction.update({ content: 'No se encontró al miembro.', components: [] });
                 if (team.captains.includes(targetId)) return interaction.update({ content: 'No puedes mutear a un capitán.', components: [] });
-
                 const hasMutedRole = targetMember.roles.cache.has(process.env.MUTED_ROLE_ID);
                 if (hasMutedRole) {
                     await targetMember.roles.remove(process.env.MUTED_ROLE_ID);
@@ -225,8 +340,6 @@ client.on(Events.InteractionCreate, async interaction => {
                 }
                 return;
             }
-            
-            const esAprobador = isAdmin || interaction.member.roles.cache.has(process.env.APPROVER_ROLE_ID);
             
             if (customId === 'admin_create_league_button') {
                 if (!isAdmin) return interaction.reply({ content: 'Solo los administradores pueden usar este botón.', ephemeral: true });
@@ -412,7 +525,24 @@ client.on(Events.InteractionCreate, async interaction => {
         
         else if (interaction.isStringSelectMenu()) {
             const customId = interaction.customId;
-            if (customId === 'delete_league_select_menu') {
+            const isAdmin = interaction.member.permissions.has(PermissionFlagsBits.Administrator);
+            if (customId === 'schedule_time_select') {
+                const team = await Team.findOne({ guildId: interaction.guildId, $or: [{ managerId: interaction.user.id }, { captains: interaction.user.id }] });
+                if (!team) return interaction.update({ content: 'Error: No se encontró tu equipo.', components: [] });
+                const selectedTime = interaction.values[0];
+                const channelId = '1396284750850949142';
+                await interaction.deferUpdate();
+                const channel = await client.channels.fetch(channelId).catch(() => null);
+                if (!channel) return interaction.followUp({ content: 'Error: No se encontró el canal de amistosos programados.', ephemeral: true });
+                const embed = new EmbedBuilder().setAuthor({ name: `${team.name} busca amistoso`, iconURL: team.logoUrl }).setTitle(`🗓️ Partido Programado para las ${selectedTime}`).setDescription(`Nuestro equipo busca rival.\n**Publicado por:** <@${interaction.user.id}>`).setColor('Blue');
+                const offerMessage = await channel.send({ embeds: [embed] });
+                const match = new FriendlyMatch({ guildId: interaction.guildId, channelId, messageId: offerMessage.id, teamId: team._id, postedById: interaction.user.id, matchType: 'SCHEDULED', scheduledTime: selectedTime });
+                const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`challenge_friendly_${match._id}`).setLabel('⚔️ Desafiar').setStyle(ButtonStyle.Primary));
+                await offerMessage.edit({ components: [row] });
+                await match.save();
+                await interaction.editReply({ content: `✅ Tu oferta para las **${selectedTime}** ha sido publicada.`, components: [] });
+            }
+            else if (customId === 'delete_league_select_menu') {
                 if (!isAdmin) return interaction.reply({ content: 'Acción no permitida.', ephemeral: true });
                 const selectedLeagues = interaction.values;
                 await League.deleteMany({ guildId: interaction.guildId, name: { $in: selectedLeagues } });
@@ -476,6 +606,7 @@ client.on(Events.InteractionCreate, async interaction => {
         
         else if (interaction.isModalSubmit()) {
             const customId = interaction.customId;
+            const isAdmin = interaction.member.permissions.has(PermissionFlagsBits.Administrator);
             if (customId === 'create_league_modal') {
                 if (!isAdmin) return interaction.reply({ content: 'Acción no permitida.', ephemeral: true });
                 const leagueName = interaction.fields.getTextInputValue('leagueNameInput');
