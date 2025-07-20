@@ -9,6 +9,7 @@ module.exports = async (client, interaction) => {
     const { customId, values, guild, user } = interaction;
     const selectedValue = values[0];
 
+    // Este bloque ya era correcto porque .showModal() es una respuesta inmediata.
     if (customId === 'apply_to_team_select') {
         const teamId = selectedValue;
         const modal = new ModalBuilder().setCustomId(`application_modal_${teamId}`).setTitle('Aplicar a Equipo');
@@ -17,6 +18,7 @@ module.exports = async (client, interaction) => {
         return interaction.showModal(modal);
     }
     
+    // Este bloque también era correcto.
     if (customId === 'select_league_for_registration') {
         const leagueName = selectedValue;
         const modal = new ModalBuilder().setCustomId(`manager_request_modal_${leagueName}`).setTitle(`Registrar Equipo en ${leagueName}`);
@@ -90,14 +92,15 @@ module.exports = async (client, interaction) => {
     }
 
     if (customId.startsWith('select_available_times')) {
-        await interaction.deferReply({ ephemeral: true });
+        // CORRECCIÓN: deferReply ahora es la primera línea y usa la sintaxis de flags.
+        await interaction.deferReply({ flags: 64 }); // 64 es el flag para Ephemeral
+        
         const parts = customId.split('_');
         const leaguesString = parts.slice(3).join('_');
         const leagues = leaguesString === 'all' || !leaguesString || leaguesString === 'none' ? [] : leaguesString.split(',');
         const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
         if (!team) return interaction.editReply({ content: 'No se encontró tu equipo.' });
         
-        // CORRECCIÓN: Usar la variable de entorno para el canal correcto.
         const channelId = process.env.SCHEDULED_FRIENDLY_CHANNEL_ID;
         if (!channelId) return interaction.editReply({ content: 'Error: El ID del canal de amistosos programados no está configurado.' });
         
@@ -106,7 +109,6 @@ module.exports = async (client, interaction) => {
 
         const timeSlots = values.map(time => ({ time, status: 'AVAILABLE' }));
         
-        // CORRECCIÓN: Usar el webhook para enviar el mensaje inicial y evitar el bug "atascado".
         const buttonHandler = client.handlers.get('buttonHandler');
         const webhook = await buttonHandler.getOrCreateWebhook(channel, client);
         const message = await webhook.send({ content: "Creando panel...", username: team.name, avatarURL: team.logoUrl });
@@ -125,9 +127,10 @@ module.exports = async (client, interaction) => {
         return interaction.editReply({ content: '✅ Tu panel de amistosos programados ha sido publicado.' });
     }
     
-    await interaction.deferReply({ ephemeral: true });
-
     if (customId === 'view_team_roster_select') {
+        // CORRECCIÓN: deferReply ahora es la primera línea.
+        await interaction.deferReply({ flags: 64 });
+        
         const team = await Team.findById(selectedValue).lean();
         if (!team) return interaction.editReply({ content: 'Este equipo ya no existe.' });
         const allMemberIds = [team.managerId, ...team.captains, ...team.players].filter(id => id);
@@ -153,6 +156,9 @@ module.exports = async (client, interaction) => {
     }
     
     if (customId === 'delete_league_select_menu') {
+        // CORRECCIÓN: deferReply ahora es la primera línea.
+        await interaction.deferReply({ flags: 64 });
+        
         const leaguesToDelete = values;
         const result = await League.deleteMany({ guildId: guild.id, name: { $in: leaguesToDelete } });
         return interaction.editReply({ content: `✅ Se han eliminado ${result.deletedCount} ligas.` });
