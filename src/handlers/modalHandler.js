@@ -8,10 +8,43 @@ const VPGUser = require('../models/user.js');
 module.exports = async (client, interaction) => {
     const { customId, fields, guild, user } = interaction;
     
-    // Todos los modales deben tener una respuesta, así que deferimos al principio.
     await interaction.deferReply({ ephemeral: true });
 
-    // --- Lógica de Aprobación Final de Equipo (ahora con liga) ---
+    if (customId.startsWith('manager_request_modal_')) {
+        const leagueName = customId.split('_')[3];
+        const vpgUsername = fields.getTextInputValue('vpgUsername');
+        const teamName = fields.getTextInputValue('teamName');
+        const teamAbbr = fields.getTextInputValue('teamAbbr').toUpperCase();
+        
+        const approvalChannelId = process.env.APPROVAL_CHANNEL_ID;
+        if (!approvalChannelId) return interaction.editReply({ content: 'Error: El canal de aprobaciones no está configurado.' });
+        
+        const approvalChannel = await client.channels.fetch(approvalChannelId).catch(() => null);
+        if(!approvalChannel) return interaction.editReply({ content: 'Error: No se pudo encontrar el canal de aprobaciones.' });
+
+        const embed = new EmbedBuilder()
+            .setTitle('📝 Nueva Solicitud de Registro de Equipo')
+            .setColor('Orange')
+            .setAuthor({ name: user.tag, iconURL: user.displayAvatarURL() })
+            .addFields(
+                { name: 'Solicitante', value: `<@${user.id}>`, inline: true },
+                { name: 'ID del Solicitante', value: `\`${user.id}\``, inline: true },
+                { name: 'Usuario VPG', value: vpgUsername, inline: false },
+                { name: 'Nombre del Equipo', value: teamName, inline: true },
+                { name: 'Abreviatura', value: teamAbbr, inline: true },
+                { name: 'Liga Seleccionada', value: leagueName, inline: false }
+            )
+            .setTimestamp();
+        
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId(`approve_request_${user.id}_${leagueName}`).setLabel('Aprobar').setStyle(ButtonStyle.Success),
+            new ButtonBuilder().setCustomId(`reject_request_${user.id}`).setLabel('Rechazar').setStyle(ButtonStyle.Danger)
+        );
+
+        await approvalChannel.send({ embeds: [embed], components: [row] });
+        return interaction.editReply({ content: '✅ ¡Tu solicitud ha sido enviada! Un administrador la revisará pronto.' });
+    }
+    
     if (customId.startsWith('approve_modal_')) {
         const { member, message } = interaction;
         const esAprobador = member.permissions.has(PermissionFlagsBits.Administrator) || member.roles.cache.has(process.env.APPROVER_ROLE_ID);
@@ -20,6 +53,7 @@ module.exports = async (client, interaction) => {
         try {
             const parts = customId.split('_');
             const applicantId = parts[2];
+            const leagueName = parts[3];
             const teamLogoUrl = fields.getTextInputValue('teamLogoUrl');
             
             const originalMessage = message;
@@ -28,7 +62,6 @@ module.exports = async (client, interaction) => {
             const embed = originalMessage.embeds[0];
             const teamName = embed.fields.find(f => f.name === 'Nombre del Equipo').value;
             const teamAbbr = embed.fields.find(f => f.name === 'Abreviatura').value;
-            const leagueName = embed.fields.find(f => f.name === 'Liga Seleccionada').value;
 
             const applicantMember = await guild.members.fetch(applicantId).catch(() => null);
             if (!applicantMember) return interaction.editReply({ content: `Error: El usuario solicitante ya no está en el servidor.` });
@@ -55,7 +88,6 @@ module.exports = async (client, interaction) => {
         }
     }
     
-    // --- Lógica para editar datos de equipo ---
     if (customId.startsWith('edit_data_modal_')) {
         const teamId = customId.split('_')[3];
         const team = await Team.findById(teamId);
@@ -83,11 +115,6 @@ module.exports = async (client, interaction) => {
             await team.save();
             return interaction.editReply({ content: `✅ Los datos del equipo **${team.name}** han sido actualizados.` });
         }
-    }
-
-    if (customId === 'manager_request_modal') {
-        // La lógica para este modal ahora se maneja en selectMenuHandler, después de elegir la liga.
-        // Este customId ya no debería activarse.
     }
 
     if (customId === 'create_league_modal') {
@@ -139,7 +166,4 @@ module.exports = async (client, interaction) => {
             return interaction.editReply({ content: `❌ No se pudo enviar la solicitud. El mánager tiene los MDs cerrados.` });
         }
     }
-
-    // Fallback por si acaso
-    return interaction.editReply({ content: 'Acción completada con un resultado inesperado.' });
 };
