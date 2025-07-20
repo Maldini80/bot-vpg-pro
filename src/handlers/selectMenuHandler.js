@@ -1,5 +1,5 @@
 // src/handlers/selectMenuHandler.js
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, InteractionResponseFlags } = require('discord.js');
 const Team = require('../models/team.js');
 const VPGUser = require('../models/user.js');
 const League = require('../models/league.js');
@@ -8,10 +8,7 @@ module.exports = async (client, interaction) => {
     const { customId, values, guild, user } = interaction;
     const selectedValue = values[0];
 
-    // ======================================================================
-    // == SECCIÓN 1: MENÚS QUE ABREN MODALES (NO USAN DEFERENCIA)        ==
-    // ======================================================================
-
+    // --- Menú que abre un modal ---
     if (customId === 'apply_to_team_select') {
         const teamId = selectedValue;
         const modal = new ModalBuilder().setCustomId(`application_modal_${teamId}`).setTitle('Aplicar a Equipo');
@@ -20,24 +17,24 @@ module.exports = async (client, interaction) => {
         return interaction.showModal(modal);
     }
     
-    // ======================================================================
-    // == SECCIÓN 2: MENÚS QUE ACTUALIZAN UN MENSAJE (USAN DEFERUPDATE)   ==
-    // ======================================================================
-
+    // --- Menús que actualizan el mensaje ---
     if (customId === 'admin_select_team_to_manage' || customId === 'roster_management_menu') {
         await interaction.deferUpdate();
         
         if (customId === 'admin_select_team_to_manage') {
             const teamId = selectedValue;
             const team = await Team.findById(teamId).lean();
-            if (!team) return interaction.followUp({ content: 'Este equipo ya no existe.', ephemeral: true });
+            if (!team) return interaction.editReply({ content: 'Este equipo ya no existe.', components: [] });
 
-            const embed = new EmbedBuilder().setTitle(`Gestión Avanzada: ${team.name}`).setDescription('Selecciona una acción para este equipo.').setColor('DarkRed').setThumbnail(team.logoUrl);
-            const row1 = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`admin_change_data_${teamId}`).setLabel('Cambiar Datos').setStyle(ButtonStyle.Secondary), new ButtonBuilder().setCustomId(`admin_manage_members_${teamId}`).setLabel('Gestionar Miembros').setStyle(ButtonStyle.Primary));
-            const row2 = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`admin_dissolve_team_${teamId}`).setLabel('DISOLVER EQUIPO').setStyle(ButtonStyle.Danger));
-            
-            // Usamos editReply en la interacción original ya que deferUpdate() nos lo permite.
-            return interaction.editReply({ embeds: [embed], components: [row1, row2], ephemeral: true });
+            const embed = new EmbedBuilder().setTitle(`Gestión: ${team.name}`).setColor('DarkRed').setThumbnail(team.logoUrl);
+            const row1 = new ActionRowBuilder().addComponents(
+                new ButtonBuilder().setCustomId(`admin_change_data_${teamId}`).setLabel('Cambiar Datos').setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId(`admin_manage_members_${teamId}`).setLabel('Gestionar Miembros').setStyle(ButtonStyle.Primary)
+            );
+            const row2 = new ActionRowBuilder().addComponents(
+                new ButtonBuilder().setCustomId(`admin_dissolve_team_${teamId}`).setLabel('DISOLVER EQUIPO').setStyle(ButtonStyle.Danger)
+            );
+            return interaction.editReply({ content: '', embeds: [embed], components: [row1, row2] });
         }
         
         if (customId === 'roster_management_menu') {
@@ -61,16 +58,13 @@ module.exports = async (client, interaction) => {
             row.addComponents(new ButtonBuilder().setCustomId(`kick_player_${targetId}`).setLabel('Expulsar del Equipo').setStyle(ButtonStyle.Danger));
             row.addComponents(new ButtonBuilder().setCustomId(`toggle_mute_player_${targetId}`).setLabel('Mutear/Desmutear Chat').setStyle(ButtonStyle.Secondary));
     
-            return interaction.editReply({ content: `Acciones para **${targetMember.user.username}**:`, components: [row], ephemeral: true });
+            return interaction.editReply({ content: `Acciones para **${targetMember.user.username}**:`, components: [row] });
         }
         return;
     }
 
-    // ======================================================================
-    // == SECCIÓN 3: MENÚS QUE ENVÍAN RESPUESTAS PRIVADAS (DEFERREPLY)    ==
-    // ======================================================================
-
-    await interaction.deferReply({ ephemeral: true });
+    // --- Menús que envían una nueva respuesta ---
+    await interaction.deferReply({ flags: [InteractionResponseFlags.Ephemeral] });
 
     if (customId === 'view_team_roster_select') {
         const team = await Team.findById(selectedValue).lean();
@@ -99,12 +93,7 @@ module.exports = async (client, interaction) => {
         await fetchMemberInfo(team.captains, '🛡️ Capitanes');
         await fetchMemberInfo(team.players, 'Jugadores');
         
-        const embed = new EmbedBuilder()
-            .setTitle(`Plantilla de ${team.name} (${team.abbreviation})`)
-            .setDescription(rosterString.trim() || 'Este equipo no tiene miembros registrados.')
-            .setColor('#3498db')
-            .setThumbnail(team.logoUrl)
-            .setFooter({ text: `Liga: ${team.league}` });
+        const embed = new EmbedBuilder().setTitle(`Plantilla de ${team.name} (${team.abbreviation})`).setDescription(rosterString.trim() || 'Este equipo no tiene miembros.').setColor('#3498db').setThumbnail(team.logoUrl).setFooter({ text: `Liga: ${team.league}` });
             
         return interaction.editReply({ embeds: [embed] });
     }
