@@ -7,8 +7,9 @@ const AvailabilityPanel = require('../models/availabilityPanel.js');
 const VPGUser = require('../models/user.js');
 
 module.exports = async (client, interaction) => {
-    // Primero, verificamos si la interacción es de un MD.
+    // Si la interacción viene de un MD, no hay `member` ni `guild`.
     if (!interaction.inGuild()) {
+        const { customId, user } = interaction;
         if (customId.startsWith('accept_application_') || customId.startsWith('reject_application_')) {
             await interaction.deferUpdate();
             const applicationId = customId.split('_')[2];
@@ -48,18 +49,6 @@ module.exports = async (client, interaction) => {
     // ======================================================================
     // SECCIÓN 1: BOTONES QUE ABREN UN MODAL (RESPUESTA INSTANTÁNEA)
     // ======================================================================
-    
-    if (customId === 'request_manager_role_button') {
-        const existingTeam = await Team.findOne({ $or: [{ managerId: user.id }, { captains: user.id }, { players: user.id }], guildId: guild.id });
-        if (existingTeam) return interaction.reply({ content: `Ya perteneces al equipo **${existingTeam.name}**.`, ephemeral: true });
-        
-        const leagues = await League.find({ guildId: guild.id });
-        if(leagues.length === 0) return interaction.reply({ content: 'No hay ligas configuradas en el servidor. Contacta a un administrador.', ephemeral: true });
-
-        const leagueOptions = leagues.map(l => ({ label: l.name, value: `request_manager_role_${l._id}` }));
-        const selectMenu = new StringSelectMenuBuilder().setCustomId('select_league_for_registration').setPlaceholder('Selecciona la liga para tu equipo').addOptions(leagueOptions);
-        return interaction.reply({ content: 'Por favor, selecciona la liga en la que deseas registrar tu equipo:', components: [new ActionRowBuilder().addComponents(selectMenu)], ephemeral: true });
-    }
     
     if (customId === 'admin_create_league_button') {
         if (!isAdmin) return interaction.reply({ content: 'Acción restringida.', ephemeral: true });
@@ -190,14 +179,43 @@ module.exports = async (client, interaction) => {
     
     await interaction.deferReply({ ephemeral: true });
 
+    if (customId === 'request_manager_role_button') {
+        const existingTeam = await Team.findOne({ $or: [{ managerId: user.id }, { captains: user.id }, { players: user.id }], guildId: guild.id });
+        if (existingTeam) return interaction.editReply({ content: `Ya perteneces al equipo **${existingTeam.name}**.` });
+        const leagues = await League.find({ guildId: guild.id });
+        if(leagues.length === 0) return interaction.editReply({ content: 'No hay ligas configuradas. Contacta a un administrador.' });
+        const leagueOptions = leagues.map(l => ({ label: l.name, value: l.name }));
+        const selectMenu = new StringSelectMenuBuilder().setCustomId('select_league_for_registration').setPlaceholder('Selecciona la liga para tu equipo').addOptions(leagueOptions);
+        return interaction.editReply({ content: 'Por favor, selecciona la liga en la que deseas registrar tu equipo:', components: [new ActionRowBuilder().addComponents(selectMenu)]});
+    }
+
     if (customId === 'view_teams_button' || customId === 'team_view_roster_button') {
         let teamToView;
         if(customId === 'team_view_roster_button') {
              teamToView = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }, { players: user.id }] });
              if (!teamToView) return interaction.editReply({ content: 'No perteneces a ningún equipo.' });
-        }
-        
-        if (customId === 'view_teams_button') {
+             
+             const allMemberIds = [teamToView.managerId, ...teamToView.captains, ...teamToView.players].filter(id => id);
+             const memberProfiles = await VPGUser.find({ discordId: { $in: allMemberIds } }).lean();
+             const memberMap = new Map(memberProfiles.map(p => [p.discordId, p]));
+             let rosterString = '';
+             const fetchMemberInfo = async (ids, roleName) => {
+                 if (!ids || ids.length === 0) return;
+                 rosterString += `\n**${roleName}**\n`;
+                 for (const memberId of ids) {
+                     try {
+                        const memberData = await guild.members.fetch(memberId);
+                        const vpgUser = memberMap.get(memberId)?.vpgUsername || 'N/A';
+                        rosterString += `> ${memberData.user.username} (${vpgUser})\n`;
+                     } catch (error) { rosterString += `> *Usuario no encontrado (ID: ${memberId})*\n`; }
+                 }
+             };
+             await fetchMemberInfo([teamToView.managerId].filter(Boolean), '👑 Mánager');
+             await fetchMemberInfo(teamToView.captains, '🛡️ Capitanes');
+             await fetchMemberInfo(teamToView.players, 'Jugadores');
+             const embed = new EmbedBuilder().setTitle(`Plantilla de ${teamToView.name}`).setDescription(rosterString.trim() || 'Este equipo no tiene miembros.').setColor('#3498db').setThumbnail(teamToView.logoUrl).setFooter({ text: `Liga: ${teamToView.league}` });
+             return interaction.editReply({ embeds: [embed] });
+        } else {
             const teams = await Team.find({ guildId: guild.id }).limit(25).sort({ name: 1 });
             if (teams.length === 0) return interaction.editReply({ content: 'No hay equipos registrados.' });
             const teamOptions = teams.map(t => ({ label: `${t.name} (${t.abbreviation})`, value: t._id.toString() }));
