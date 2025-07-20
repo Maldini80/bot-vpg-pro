@@ -10,24 +10,18 @@ async function updatePanelMessage(client, panelId) {
     try {
         const panel = await AvailabilityPanel.findById(panelId).populate('teamId').lean();
         if (!panel) return;
-
         const channel = await client.channels.fetch(panel.channelId);
         const webhook = await getOrCreateWebhook(channel, client);
-        
         const hostTeam = panel.teamId;
-
         let description = `**Anfitrión:** ${hostTeam.name}\n**Contacto:** <@${panel.postedById}>`;
         if (panel.leagues && panel.leagues.length > 0) {
             description += `\n**Filtro de liga:** \`${panel.leagues.join(', ')}\``;
         }
-
         const embed = new EmbedBuilder().setDescription(description).setThumbnail(hostTeam.logoUrl);
         const components = [];
         let currentRow = new ActionRowBuilder();
-
         for (const slot of panel.timeSlots) {
             let buttonSet = [];
-            
             if (slot.status === 'CONFIRMED') {
                 const challengerTeam = await Team.findById(slot.challengerTeamId).lean();
                 embed.setTitle(`Partido: ${hostTeam.name} vs ${challengerTeam.name}`).setColor("Green");
@@ -47,18 +41,15 @@ async function updatePanelMessage(client, panelId) {
                 const label = slot.time === 'INSTANT' ? `⚔️ Desafiar Ahora` : `⚔️ Desafiar (${slot.time})`;
                 buttonSet.push(new ButtonBuilder().setCustomId(`challenge_slot_${panel._id}_${slot.time}`).setLabel(label).setStyle(ButtonStyle.Success));
             }
-            
             if (currentRow.components.length + buttonSet.length > 5) {
                 components.push(currentRow);
                 currentRow = new ActionRowBuilder();
             }
             currentRow.addComponents(...buttonSet);
         }
-
         if (currentRow.components.length > 0) {
             components.push(currentRow);
         }
-        
         await webhook.editMessage(panel.messageId, {
             username: hostTeam.name,
             avatarURL: hostTeam.logoUrl,
@@ -71,9 +62,8 @@ async function updatePanelMessage(client, panelId) {
 }
 
 async function getOrCreateWebhook(channel, client) {
-    const webhooks = await channel.fetchWebhooks();
-    // CORRECCIÓN: Usar un nombre específico para el webhook de amistosos.
     const webhookName = 'VPG Bot Amistosos';
+    const webhooks = await channel.fetchWebhooks();
     let webhook = webhooks.find(wh => wh.name === webhookName);
     if (!webhook) {
         webhook = await channel.createWebhook({ name: webhookName, avatar: client.user.displayAvatarURL() });
@@ -83,7 +73,7 @@ async function getOrCreateWebhook(channel, client) {
 
 module.exports = async (client, interaction) => {
     if (!interaction.inGuild()) {
-        const { customId, user } = interaction;
+        const { customId } = interaction;
         if (customId.startsWith('accept_challenge_') || customId.startsWith('reject_challenge_')) {
             await interaction.deferUpdate();
             const [, action, panelId, time, challengeId] = customId.split('_');
@@ -159,8 +149,10 @@ module.exports = async (client, interaction) => {
     const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
     const esAprobador = isAdmin || member.roles.cache.has(process.env.APPROVER_ROLE_ID);
     
+    // CORRECCIÓN: Se usa la nueva sintaxis para eliminar la advertencia de 'ephemeral'.
+    // En lugar de { ephemeral: true }, se usa { flags: [ 'Ephemeral' ] } para los deferReply.
     if (customId.startsWith('challenge_slot_')) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: [ 'Ephemeral' ] });
         const challengerTeam = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }, { players: user.id }] });
         if (!challengerTeam) return interaction.editReply({ content: 'Debes pertenecer a un equipo para desafiar.' });
         const [, , panelId, time] = customId.split('_');
@@ -198,7 +190,7 @@ module.exports = async (client, interaction) => {
     }
 
     if (customId.startsWith('abandon_challenge_')) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: [ 'Ephemeral' ] });
         const [, , panelId, time] = customId.split('_');
         const panel = await AvailabilityPanel.findById(panelId);
         if (!panel) return interaction.editReply({ content: 'Este panel ya no existe.' });
@@ -221,7 +213,7 @@ module.exports = async (client, interaction) => {
     }
 
     if (customId.startsWith('contact_opponent_')) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: [ 'Ephemeral' ] });
         const [, , teamId1, teamId2] = customId.split('_');
         const userTeam = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
         if (!userTeam) return interaction.editReply({ content: 'No tienes permisos.' });
@@ -289,7 +281,6 @@ module.exports = async (client, interaction) => {
     
     if (customId.startsWith('reject_request_') || customId.startsWith('promote_player_') || customId.startsWith('demote_captain_') || customId.startsWith('kick_player_') || customId.startsWith('toggle_mute_player_')) {
         await interaction.deferUpdate();
-        
         if (customId.startsWith('reject_request_')) {
             if (!esAprobador) return interaction.followUp({ content: 'No tienes permiso.', ephemeral: true });
             const applicantId = customId.split('_')[2];
@@ -299,7 +290,6 @@ module.exports = async (client, interaction) => {
             await interaction.followUp({ content: `La solicitud de **${applicant ? applicant.user.tag : 'un usuario'}** ha sido rechazada.`, ephemeral: true });
             if (applicant) await applicant.send(`Tu solicitud para registrar un equipo ha sido rechazada.`).catch(() => {});
         }
-        
         if(customId.startsWith('promote_player_') || customId.startsWith('demote_captain_') || customId.startsWith('kick_player_') || customId.startsWith('toggle_mute_player_')) {
             const targetId = customId.substring(customId.lastIndexOf('_') + 1);
             const team = await Team.findOne({ guildId: interaction.guildId, $or: [{ managerId: user.id }, { captains: user.id }] });
@@ -307,7 +297,6 @@ module.exports = async (client, interaction) => {
             const targetMember = await interaction.guild.members.fetch(targetId).catch(() => null);
             if(!targetMember) return interaction.editReply({ content: 'Miembro no encontrado.', components: []});
             const isManagerAction = team.managerId === user.id;
-
             if(customId.startsWith('kick_player_')) {
                 const isTargetCaptain = team.captains.includes(targetId);
                 if(isTargetCaptain && !isManagerAction) return interaction.editReply({content: 'Un capitán no puede expulsar a otro capitán.', components: []});
@@ -483,19 +472,15 @@ module.exports = async (client, interaction) => {
         const panelType = customId === 'post_scheduled_panel' ? 'SCHEDULED' : 'INSTANT';
         const existingPanel = await AvailabilityPanel.findOne({ teamId: userTeam._id, panelType });
         if (existingPanel) return interaction.editReply({ content: `Tu equipo ya tiene un panel de amistosos de tipo ${panelType} activo. Bórralo primero.` });
-        
         const leagues = await League.find({ guildId: guild.id });
         const components = [];
-        
         if (leagues.length > 0) {
             const leagueOptions = leagues.map(l => ({ label: l.name, value: l.name }));
             const selectMenu = new StringSelectMenuBuilder().setCustomId(`select_league_filter_${panelType}`).setPlaceholder('Filtrar por ligas (opcional)').addOptions(leagueOptions).setMinValues(0).setMaxValues(leagues.length);
             components.push(new ActionRowBuilder().addComponents(selectMenu));
         }
-
         const button = new ButtonBuilder().setCustomId(`continue_panel_creation_${panelType}_all`).setLabel('Buscar en TODAS las Ligas').setStyle(ButtonStyle.Primary);
         components.push(new ActionRowBuilder().addComponents(button));
-        
         return interaction.editReply({ content: 'Selecciona las ligas para las que quieres buscar rival, o busca en todas.', components: components, ephemeral: true });
     }
 
@@ -504,23 +489,18 @@ module.exports = async (client, interaction) => {
         const panelType = parts[3];
         const leaguesString = parts.slice(4).join('_');
         const leagues = leaguesString === 'all' || leaguesString === 'none' || !leaguesString ? [] : leaguesString.split(',');
-        
         const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
         if (!team) return interaction.editReply({ content: 'No se ha podido encontrar tu equipo.' });
-        
         if (panelType === 'SCHEDULED') {
             const timeSlots = ['22:00', '22:20', '22:40', '23:00', '23:20', '23:40'];
             const timeOptions = timeSlots.map(time => ({ label: time, value: time }));
             const selectMenu = new StringSelectMenuBuilder().setCustomId(`select_available_times_${leagues.join(',') || 'all'}`).setPlaceholder('Selecciona tus horarios disponibles').addOptions(timeOptions).setMinValues(1).setMaxValues(timeSlots.length);
             return interaction.editReply({ content: 'Elige los horarios en los que tu equipo está disponible:', components: [new ActionRowBuilder().addComponents(selectMenu)] });
-        } else { // INSTANT
-            // CORRECCIÓN: Usar la variable de entorno para el canal de amistosos instantáneos.
+        } else {
             const channelId = process.env.INSTANT_FRIENDLY_CHANNEL_ID;
             if (!channelId) return interaction.editReply({ content: 'Error: El ID del canal de amistosos instantáneos no está configurado.' });
-
             const channel = await client.channels.fetch(channelId).catch(()=>null);
             if (!channel) return interaction.editReply({ content: 'Error: No se encontró el canal de amistosos instantáneos.' });
-
             const panel = new AvailabilityPanel({ 
                 guildId: guild.id, channelId, messageId: 'temp', teamId: team._id, postedById: user.id, panelType: 'INSTANT', leagues,
                 timeSlots: [{ time: 'INSTANT', status: 'AVAILABLE' }] 
@@ -541,14 +521,12 @@ module.exports = async (client, interaction) => {
         return interaction.editReply({ content: '¿Qué tipo de búsqueda de amistoso quieres borrar?', components: [row] });
     }
     
-    // CORRECCIÓN: Lógica de borrado reforzada.
     if (customId.startsWith('confirm_delete_panel_')) {
         const [, , , panelType] = customId.split('_');
         const teamToDeleteFrom = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
         if (!teamToDeleteFrom) {
             return interaction.editReply({ content: "No se pudo encontrar tu equipo para realizar esta acción." });
         }
-
         const existingPanel = await AvailabilityPanel.findOneAndDelete({ teamId: teamToDeleteFrom._id, panelType: panelType });
         if (!existingPanel) {
             return interaction.editReply({ content: `No se encontró un panel de tipo **${panelType}** activo que pertenezca a tu equipo.` });
