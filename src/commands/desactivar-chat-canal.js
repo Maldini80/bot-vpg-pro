@@ -1,6 +1,6 @@
 // src/commands/desactivar-chat-canal.js
 const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
-// const TeamChatChannel = require('../models/teamChatChannel.js'); // <-- ELIMINA ESTA LÍNEA DE AQUÍ
+const TeamChatChannel = require('../models/teamChatChannel.js');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -9,15 +9,13 @@ module.exports = {
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
     async execute(interaction) {
-        // Y AÑÁDELA JUSTO AQUÍ DENTRO
-        const TeamChatChannel = require('../models/teamChatChannel.js');
-
+        // CORRECCIÓN: Se cambia la lógica para que primero busque y luego elimine.
         const { channelId, guildId } = interaction;
 
         const result = await TeamChatChannel.deleteOne({ channelId, guildId });
 
         if (result.deletedCount === 0) {
-            return interaction.reply({ content: 'Este canal no estaba activado.', ephemeral: true });
+            return interaction.reply({ content: 'Este canal no estaba activado como chat de equipo.', ephemeral: true });
         }
 
         await interaction.reply({ content: '❌ El chat de equipo se ha desactivado en este canal. Todos los mensajes volverán a ser normales.' });
