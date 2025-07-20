@@ -6,10 +6,11 @@ const PlayerApplication = require('../models/playerApplication.js');
 const VPGUser = require('../models/user.js');
 
 module.exports = async (client, interaction) => {
-    const { customId, fields, guild, user } = interaction;
+    const { customId, fields, guild, user, member, message } = interaction;
     
     await interaction.deferReply({ ephemeral: true });
 
+    // --- Lógica para el modal de registro de equipo ---
     if (customId.startsWith('manager_request_modal_')) {
         const leagueName = customId.split('_')[3];
         const vpgUsername = fields.getTextInputValue('vpgUsername');
@@ -24,17 +25,14 @@ module.exports = async (client, interaction) => {
 
         const embed = new EmbedBuilder()
             .setTitle('📝 Nueva Solicitud de Registro de Equipo')
-            .setColor('Orange')
-            .setAuthor({ name: user.tag, iconURL: user.displayAvatarURL() })
+            .setColor('Orange').setAuthor({ name: user.tag, iconURL: user.displayAvatarURL() })
             .addFields(
                 { name: 'Solicitante', value: `<@${user.id}>`, inline: true },
-                { name: 'ID del Solicitante', value: `\`${user.id}\``, inline: true },
-                { name: 'Usuario VPG', value: vpgUsername, inline: false },
-                { name: 'Nombre del Equipo', value: teamName, inline: true },
+                { name: 'Usuario VPG', value: vpgUsername, inline: true },
+                { name: 'Nombre del Equipo', value: teamName, inline: false },
                 { name: 'Abreviatura', value: teamAbbr, inline: true },
-                { name: 'Liga Seleccionada', value: leagueName, inline: false }
-            )
-            .setTimestamp();
+                { name: 'Liga Seleccionada', value: leagueName, inline: true }
+            ).setTimestamp();
         
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId(`approve_request_${user.id}_${leagueName}`).setLabel('Aprobar').setStyle(ButtonStyle.Success),
@@ -44,9 +42,9 @@ module.exports = async (client, interaction) => {
         await approvalChannel.send({ embeds: [embed], components: [row] });
         return interaction.editReply({ content: '✅ ¡Tu solicitud ha sido enviada! Un administrador la revisará pronto.' });
     }
-    
+
+    // --- Lógica de Aprobación Final de Equipo (ahora con liga) ---
     if (customId.startsWith('approve_modal_')) {
-        const { member, message } = interaction;
         const esAprobador = member.permissions.has(PermissionFlagsBits.Administrator) || member.roles.cache.has(process.env.APPROVER_ROLE_ID);
         if (!esAprobador) return interaction.editReply({ content: 'No tienes permiso.' });
 
@@ -88,11 +86,11 @@ module.exports = async (client, interaction) => {
         }
     }
     
+    // --- Lógica para editar datos de equipo ---
     if (customId.startsWith('edit_data_modal_')) {
         const teamId = customId.split('_')[3];
         const team = await Team.findById(teamId);
         if (!team) return interaction.editReply({ content: 'El equipo ya no existe.' });
-        const { member } = interaction;
         const isManager = team.managerId === user.id;
         const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
         if (!isManager && !isAdmin) return interaction.editReply({ content: 'No tienes permiso.' });
@@ -114,6 +112,32 @@ module.exports = async (client, interaction) => {
             team.logoUrl = newLogo;
             await team.save();
             return interaction.editReply({ content: `✅ Los datos del equipo **${team.name}** han sido actualizados.` });
+        }
+    }
+
+    if (customId.startsWith('invite_player_modal_')) {
+        const teamId = customId.split('_')[3];
+        const team = await Team.findById(teamId);
+        if (!team) return interaction.editReply({ content: 'Tu equipo ya no existe.' });
+
+        const playerName = fields.getTextInputValue('playerName');
+        const targetMember = guild.members.cache.find(m => m.user.username.toLowerCase() === playerName.toLowerCase());
+
+        if (!targetMember) {
+            return interaction.editReply({ content: `No se encontró a ningún miembro con el nombre de usuario "${playerName}".` });
+        }
+        
+        const embed = new EmbedBuilder().setTitle(`📩 Invitación de Equipo`).setDescription(`Has sido invitado a unirte a **${team.name}**.`).setColor('Green').setThumbnail(team.logoUrl);
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId(`accept_invite_${team._id}_${targetMember.id}`).setLabel('Aceptar').setStyle(ButtonStyle.Success),
+            new ButtonBuilder().setCustomId(`reject_invite_${team._id}_${targetMember.id}`).setLabel('Rechazar').setStyle(ButtonStyle.Danger)
+        );
+
+        try {
+            await targetMember.send({ embeds: [embed], components: [row] });
+            return interaction.editReply({ content: `✅ Invitación enviada a **${targetMember.user.tag}**.` });
+        } catch (error) {
+            return interaction.editReply({ content: `❌ No se pudo enviar la invitación a ${targetMember.user.tag}. Es posible que tenga los MDs cerrados.` });
         }
     }
 
