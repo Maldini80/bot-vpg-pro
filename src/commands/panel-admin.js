@@ -13,14 +13,14 @@ module.exports = {
             .setDescription('Usa los botones de abajo para gestionar la comunidad.')
             .setColor('#c0392b');
             
-        const row1 = new ActionRowBuilder().addComponents(
+        const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId('admin_create_league_button').setLabel('➕ Crear Liga').setStyle(ButtonStyle.Success),
             new ButtonBuilder().setCustomId('admin_delete_league_button').setLabel('🗑️ Borrar Liga').setStyle(ButtonStyle.Danger),
             new ButtonBuilder().setCustomId('admin_manage_team_button').setLabel('🔍 Gestionar Equipo').setStyle(ButtonStyle.Primary),
             new ButtonBuilder().setCustomId('admin_view_pending_requests').setLabel('⏳ Ver Solicitudes').setStyle(ButtonStyle.Secondary)
         );
         
-        await interaction.channel.send({ embeds: [embed], components: [row1] });
+        await interaction.channel.send({ embeds: [embed], components: [row] });
         await interaction.reply({ content: 'Panel de administrador creado con éxito.', ephemeral: true });
     },
 };
