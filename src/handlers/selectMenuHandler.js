@@ -31,13 +31,11 @@ module.exports = async (client, interaction) => {
         await interaction.deferUpdate();
         const panelType = customId.split('_')[3];
         const selectedLeagues = values;
-        
         const leaguesString = selectedLeagues.length > 0 ? selectedLeagues.join(',') : 'none';
         const continueButton = new ButtonBuilder()
             .setCustomId(`continue_panel_creation_${panelType}_${leaguesString}`)
             .setLabel('Continuar con la Creación del Panel')
             .setStyle(ButtonStyle.Success);
-            
         await interaction.editReply({
             content: `Has seleccionado las ligas: **${selectedLeagues.length > 0 ? selectedLeagues.join(', ') : 'Ninguna'}**. Pulsa continuar.`,
             components: [new ActionRowBuilder().addComponents(continueButton)]
@@ -47,7 +45,6 @@ module.exports = async (client, interaction) => {
 
     if (customId === 'admin_select_team_to_manage' || customId === 'roster_management_menu' || customId === 'admin_change_league_menu') {
         await interaction.deferUpdate();
-        
         if (customId === 'admin_select_team_to_manage') {
             const teamId = selectedValue;
             const team = await Team.findById(teamId).lean();
@@ -61,7 +58,6 @@ module.exports = async (client, interaction) => {
             const row3 = new ActionRowBuilder().addComponents(leagueMenu);
             return interaction.editReply({ content: '', embeds: [embed], components: [row1, row2, row3] });
         }
-        
         if (customId === 'roster_management_menu') {
             const targetId = selectedValue;
             const managerTeam = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
@@ -79,7 +75,6 @@ module.exports = async (client, interaction) => {
             row.addComponents(new ButtonBuilder().setCustomId(`toggle_mute_player_${targetId}`).setLabel('Mutear/Desmutear Chat').setStyle(ButtonStyle.Secondary));
             return interaction.editReply({ content: `Acciones para **${targetMember.user.username}**:`, components: [row] });
         }
-        
         if (customId === 'admin_change_league_menu') {
             const parts = selectedValue.split('_');
             const teamId = parts[3];
@@ -96,15 +91,13 @@ module.exports = async (client, interaction) => {
 
     if (customId.startsWith('select_available_times')) {
         await interaction.deferReply({ ephemeral: true });
-        
         const parts = customId.split('_');
         const leaguesString = parts.slice(3).join('_');
         const leagues = leaguesString === 'all' || !leaguesString || leaguesString === 'none' ? [] : leaguesString.split(',');
-
         const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
         if (!team) return interaction.editReply({ content: 'No se encontró tu equipo.' });
         
-        // CORRECCIÓN: Usar la variable de entorno para el canal de amistosos programados.
+        // CORRECCIÓN: Usar la variable de entorno para el canal correcto.
         const channelId = process.env.SCHEDULED_FRIENDLY_CHANNEL_ID;
         if (!channelId) return interaction.editReply({ content: 'Error: El ID del canal de amistosos programados no está configurado.' });
         
@@ -113,18 +106,19 @@ module.exports = async (client, interaction) => {
 
         const timeSlots = values.map(time => ({ time, status: 'AVAILABLE' }));
         
+        // CORRECCIÓN: Usar el webhook para enviar el mensaje inicial y evitar el bug "atascado".
+        const buttonHandler = client.handlers.get('buttonHandler');
+        const webhook = await buttonHandler.getOrCreateWebhook(channel, client);
+        const message = await webhook.send({ content: "Creando panel...", username: team.name, avatarURL: team.logoUrl });
+
         const panel = new AvailabilityPanel({ 
-            guildId: guild.id, channelId, messageId: 'temp', teamId: team._id, postedById: user.id, panelType: 'SCHEDULED', 
+            guildId: guild.id, channelId, messageId: message.id, teamId: team._id, postedById: user.id, panelType: 'SCHEDULED', 
             leagues: leagues,
             timeSlots 
         });
-        
-        const message = await channel.send({content: "Creando panel..."});
-        panel.messageId = message.id;
         await panel.save();
 
-        const buttonHandler = client.handlers.get('buttonHandler');
-        if (buttonHandler && typeof buttonHandler.updatePanelMessage === 'function') {
+        if (typeof buttonHandler.updatePanelMessage === 'function') {
             await buttonHandler.updatePanelMessage(client, panel._id);
         }
         
