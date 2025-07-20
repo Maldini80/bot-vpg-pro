@@ -1,5 +1,5 @@
 // src/handlers/buttonHandler.js
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, EmbedBuilder, PermissionFlagsBits, InteractionResponseFlags } = require('discord.js');
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 const Team = require('../models/team.js');
 const League = require('../models/league.js');
 const PlayerApplication = require('../models/playerApplication.js');
@@ -17,7 +17,9 @@ module.exports = async (client, interaction) => {
     
     if (customId === 'request_manager_role_button') {
         const existingTeam = await Team.findOne({ $or: [{ managerId: user.id }, { captains: user.id }, { players: user.id }], guildId: guild.id });
-        if (existingTeam) return interaction.reply({ content: `Ya perteneces al equipo **${existingTeam.name}**.`, flags: [InteractionResponseFlags.Ephemeral] });
+        // CORRECCIÓN: Usamos ephemeral: true
+        if (existingTeam) return interaction.reply({ content: `Ya perteneces al equipo **${existingTeam.name}**.`, ephemeral: true });
+        
         const modal = new ModalBuilder().setCustomId('manager_request_modal').setTitle('Formulario de Solicitud de Mánager');
         const vpgUsernameInput = new TextInputBuilder().setCustomId('vpgUsername').setLabel("Tu nombre de usuario en VPG").setStyle(TextInputStyle.Short).setRequired(true);
         const teamNameInput = new TextInputBuilder().setCustomId('teamName').setLabel("Nombre de tu equipo").setStyle(TextInputStyle.Short).setRequired(true);
@@ -27,7 +29,7 @@ module.exports = async (client, interaction) => {
     }
     
     if (customId === 'admin_create_league_button') {
-        if (!isAdmin) return interaction.reply({ content: 'Acción restringida.', flags: [InteractionResponseFlags.Ephemeral] });
+        if (!isAdmin) return interaction.reply({ content: 'Acción restringida.', ephemeral: true });
         const modal = new ModalBuilder().setCustomId('create_league_modal').setTitle('Crear Nueva Liga');
         const leagueNameInput = new TextInputBuilder().setCustomId('leagueNameInput').setLabel("Nombre de la nueva liga").setStyle(TextInputStyle.Short).setRequired(true);
         modal.addComponents(new ActionRowBuilder().addComponents(leagueNameInput));
@@ -35,10 +37,10 @@ module.exports = async (client, interaction) => {
     }
 
     if (customId.startsWith('admin_dissolve_team_')) {
-        if (!isAdmin) return interaction.reply({ content: 'Acción restringida.', flags: [InteractionResponseFlags.Ephemeral] });
+        if (!isAdmin) return interaction.reply({ content: 'Acción restringida.', ephemeral: true });
         const teamId = customId.split('_')[3];
         const team = await Team.findById(teamId);
-        if (!team) return interaction.reply({ content: 'Equipo no encontrado.', flags: [InteractionResponseFlags.Ephemeral] });
+        if (!team) return interaction.reply({ content: 'Equipo no encontrado.', ephemeral: true });
         const modal = new ModalBuilder().setCustomId(`confirm_dissolve_modal_${teamId}`).setTitle(`Disolver Equipo: ${team.name}`);
         const confirmationInput = new TextInputBuilder().setCustomId('confirmation_text').setLabel(`Escribe "${team.name}" para confirmar`).setStyle(TextInputStyle.Short).setRequired(true).setPlaceholder(team.name);
         modal.addComponents(new ActionRowBuilder().addComponents(confirmationInput));
@@ -46,7 +48,7 @@ module.exports = async (client, interaction) => {
     }
 
     if (customId.startsWith('approve_request_')) {
-        if (!esAprobador) return interaction.reply({ content: 'No tienes permiso.', flags: [InteractionResponseFlags.Ephemeral] });
+        if (!esAprobador) return interaction.reply({ content: 'No tienes permiso.', ephemeral: true });
         const parts = customId.split('_');
         const applicantId = parts[2];
         const teamName = parts.slice(3).join(' ').replace(/-/g, ' ');
@@ -152,7 +154,8 @@ module.exports = async (client, interaction) => {
     // == SECCIÓN 3: BOTONES QUE ENVÍAN RESPUESTAS PRIVADAS (DEFERREPLY)   ==
     // ======================================================================
     
-    await interaction.deferReply({ flags: [InteractionResponseFlags.Ephemeral] });
+    // CORRECCIÓN: Usamos ephemeral: true
+    await interaction.deferReply({ ephemeral: true });
 
     if (customId === 'view_teams_button') {
         const teams = await Team.find({ guildId: guild.id }).limit(25).sort({ name: 1 });
