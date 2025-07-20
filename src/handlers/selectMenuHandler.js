@@ -1,5 +1,5 @@
 // src/handlers/selectMenuHandler.js
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, StringSelectMenuBuilder } = require('discord.js');
 const Team = require('../models/team.js');
 const VPGUser = require('../models/user.js');
 const League = require('../models/league.js');
@@ -35,7 +35,7 @@ module.exports = async (client, interaction) => {
     // SECCIÓN 2: MENÚS QUE ACTUALIZAN UN MENSAJE (USAN DEFERUPDATE)
     // ======================================================================
 
-    if (customId === 'admin_select_team_to_manage' || customId === 'roster_management_menu') {
+    if (customId === 'admin_select_team_to_manage' || customId === 'roster_management_menu' || customId === 'admin_change_league_menu') {
         await interaction.deferUpdate();
         
         if (customId === 'admin_select_team_to_manage') {
@@ -91,24 +91,21 @@ module.exports = async (client, interaction) => {
     
             return interaction.editReply({ content: `Acciones para **${targetMember.user.username}**:`, components: [row] });
         }
+        
+        if (customId === 'admin_change_league_menu') {
+            const parts = selectedValue.split('_');
+            const teamId = parts[3];
+            const leagueId = parts[4];
+    
+            const team = await Team.findById(teamId);
+            const league = await League.findById(leagueId);
+            if (!team || !league) return interaction.followUp({ content: 'El equipo o la liga ya no existen.', ephemeral: true });
+    
+            team.league = league.name;
+            await team.save();
+            return interaction.followUp({ content: `✅ La liga del equipo **${team.name}** ha sido cambiada a **${league.name}**.`, ephemeral: true });
+        }
         return;
-    }
-
-    if (customId.startsWith('admin_change_league_menu')) {
-        await interaction.deferUpdate();
-        const parts = selectedValue.split('_');
-        const action = parts[0];
-        const command = parts[1];
-        const teamId = parts[2];
-        const leagueId = parts[3];
-
-        const team = await Team.findById(teamId);
-        const league = await League.findById(leagueId);
-        if (!team || !league) return interaction.followUp({ content: 'El equipo o la liga ya no existen.', ephemeral: true });
-
-        team.league = league.name;
-        await team.save();
-        return interaction.followUp({ content: `✅ La liga del equipo **${team.name}** ha sido cambiada a **${league.name}**.`, ephemeral: true });
     }
 
     // ======================================================================
