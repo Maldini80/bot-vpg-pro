@@ -5,7 +5,7 @@ const { Client, Collection, GatewayIntentBits, Events } = require('discord.js');
 const mongoose = require('mongoose');
 const cron = require('node-cron');
 
-// --- CARGA DE MODELOS (sin cambios) ---
+// --- CARGA DE MODELOS ---
 const AvailabilityPanel = require('./models/availabilityPanel.js');
 const TeamChatChannel = require('./models/teamChatChannel.js');
 const Team = require('./models/team.js');
@@ -27,7 +27,8 @@ const client = new Client({
 // --- CARGA DE COMANDOS ---
 client.commands = new Collection();
 const commandsPath = path.join(__dirname, 'commands');
-const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+const commandFilesToExclude = ['panel-amistosos.js', 'admin-gestionar-equipo.js'];
+const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js') && !commandFilesToExclude.includes(file));
 for (const file of commandFiles) {
     const filePath = path.join(commandsPath, file);
     const command = require(filePath);
@@ -37,27 +38,37 @@ for (const file of commandFiles) {
 }
 
 // --- CARGA DE HANDLERS DE INTERACCIONES ---
+client.handlers = new Map();
 const handlersPath = path.join(__dirname, 'handlers');
-const handlerFiles = fs.readdirSync(handlersPath).filter(file => file.endsWith('.js'));
-for (const file of handlerFiles) {
-    require(path.join(handlersPath, file));
+// Comprobamos si la carpeta handlers existe antes de intentar leerla.
+if (fs.existsSync(handlersPath)) {
+    const handlerFiles = fs.readdirSync(handlersPath).filter(file => file.endsWith('.js'));
+    for (const file of handlerFiles) {
+        // Carga cada handler y lo almacena en un mapa para acceso rápido.
+        const handlerName = path.basename(file, '.js');
+        client.handlers.set(handlerName, require(path.join(handlersPath, file)));
+    }
 }
+
 
 // --- EVENTO CLIENT READY ---
 client.once(Events.ClientReady, () => {
     console.log(`¡Listo! ${client.user.tag} está online.`);
 
-    // Tarea programada de limpieza diaria
+    // Tarea programada de limpieza diaria de amistosos
     cron.schedule('0 6 * * *', async () => {
         console.log('Ejecutando limpieza diaria de amistosos a las 6:00 AM...');
         try {
+            // Limpia la base de datos de paneles
             await AvailabilityPanel.deleteMany({});
             console.log('Base de datos de paneles de disponibilidad limpiada.');
-
-            const scheduledChannelId = process.env.SCHEDULED_FRIENDLY_CHANNEL_ID || 'ID_CANAL_PROGRAMADOS';
-            const instantChannelId = process.env.INSTANT_FRIENDLY_CHANNEL_ID || 'ID_CANAL_INSTANTANEOS';
+            
+            // Define los IDs de los canales desde las variables de entorno
+            const scheduledChannelId = process.env.SCHEDULED_FRIENDLY_CHANNEL_ID;
+            const instantChannelId = process.env.INSTANT_FRIENDLY_CHANNEL_ID;
 
             const clearChannel = async (channelId) => {
+                if (!channelId) return; // No hace nada si el ID no está definido
                 try {
                     const channel = await client.channels.fetch(channelId);
                     if (!channel || !channel.isTextBased()) return;
@@ -92,11 +103,14 @@ client.once(Events.ClientReady, () => {
 client.on(Events.MessageCreate, async message => {
     if (message.author.bot || !message.inGuild()) return;
 
+    // Comprueba si es un canal de chat de equipo
     const activeChannel = await TeamChatChannel.findOne({ channelId: message.channel.id, guildId: message.guildId });
     if (!activeChannel) return;
 
+    // No reenvía mensajes si el usuario está muteado
     if (message.member.roles.cache.has(process.env.MUTED_ROLE_ID)) return;
 
+    // Busca el equipo del usuario
     const team = await Team.findOne({ guildId: message.guildId, $or: [{ managerId: message.member.id }, { captains: message.member.id }, { players: message.member.id }] });
     if (!team) return;
 
@@ -114,8 +128,9 @@ client.on(Events.MessageCreate, async message => {
             allowedMentions: { parse: ['users', 'roles', 'everyone'] }
         });
     } catch (error) {
-        if (error.code !== 10008) { // Ignorar error "Unknown Message"
-            console.error(`Error en chat de equipo:`, error.message);
+        // Ignora errores comunes como "Unknown Message" si el mensaje ya fue borrado.
+        if (error.code !== 10008) {
+            console.error(`Error en la lógica del chat de equipo:`, error.message);
         }
     }
 });
@@ -126,35 +141,34 @@ client.on(Events.InteractionCreate, async interaction => {
     try {
         if (interaction.isChatInputCommand()) {
             const command = client.commands.get(interaction.commandName);
-            if (!command) {
-                console.error(`No se encontró el comando ${interaction.commandName}.`);
-                return;
-            }
+            if (!command) return;
             await command.execute(interaction);
         } 
         else if (interaction.isButton()) {
-            // La lógica ahora está en su propio handler
-            require('./handlers/buttonHandler')(client, interaction);
+            const buttonHandler = client.handlers.get('buttonHandler');
+            if (buttonHandler) await buttonHandler(client, interaction);
         } 
         else if (interaction.isStringSelectMenu()) {
-            // La lógica ahora está en su propio handler
-            require('./handlers/selectMenuHandler')(client, interaction);
+            const selectMenuHandler = client.handlers.get('selectMenuHandler');
+            if (selectMenuHandler) await selectMenuHandler(client, interaction);
         } 
         else if (interaction.isModalSubmit()) {
-            // La lógica ahora está en su propio handler
-            require('./handlers/modalHandler')(client, interaction);
+            const modalHandler = client.handlers.get('modalHandler');
+            if (modalHandler) await modalHandler(client, interaction);
         } 
         else if (interaction.isAutocomplete()) {
-            // La lógica ahora está en su propio handler
-            require('./handlers/autocompleteHandler')(client, interaction);
+            const autocompleteHandler = client.handlers.get('autocompleteHandler');
+            if (autocompleteHandler) await autocompleteHandler(client, interaction);
         }
     } catch (error) {
-        console.error("Fallo crítico de interacción:", error);
+        console.error("Fallo crítico durante el procesamiento de una interacción:", error);
+        // Manejo de errores mejorado para responder al usuario.
         if (interaction.replied || interaction.deferred) {
-            await interaction.followUp({ content: 'Ha ocurrido un error al procesar tu solicitud.', ephemeral: true }).catch(() => {});
+            await interaction.followUp({ content: 'Ha ocurrido un error inesperado al procesar tu solicitud.', ephemeral: true }).catch(() => {});
         } else {
-            if (error.code !== 10062) { // 10062 = Interaction has already been acknowledged
-                await interaction.reply({ content: 'Ha ocurrido un error al procesar tu solicitud.', ephemeral: true }).catch(() => {});
+            // Evita el error "Interaction has already been acknowledged"
+            if (error.code !== 10062) {
+                await interaction.reply({ content: 'Ha ocurrido un error inesperado al procesar tu solicitud.', ephemeral: true }).catch(() => {});
             }
         }
     }
