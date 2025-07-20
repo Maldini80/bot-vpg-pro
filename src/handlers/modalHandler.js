@@ -10,6 +10,7 @@ module.exports = async (client, interaction) => {
     
     await interaction.deferReply({ ephemeral: true });
 
+    // --- Lógica para el modal de registro de equipo ---
     if (customId.startsWith('manager_request_modal_')) {
         const leagueName = customId.split('_')[3];
         const vpgUsername = fields.getTextInputValue('vpgUsername');
@@ -25,6 +26,7 @@ module.exports = async (client, interaction) => {
         return interaction.editReply({ content: '✅ ¡Tu solicitud ha sido enviada!' });
     }
     
+    // --- Lógica de Aprobación Final de Equipo ---
     if (customId.startsWith('approve_modal_')) {
         const esAprobador = member.permissions.has(PermissionFlagsBits.Administrator) || member.roles.cache.has(process.env.APPROVER_ROLE_ID);
         if (!esAprobador) return interaction.editReply({ content: 'No tienes permiso.' });
@@ -57,6 +59,7 @@ module.exports = async (client, interaction) => {
         }
     }
     
+    // --- Lógica para editar datos de equipo ---
     if (customId.startsWith('edit_data_modal_')) {
         const teamId = customId.split('_')[3];
         const team = await Team.findById(teamId);
@@ -83,6 +86,7 @@ module.exports = async (client, interaction) => {
         }
     }
 
+    // --- Lógica para invitar jugador ---
     if (customId.startsWith('invite_player_modal_')) {
         const teamId = customId.split('_')[3];
         const team = await Team.findById(teamId);
