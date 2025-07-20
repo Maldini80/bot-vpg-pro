@@ -1,5 +1,5 @@
 // src/handlers/buttonHandler.js
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, EmbedBuilder, PermissionFlagsBits, InteractionResponseFlags } = require('discord.js');
 const Team = require('../models/team.js');
 const League = require('../models/league.js');
 const PlayerApplication = require('../models/playerApplication.js');
@@ -12,26 +12,22 @@ module.exports = async (client, interaction) => {
     const esAprobador = isAdmin || member.roles.cache.has(process.env.APPROVER_ROLE_ID);
 
     // ======================================================================
-    // == SECCIÓN 1: BOTONES QUE ABREN UN MODAL O ACTUALIZAN UN MENSAJE    ==
-    // == (No usan deferReply y deben ir primero para evitar conflictos)    ==
+    // == SECCIÓN 1: BOTONES QUE ABREN UN MODAL (RESPUESTA INSTANTÁNEA)   ==
     // ======================================================================
     
-    // --- Botones que abren un modal ---
     if (customId === 'request_manager_role_button') {
         const existingTeam = await Team.findOne({ $or: [{ managerId: user.id }, { captains: user.id }, { players: user.id }], guildId: guild.id });
-        if (existingTeam) return interaction.reply({ content: `Ya perteneces al equipo **${existingTeam.name}**.`, ephemeral: true });
-        
+        if (existingTeam) return interaction.reply({ content: `Ya perteneces al equipo **${existingTeam.name}**.`, flags: [InteractionResponseFlags.Ephemeral] });
         const modal = new ModalBuilder().setCustomId('manager_request_modal').setTitle('Formulario de Solicitud de Mánager');
         const vpgUsernameInput = new TextInputBuilder().setCustomId('vpgUsername').setLabel("Tu nombre de usuario en VPG").setStyle(TextInputStyle.Short).setRequired(true);
         const teamNameInput = new TextInputBuilder().setCustomId('teamName').setLabel("Nombre de tu equipo").setStyle(TextInputStyle.Short).setRequired(true);
         const teamAbbrInput = new TextInputBuilder().setCustomId('teamAbbr').setLabel("Abreviatura (3 letras)").setStyle(TextInputStyle.Short).setRequired(true).setMinLength(3).setMaxLength(3);
-        
         modal.addComponents(new ActionRowBuilder().addComponents(vpgUsernameInput), new ActionRowBuilder().addComponents(teamNameInput), new ActionRowBuilder().addComponents(teamAbbrInput));
         return interaction.showModal(modal);
     }
     
     if (customId === 'admin_create_league_button') {
-        if (!isAdmin) return interaction.reply({ content: 'Acción restringida.', ephemeral: true });
+        if (!isAdmin) return interaction.reply({ content: 'Acción restringida.', flags: [InteractionResponseFlags.Ephemeral] });
         const modal = new ModalBuilder().setCustomId('create_league_modal').setTitle('Crear Nueva Liga');
         const leagueNameInput = new TextInputBuilder().setCustomId('leagueNameInput').setLabel("Nombre de la nueva liga").setStyle(TextInputStyle.Short).setRequired(true);
         modal.addComponents(new ActionRowBuilder().addComponents(leagueNameInput));
@@ -39,10 +35,10 @@ module.exports = async (client, interaction) => {
     }
 
     if (customId.startsWith('admin_dissolve_team_')) {
-        if (!isAdmin) return interaction.reply({ content: 'Acción restringida.', ephemeral: true });
+        if (!isAdmin) return interaction.reply({ content: 'Acción restringida.', flags: [InteractionResponseFlags.Ephemeral] });
         const teamId = customId.split('_')[3];
         const team = await Team.findById(teamId);
-        if (!team) return interaction.reply({ content: 'Equipo no encontrado.', ephemeral: true });
+        if (!team) return interaction.reply({ content: 'Equipo no encontrado.', flags: [InteractionResponseFlags.Ephemeral] });
         const modal = new ModalBuilder().setCustomId(`confirm_dissolve_modal_${teamId}`).setTitle(`Disolver Equipo: ${team.name}`);
         const confirmationInput = new TextInputBuilder().setCustomId('confirmation_text').setLabel(`Escribe "${team.name}" para confirmar`).setStyle(TextInputStyle.Short).setRequired(true).setPlaceholder(team.name);
         modal.addComponents(new ActionRowBuilder().addComponents(confirmationInput));
@@ -50,7 +46,7 @@ module.exports = async (client, interaction) => {
     }
 
     if (customId.startsWith('approve_request_')) {
-        if (!esAprobador) return interaction.reply({ content: 'No tienes permiso.', ephemeral: true });
+        if (!esAprobador) return interaction.reply({ content: 'No tienes permiso.', flags: [InteractionResponseFlags.Ephemeral] });
         const parts = customId.split('_');
         const applicantId = parts[2];
         const teamName = parts.slice(3).join(' ').replace(/-/g, ' ');
@@ -60,7 +56,10 @@ module.exports = async (client, interaction) => {
         return interaction.showModal(modal);
     }
     
-    // --- Botones que actualizan un mensaje ---
+    // ======================================================================
+    // == SECCIÓN 2: BOTONES QUE ACTUALIZAN UN MENSAJE (DEFERUPDATE)     ==
+    // ======================================================================
+
     if (customId.startsWith('reject_request_') || customId.startsWith('accept_application_') || customId.startsWith('reject_application_') || customId.startsWith('promote_player_') || customId.startsWith('demote_captain_') || customId.startsWith('kick_player_') || customId.startsWith('toggle_mute_player_')) {
         await interaction.deferUpdate();
         
@@ -146,21 +145,21 @@ module.exports = async (client, interaction) => {
             }
             await team.save();
         }
-        return; // Detiene la ejecución aquí.
+        return; 
     }
     
     // ======================================================================
-    // == SECCIÓN 2: BOTONES QUE ENVÍAN RESPUESTAS PRIVADAS (DEFERREPLY)   ==
+    // == SECCIÓN 3: BOTONES QUE ENVÍAN RESPUESTAS PRIVADAS (DEFERREPLY)   ==
     // ======================================================================
     
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: [InteractionResponseFlags.Ephemeral] });
 
     if (customId === 'view_teams_button') {
         const teams = await Team.find({ guildId: guild.id }).limit(25).sort({ name: 1 });
-        if (teams.length === 0) return interaction.editReply({ content: 'No hay equipos registrados en este servidor.' });
-        const teamOptions = teams.map(t => ({ label: `${t.name} (${t.abbreviation})`, description: `Liga: ${t.league}`, value: t._id.toString() }));
-        const selectMenu = new StringSelectMenuBuilder().setCustomId('view_team_roster_select').setPlaceholder('Selecciona un equipo para ver su plantilla').addOptions(teamOptions);
-        return interaction.editReply({ content: 'Elige un equipo del menú desplegable:', components: [new ActionRowBuilder().addComponents(selectMenu)] });
+        if (teams.length === 0) return interaction.editReply({ content: 'No hay equipos registrados.' });
+        const teamOptions = teams.map(t => ({ label: `${t.name} (${t.abbreviation})`, value: t._id.toString() }));
+        const selectMenu = new StringSelectMenuBuilder().setCustomId('view_team_roster_select').setPlaceholder('Selecciona un equipo').addOptions(teamOptions);
+        return interaction.editReply({ content: 'Elige un equipo:', components: [new ActionRowBuilder().addComponents(selectMenu)] });
     }
 
     if (customId === 'apply_to_team_button') {
@@ -213,7 +212,7 @@ module.exports = async (client, interaction) => {
         return interaction.editReply({ embeds: [embed] });
     }
     
-    // --- Lógica del Panel de Equipo (requiere que el usuario esté en un equipo) ---
+    // --- Lógica del Panel de Equipo ---
     const userTeam = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
     if (!userTeam) return interaction.editReply({content: 'Debes ser mánager o capitán para usar este botón.'});
     
