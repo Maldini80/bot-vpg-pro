@@ -59,7 +59,7 @@ module.exports = async (client, interaction) => {
     // SECCIÓN 1: BOTONES QUE ABREN UN MODAL (RESPUESTA INSTANTÁNEA)
     // ======================================================================
     
-    if (customId.startsWith('admin_change_data_') || customId === 'team_edit_data_button' || customId === 'team_invite_player_button' || customId === 'admin_create_league_button' || customId.startsWith('admin_dissolve_team_') || customId.startsWith('approve_request_')) {
+    if (customId === 'admin_create_league_button' || customId.startsWith('admin_dissolve_team_') || customId.startsWith('approve_request_') || customId.startsWith('admin_change_data_') || customId === 'team_edit_data_button' || customId === 'team_invite_player_button') {
         if (customId === 'admin_create_league_button') {
             if (!isAdmin) return interaction.reply({ content: 'Acción restringida.', ephemeral: true });
             const modal = new ModalBuilder().setCustomId('create_league_modal').setTitle('Crear Nueva Liga');
@@ -327,10 +327,9 @@ module.exports = async (client, interaction) => {
             const selectMenu = new StringSelectMenuBuilder().setCustomId('select_available_times').setPlaceholder('Selecciona tus horarios disponibles').addOptions(timeOptions).setMinValues(1).setMaxValues(timeSlots.length);
             return interaction.editReply({ content: 'Elige los horarios en los que tu equipo está disponible:', components: [new ActionRowBuilder().addComponents(selectMenu)] });
         } else {
-            const channelId = process.env.INSTANT_FRIENDLY_CHANNEL_ID;
-            if (!channelId) return interaction.editReply({ content: 'El canal de amistosos instantáneos no está configurado.' });
+            const channelId = '1396367574882717869'; // ID Canal Instantáneos
             const channel = await client.channels.fetch(channelId).catch(()=>null);
-            if (!channel) return interaction.editReply({ content: 'No se encontró el canal de amistosos instantáneos.' });
+            if (!channel) return interaction.editReply({ content: 'Error: No se encontró el canal de amistosos instantáneos.' });
             const webhook = await getOrCreateWebhook(channel, client);
             const embed = new EmbedBuilder().setColor('Green').setDescription(`**Buscando rival para jugar AHORA**\n\n*Contacto:* <@${user.id}>`);
             const message = await webhook.send({ username: userTeam.name, avatarURL: userTeam.logoUrl, embeds: [embed] });
