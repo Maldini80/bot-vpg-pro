@@ -17,7 +17,6 @@ module.exports = async (client, interaction) => {
     
     if (customId === 'request_manager_role_button') {
         const existingTeam = await Team.findOne({ $or: [{ managerId: user.id }, { captains: user.id }, { players: user.id }], guildId: guild.id });
-        // CORRECCIÓN: Usamos ephemeral: true
         if (existingTeam) return interaction.reply({ content: `Ya perteneces al equipo **${existingTeam.name}**.`, ephemeral: true });
         
         const modal = new ModalBuilder().setCustomId('manager_request_modal').setTitle('Formulario de Solicitud de Mánager');
@@ -154,7 +153,6 @@ module.exports = async (client, interaction) => {
     // == SECCIÓN 3: BOTONES QUE ENVÍAN RESPUESTAS PRIVADAS (DEFERREPLY)   ==
     // ======================================================================
     
-    // CORRECCIÓN: Usamos ephemeral: true
     await interaction.deferReply({ ephemeral: true });
 
     if (customId === 'view_teams_button') {
