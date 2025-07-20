@@ -8,6 +8,9 @@ module.exports = {
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     
     async execute(interaction) {
+        // CORRECCIÓN: Respondemos primero para evitar "Unknown Interaction"
+        await interaction.reply({ content: 'Creando el panel de solicitud...', ephemeral: true });
+
         const embed = new EmbedBuilder()
             .setTitle('Centro de Control de Jugador VPG')
             .setDescription('Aquí puedes interactuar con el sistema de equipos.')
@@ -19,7 +22,11 @@ module.exports = {
             new ButtonBuilder().setCustomId('leave_team_button').setLabel('🚪 Abandonar Equipo').setStyle(ButtonStyle.Danger),
             new ButtonBuilder().setCustomId('apply_to_team_button').setLabel('✉️ Aplicar a un Equipo').setStyle(ButtonStyle.Secondary)
         );
+
+        // Enviamos el panel al canal
         await interaction.channel.send({ embeds: [embed], components: [row] });
-        await interaction.reply({ content: 'Panel de usuario creado con éxito.', ephemeral: true });
+
+        // Editamos la respuesta original para confirmar
+        await interaction.editReply({ content: '✅ Panel de solicitud creado con éxito.' });
     },
 };
