@@ -10,83 +10,53 @@ module.exports = async (client, interaction) => {
     
     await interaction.deferReply({ ephemeral: true });
 
-    // --- Lógica para el modal de registro de equipo ---
     if (customId.startsWith('manager_request_modal_')) {
         const leagueName = customId.split('_')[3];
         const vpgUsername = fields.getTextInputValue('vpgUsername');
         const teamName = fields.getTextInputValue('teamName');
         const teamAbbr = fields.getTextInputValue('teamAbbr').toUpperCase();
-        
         const approvalChannelId = process.env.APPROVAL_CHANNEL_ID;
         if (!approvalChannelId) return interaction.editReply({ content: 'Error: El canal de aprobaciones no está configurado.' });
-        
         const approvalChannel = await client.channels.fetch(approvalChannelId).catch(() => null);
         if(!approvalChannel) return interaction.editReply({ content: 'Error: No se pudo encontrar el canal de aprobaciones.' });
-
-        const embed = new EmbedBuilder()
-            .setTitle('📝 Nueva Solicitud de Registro de Equipo')
-            .setColor('Orange').setAuthor({ name: user.tag, iconURL: user.displayAvatarURL() })
-            .addFields(
-                { name: 'Solicitante', value: `<@${user.id}>`, inline: true },
-                { name: 'Usuario VPG', value: vpgUsername, inline: true },
-                { name: 'Nombre del Equipo', value: teamName, inline: false },
-                { name: 'Abreviatura', value: teamAbbr, inline: true },
-                { name: 'Liga Seleccionada', value: leagueName, inline: true }
-            ).setTimestamp();
-        
-        const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId(`approve_request_${user.id}_${leagueName}`).setLabel('Aprobar').setStyle(ButtonStyle.Success),
-            new ButtonBuilder().setCustomId(`reject_request_${user.id}`).setLabel('Rechazar').setStyle(ButtonStyle.Danger)
-        );
-
+        const embed = new EmbedBuilder().setTitle('📝 Nueva Solicitud de Registro de Equipo').setColor('Orange').setAuthor({ name: user.tag, iconURL: user.displayAvatarURL() }).addFields({ name: 'Solicitante', value: `<@${user.id}>` }, { name: 'Usuario VPG', value: vpgUsername }, { name: 'Nombre del Equipo', value: teamName }, { name: 'Abreviatura', value: teamAbbr }, { name: 'Liga Seleccionada', value: leagueName }).setTimestamp();
+        const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`approve_request_${user.id}_${leagueName}`).setLabel('Aprobar').setStyle(ButtonStyle.Success), new ButtonBuilder().setCustomId(`reject_request_${user.id}`).setLabel('Rechazar').setStyle(ButtonStyle.Danger));
         await approvalChannel.send({ embeds: [embed], components: [row] });
         return interaction.editReply({ content: '✅ ¡Tu solicitud ha sido enviada! Un administrador la revisará pronto.' });
     }
-
-    // --- Lógica de Aprobación Final de Equipo (ahora con liga) ---
+    
     if (customId.startsWith('approve_modal_')) {
         const esAprobador = member.permissions.has(PermissionFlagsBits.Administrator) || member.roles.cache.has(process.env.APPROVER_ROLE_ID);
         if (!esAprobador) return interaction.editReply({ content: 'No tienes permiso.' });
-
         try {
             const parts = customId.split('_');
             const applicantId = parts[2];
             const leagueName = parts[3];
             const teamLogoUrl = fields.getTextInputValue('teamLogoUrl');
-            
             const originalMessage = message;
             if (!originalMessage || !originalMessage.embeds[0]) return interaction.editReply({ content: 'Error: No se pudo encontrar la solicitud original.' });
-            
             const embed = originalMessage.embeds[0];
             const teamName = embed.fields.find(f => f.name === 'Nombre del Equipo').value;
             const teamAbbr = embed.fields.find(f => f.name === 'Abreviatura').value;
-
             const applicantMember = await guild.members.fetch(applicantId).catch(() => null);
             if (!applicantMember) return interaction.editReply({ content: `Error: El usuario solicitante ya no está en el servidor.` });
-            
             const existingTeam = await Team.findOne({ $or: [{ name: teamName }, { managerId: applicantId }], guildId: guild.id });
             if (existingTeam) return interaction.editReply({ content: `Error: Ya existe un equipo con ese nombre o el usuario ya es mánager.` });
-
             const newTeam = new Team({ name: teamName, abbreviation: teamAbbr, guildId: guild.id, league: leagueName, logoUrl: teamLogoUrl, managerId: applicantId });
             await newTeam.save();
-
             await applicantMember.roles.add(process.env.MANAGER_ROLE_ID);
             await applicantMember.roles.add(process.env.PLAYER_ROLE_ID);
             await applicantMember.setNickname(`|MG| ${teamAbbr} ${applicantMember.user.username}`).catch(err => console.log(`No se pudo cambiar apodo: ${err.message}`));
-            
             const disabledRow = new ActionRowBuilder().addComponents(ButtonBuilder.from(originalMessage.components[0].components[0]).setDisabled(true).setLabel('Aprobado'), ButtonBuilder.from(originalMessage.components[0].components[1]).setDisabled(true));
             await originalMessage.edit({ components: [disabledRow] });
-
             await applicantMember.send(`¡Felicidades! Tu solicitud para el equipo **${teamName}** ha sido **aprobada**.`).catch(() => {});
             return interaction.editReply({ content: `✅ Equipo **${teamName}** creado en la liga **${leagueName}**. ${applicantMember.user.tag} es ahora Mánager.` });
-
         } catch (error) {
             console.error("Error en aprobación de equipo:", error);
             return interaction.editReply({ content: 'Ocurrió un error inesperado.' });
         }
     }
     
-    // --- Lógica para editar datos de equipo ---
     if (customId.startsWith('edit_data_modal_')) {
         const teamId = customId.split('_')[3];
         const team = await Team.findById(teamId);
@@ -94,11 +64,9 @@ module.exports = async (client, interaction) => {
         const isManager = team.managerId === user.id;
         const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
         if (!isManager && !isAdmin) return interaction.editReply({ content: 'No tienes permiso.' });
-
         const newName = fields.getTextInputValue('newName') || team.name;
         const newAbbr = fields.getTextInputValue('newAbbr')?.toUpperCase() || team.abbreviation;
         const newLogo = fields.getTextInputValue('newLogo') || team.logoUrl;
-
         if (isManager && !isAdmin) {
             const approvalChannelId = process.env.APPROVAL_CHANNEL_ID;
             if (!approvalChannelId) return interaction.editReply({ content: 'Error: Canal de aprobaciones no configurado.' });
@@ -119,20 +87,11 @@ module.exports = async (client, interaction) => {
         const teamId = customId.split('_')[3];
         const team = await Team.findById(teamId);
         if (!team) return interaction.editReply({ content: 'Tu equipo ya no existe.' });
-
         const playerName = fields.getTextInputValue('playerName');
         const targetMember = guild.members.cache.find(m => m.user.username.toLowerCase() === playerName.toLowerCase());
-
-        if (!targetMember) {
-            return interaction.editReply({ content: `No se encontró a ningún miembro con el nombre de usuario "${playerName}".` });
-        }
-        
+        if (!targetMember) return interaction.editReply({ content: `No se encontró a ningún miembro con el nombre de usuario "${playerName}".` });
         const embed = new EmbedBuilder().setTitle(`📩 Invitación de Equipo`).setDescription(`Has sido invitado a unirte a **${team.name}**.`).setColor('Green').setThumbnail(team.logoUrl);
-        const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId(`accept_invite_${team._id}_${targetMember.id}`).setLabel('Aceptar').setStyle(ButtonStyle.Success),
-            new ButtonBuilder().setCustomId(`reject_invite_${team._id}_${targetMember.id}`).setLabel('Rechazar').setStyle(ButtonStyle.Danger)
-        );
-
+        const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`accept_invite_${team._id}_${targetMember.id}`).setLabel('Aceptar').setStyle(ButtonStyle.Success), new ButtonBuilder().setCustomId(`reject_invite_${team._id}_${targetMember.id}`).setLabel('Rechazar').setStyle(ButtonStyle.Danger));
         try {
             await targetMember.send({ embeds: [embed], components: [row] });
             return interaction.editReply({ content: `✅ Invitación enviada a **${targetMember.user.tag}**.` });
