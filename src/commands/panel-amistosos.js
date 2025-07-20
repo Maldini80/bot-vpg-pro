@@ -4,15 +4,15 @@ const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, Butt
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('panel-amistosos')
-        .setDescription('Crea el panel de búsqueda de amistosos en este canal.')
+        .setDescription('Crea el panel de búsqueda de amistosos y gestión de equipo.')
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     
     async execute(interaction) {
         const embed = new EmbedBuilder()
-            .setTitle('Búsqueda de Partidos Amistosos')
-            .setDescription('¿Tu equipo está listo para competir? Publica aquí tu panel de disponibilidad.')
+            .setTitle('Centro de Control de Amistosos y Equipos')
+            .setDescription('Usa los botones de abajo para buscar partidos o gestionar tu equipo.')
             .setColor('#5865F2')
-            .setFooter({ text: 'Solo los Mánagers y Capitanes pueden usar estos botones.'});
+            .setFooter({ text: 'Algunos botones solo son visibles para Mánagers y Capitanes.'});
 
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
@@ -26,10 +26,14 @@ module.exports = {
             new ButtonBuilder()
                 .setCustomId('delete_my_panel')
                 .setLabel('🗑️ Borrar mi Panel')
-                .setStyle(ButtonStyle.Danger)
+                .setStyle(ButtonStyle.Danger),
+            new ButtonBuilder()
+                .setCustomId('open_my_team_panel')
+                .setLabel('🛡️ Mi Equipo')
+                .setStyle(ButtonStyle.Secondary)
         );
 
         await interaction.channel.send({ embeds: [embed], components: [row] });
-        await interaction.reply({ content: 'Panel de amistosos creado con éxito.', ephemeral: true });
+        await interaction.reply({ content: 'Panel de amistosos y gestión de equipo creado con éxito.', ephemeral: true });
     }
 };
