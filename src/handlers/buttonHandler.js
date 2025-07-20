@@ -15,12 +15,81 @@ async function getOrCreateWebhook(channel, client) {
     return webhook;
 }
 
+async function buildPanel(panelData) {
+    const { team, postedById, timeSlots, _id, allowedLeagues, panelType } = panelData;
+    
+    let description = panelType === 'SCHEDULED' 
+        ? `**Buscando rivales para los siguientes horarios:**\n\n*Contacto:* <@${postedById}>`
+        : `**Buscando rival para jugar AHORA**\n\n*Contacto:* <@${postedById}>`;
+
+    if (allowedLeagues && allowedLeagues.length > 0 && allowedLeagues[0]) {
+        description += `\n*Filtro de Liga(s): ${allowedLeagues.join(', ')}*`;
+    }
+
+    const embed = new EmbedBuilder()
+        .setColor(timeSlots.some(ts => ts.status === 'AVAILABLE') ? 'Green' : '#5865F2')
+        .setAuthor({ name: team.name, iconURL: team.logoUrl });
+
+    const components = [];
+    let currentRow = new ActionRowBuilder();
+
+    if (panelType === 'INSTANT') {
+        const slot = timeSlots[0];
+        if (slot.status === 'AVAILABLE') {
+            embed.setDescription(description);
+            currentRow.addComponents(new ButtonBuilder().setCustomId(`challenge_${_id}_${slot.time}`).setLabel(`⚔️ Desafiar Ahora`).setStyle(ButtonStyle.Success));
+        } else { // CONFIRMED
+            embed.setDescription(`**Partido Confirmado**\n\n<@${postedById}> (Anfitrión) vs <@${slot.challengerUserId}> (Rival)`);
+            embed.addFields({ name: `⚔️ ${team.name} vs ${slot.challengerTeamName}`, value: `¡Partido en curso!` });
+            currentRow.addComponents(new ButtonBuilder().setCustomId(`contact_${postedById}_${slot.challengerUserId}`).setLabel(`Contactar por MD`).setStyle(ButtonStyle.Primary));
+            currentRow.addComponents(new ButtonBuilder().setCustomId(`cancel_match_${_id}_${slot.time}`).setLabel('Expulsar Rival').setStyle(ButtonStyle.Danger));
+        }
+    } else { // SCHEDULED
+        embed.setDescription(description);
+        for (const slot of timeSlots) {
+            if (slot.status === 'AVAILABLE') {
+                embed.addFields({ name: `🕕 ${slot.time}`, value: `✅ **DISPONIBLE**`, inline: true });
+                if (currentRow.components.length >= 5) {
+                    components.push(currentRow);
+                    currentRow = new ActionRowBuilder();
+                }
+                currentRow.addComponents(new ButtonBuilder().setCustomId(`challenge_${_id}_${slot.time}`).setLabel(`⚔️ ${slot.time}`).setStyle(ButtonStyle.Success));
+            } else { // CONFIRMED
+                embed.addFields({ name: `🕕 ${slot.time}`, value: `**VS ${slot.challengerTeamName}**`, inline: true });
+            }
+        }
+        if (currentRow.components.length > 0) {
+            components.push(currentRow);
+        }
+        const confirmedSlots = timeSlots.filter(s => s.status === 'CONFIRMED');
+        if(confirmedSlots.length > 0) {
+            let confirmedRow = new ActionRowBuilder();
+            for(const slot of confirmedSlots) {
+                if (confirmedRow.components.length >= 4) {
+                    components.push(confirmedRow);
+                    confirmedRow = new ActionRowBuilder();
+                }
+                confirmedRow.addComponents(new ButtonBuilder().setCustomId(`contact_${postedById}_${slot.challengerUserId}`).setLabel(`MDs (${slot.time})`).setStyle(ButtonStyle.Primary));
+                confirmedRow.addComponents(new ButtonBuilder().setCustomId(`cancel_match_${_id}_${slot.time}`).setLabel(`Cancelar (${slot.time})`).setStyle(ButtonStyle.Danger));
+            }
+            components.push(confirmedRow);
+        }
+    }
+    
+    if (currentRow.components.length > 0 && panelType !== 'SCHEDULED') {
+        components.push(currentRow);
+    }
+    
+    return { embeds: [embed], components };
+}
+
 module.exports = async (client, interaction) => {
     // Si la interacción viene de un MD, no hay `member` ni `guild`.
     if (!interaction.inGuild()) {
         const { customId, user } = interaction;
+        await interaction.deferUpdate();
+
         if (customId.startsWith('accept_application_') || customId.startsWith('reject_application_')) {
-            await interaction.deferUpdate();
             const applicationId = customId.split('_')[2];
             const application = await PlayerApplication.findById(applicationId).populate('teamId');
             if(!application || application.status !== 'pending') return interaction.editReply({ content: 'Esta solicitud ya no es válida o ya ha sido gestionada.', components: [], embeds: [] });
@@ -47,6 +116,43 @@ module.exports = async (client, interaction) => {
             await application.teamId.save();
             await application.save();
         }
+
+        if (customId.startsWith('accept_challenge_') || customId.startsWith('reject_challenge_')) {
+            const parts = customId.split('_');
+            const panelId = parts[2];
+            const time = parts[3];
+            const challengerTeamId = parts[4];
+            const challengerUserId = parts[5];
+
+            const panel = await AvailabilityPanel.findById(panelId).populate('teamId');
+            if(!panel) return interaction.editReply({ content: 'Este panel de amistosos ya no existe.', components: [] });
+            
+            const slot = panel.timeSlots.find(s => s.time === time);
+            if (!slot || slot.status === 'CONFIRMED') return interaction.editReply({ content: 'Este horario ya ha sido confirmado o no existe.', components: [] });
+
+            const challengerTeam = await Team.findById(challengerTeamId);
+            const challengerUser = await client.users.fetch(challengerUserId);
+
+            if (customId.startsWith('accept_challenge_')) {
+                slot.status = 'CONFIRMED';
+                slot.challengerTeamId = challengerTeamId;
+                slot.challengerTeamName = challengerTeam.name;
+                slot.challengerTeamLogo = challengerTeam.logoUrl;
+                slot.challengerUserId = challengerUserId;
+                await panel.save();
+
+                await challengerUser.send(`✅ ¡Tu desafío ha sido **ACEPTADO**! Jugarás contra **${panel.teamId.name}** a las **${time}**.\nPuedes contactar con <@${panel.postedById}> usando los botones del panel público.`);
+                await interaction.editReply({ content: `Has aceptado el desafío de **${challengerTeam.name}** para las **${time}**.`, components: [], embeds: [] });
+                
+                const originalChannel = await client.channels.fetch(panel.channelId);
+                const originalMessage = await originalChannel.messages.fetch(panel.messageId);
+                const panelContent = await buildPanel({ ...panel.toObject(), team: panel.teamId });
+                await originalMessage.edit(panelContent);
+            } else { // Rechazar
+                await challengerUser.send(`❌ Tu desafío contra **${panel.teamId.name}** para las **${time}** ha sido rechazado.`);
+                await interaction.editReply({ content: `Has rechazado el desafío de **${challengerTeam.name}**.`, components: [], embeds: [] });
+            }
+        }
         return; // Detiene la ejecución para interacciones en MDs
     }
 
@@ -54,12 +160,22 @@ module.exports = async (client, interaction) => {
     const { customId, member, guild, user } = interaction;
     const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
     const esAprobador = isAdmin || member.roles.cache.has(process.env.APPROVER_ROLE_ID);
-
     // ======================================================================
     // SECCIÓN 1: BOTONES QUE ABREN UN MODAL (RESPUESTA INSTANTÁNEA)
     // ======================================================================
     
-    if (customId === 'admin_create_league_button' || customId.startsWith('admin_dissolve_team_') || customId.startsWith('approve_request_') || customId.startsWith('admin_change_data_') || customId === 'team_edit_data_button' || customId === 'team_invite_player_button') {
+    if (customId.startsWith('challenge_') || customId === 'admin_create_league_button' || customId.startsWith('admin_dissolve_team_') || customId.startsWith('approve_request_') || customId.startsWith('admin_change_data_') || customId === 'team_edit_data_button' || customId === 'team_invite_player_button') {
+        if (customId.startsWith('challenge_')) {
+            const parts = customId.split('_');
+            const panelId = parts[1];
+            const time = parts[2];
+            const challengerTeam = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
+            if (!challengerTeam) return interaction.reply({ content: 'Debes ser mánager o capitán para desafiar.', ephemeral: true });
+            const modal = new ModalBuilder().setCustomId(`challenge_modal_${panelId}_${time}_${challengerTeam._id}`).setTitle(`Desafiar a las ${time}`);
+            const presentationInput = new TextInputBuilder().setCustomId('presentation').setLabel('Mensaje para el rival (opcional)').setStyle(TextInputStyle.Short).setRequired(false);
+            modal.addComponents(new ActionRowBuilder().addComponents(presentationInput));
+            return interaction.showModal(modal);
+        }
         if (customId === 'admin_create_league_button') {
             if (!isAdmin) return interaction.reply({ content: 'Acción restringida.', ephemeral: true });
             const modal = new ModalBuilder().setCustomId('create_league_modal').setTitle('Crear Nueva Liga');
@@ -119,9 +235,38 @@ module.exports = async (client, interaction) => {
     // SECCIÓN 2: BOTONES QUE ACTUALIZAN UN MENSAJE (DEFERUPDATE)
     // ======================================================================
 
-    if (customId.startsWith('reject_request_') || customId.startsWith('promote_player_') || customId.startsWith('demote_captain_') || customId.startsWith('kick_player_') || customId.startsWith('toggle_mute_player_')) {
+    if (customId.startsWith('reject_request_') || customId.startsWith('promote_player_') || customId.startsWith('demote_captain_') || customId.startsWith('kick_player_') || customId.startsWith('toggle_mute_player_') || customId.startsWith('cancel_match_')) {
         await interaction.deferUpdate();
         
+        if(customId.startsWith('cancel_match_')) {
+            const parts = customId.split('_');
+            const panelId = parts[2];
+            const time = parts[3];
+            const panel = await AvailabilityPanel.findById(panelId).populate('teamId');
+            if (!panel) return interaction.followUp({ content: 'Este panel ya no existe.', ephemeral: true });
+            const isHost = panel.postedById === user.id;
+            const slot = panel.timeSlots.find(s => s.time === time);
+            const isChallenger = slot && slot.challengerUserId === user.id;
+            if (!isHost && !isChallenger) return interaction.followUp({ content: 'No tienes permiso para cancelar este partido.', ephemeral: true });
+            
+            const otherPlayerId = isHost ? slot.challengerUserId : panel.postedById;
+            const otherPlayer = await client.users.fetch(otherPlayerId);
+            await otherPlayer.send(`🚨 El partido contra **${isHost ? panel.teamId.name : slot.challengerTeamName}** para las **${time}** ha sido **cancelado** por tu rival.`);
+            
+            slot.status = 'AVAILABLE';
+            slot.challengerTeamId = null;
+            slot.challengerTeamName = null;
+            slot.challengerTeamLogo = null;
+            slot.challengerUserId = null;
+            await panel.save();
+
+            const originalChannel = await client.channels.fetch(panel.channelId);
+            const originalMessage = await originalChannel.messages.fetch(panel.messageId);
+            const panelContent = await buildPanel({ ...panel.toObject(), team: panel.teamId });
+            await originalMessage.edit(panelContent);
+            return interaction.followUp({ content: `Has cancelado el partido de las **${time}**. El horario vuelve a estar disponible.`, ephemeral: true });
+        }
+
         if (customId.startsWith('reject_request_')) {
             if (!esAprobador) return interaction.followUp({ content: 'No tienes permiso.', ephemeral: true });
             const applicantId = customId.split('_')[2];
@@ -179,8 +324,7 @@ module.exports = async (client, interaction) => {
         }
         return; 
     }
-    
-    // ======================================================================
+        // ======================================================================
     // SECCIÓN 3: BOTONES QUE ENVÍAN RESPUESTAS PRIVADAS (DEFERREPLY)
     // ======================================================================
     
@@ -317,26 +461,33 @@ module.exports = async (client, interaction) => {
         return interaction.editReply({ content: `El reclutamiento está ahora **${userTeam.recruitmentOpen ? 'ABIERTO' : 'CERRADO'}**.` });
     }
 
-    if (customId === 'post_scheduled_panel' || customId === 'post_instant_panel') {
-        const panelType = customId === 'post_scheduled_panel' ? 'SCHEDULED' : 'INSTANT';
-        const existingPanel = await AvailabilityPanel.findOne({ teamId: userTeam._id, panelType });
-        if (existingPanel) return interaction.editReply({ content: `Tu equipo ya tiene un panel de amistosos de tipo ${panelType} activo. Bórralo primero.` });
+    if (customId.startsWith('post_scheduled_panel') || customId.startsWith('post_instant_panel')) {
+        const leagues = await League.find({ guildId: guild.id }).sort({ name: 1 });
+        if (leagues.length === 0) return interaction.editReply({ content: 'No hay ligas configuradas para poder filtrar.' });
+        const panelType = customId.startsWith('post_scheduled') ? 'SCHEDULED' : 'INSTANT';
+        const leagueOptions = leagues.map(l => ({ label: l.name, value: l.name }));
+        const row = new ActionRowBuilder().addComponents(new StringSelectMenuBuilder().setCustomId(`friendly_league_filter_${panelType}`).setPlaceholder('Opcional: Filtrar por liga(s)').addOptions(leagueOptions).setMinValues(0).setMaxValues(leagues.length));
+        const noFilterButton = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`no_filter_${panelType}`).setLabel('Buscar en TODAS las ligas').setStyle(ButtonStyle.Primary));
+        return interaction.editReply({ content: '¿Quieres que solo equipos de ciertas ligas puedan desafiarte?', components: [row, noFilterButton] });
+    }
+    
+    if (customId.startsWith('no_filter_')) {
+        const panelType = customId.split('_')[2];
         if (panelType === 'SCHEDULED') {
             const timeSlots = ['22:00', '22:20', '22:40', '23:00', '23:20', '23:40'];
             const timeOptions = timeSlots.map(time => ({ label: time, value: time }));
-            const selectMenu = new StringSelectMenuBuilder().setCustomId('select_available_times').setPlaceholder('Selecciona tus horarios disponibles').addOptions(timeOptions).setMinValues(1).setMaxValues(timeSlots.length);
-            return interaction.editReply({ content: 'Elige los horarios en los que tu equipo está disponible:', components: [new ActionRowBuilder().addComponents(selectMenu)] });
+            const timeMenu = new StringSelectMenuBuilder().setCustomId(`select_available_times_`).setPlaceholder('Selecciona tus horarios').addOptions(timeOptions).setMinValues(1).setMaxValues(timeSlots.length);
+            return interaction.editReply({ content: `No has aplicado filtro de liga. Ahora, elige los horarios:`, components: [new ActionRowBuilder().addComponents(timeMenu)] });
         } else {
-            const channelId = '1396367574882717869'; // ID Canal Instantáneos
+            const channelId = '1396367574882717869';
             const channel = await client.channels.fetch(channelId).catch(()=>null);
             if (!channel) return interaction.editReply({ content: 'Error: No se encontró el canal de amistosos instantáneos.' });
             const webhook = await getOrCreateWebhook(channel, client);
-            const embed = new EmbedBuilder().setColor('Green').setDescription(`**Buscando rival para jugar AHORA**\n\n*Contacto:* <@${user.id}>`);
-            const message = await webhook.send({ username: userTeam.name, avatarURL: userTeam.logoUrl, embeds: [embed] });
-            const panel = new AvailabilityPanel({ guildId: guild.id, channelId, messageId: message.id, teamId: userTeam._id, postedById: user.id, panelType: 'INSTANT', timeSlots: [{ time: 'INSTANT', status: 'AVAILABLE' }] });
+            const panelData = { team: userTeam, postedById: user.id, _id: new mongoose.Types.ObjectId(), allowedLeagues: [], panelType: 'INSTANT', timeSlots: [{ time: 'INSTANT', status: 'AVAILABLE' }] };
+            const { embeds, components } = await buildPanel(panelData);
+            const message = await webhook.send({ username: userTeam.name, avatarURL: userTeam.logoUrl, embeds, components });
+            const panel = new AvailabilityPanel({ guildId: guild.id, channelId, messageId: message.id, teamId: userTeam._id, postedById: user.id, panelType: 'INSTANT', allowedLeagues: [], timeSlots: panelData.timeSlots });
             await panel.save();
-            const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`challenge_slot_${panel._id}_INSTANT`).setLabel('⚔️ Desafiar Ahora').setStyle(ButtonStyle.Success));
-            await client.channels.cache.get(channelId).messages.edit(message.id, { components: [row] });
             return interaction.editReply({ content: '✅ Tu panel de amistoso instantáneo ha sido publicado.' });
         }
     }
