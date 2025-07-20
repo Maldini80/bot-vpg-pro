@@ -8,8 +8,7 @@ const VPGUser = require('../models/user.js');
 module.exports = async (client, interaction) => {
     const { customId, fields, guild, user } = interaction;
     
-    // Todos los modales necesitan una respuesta, así que deferimos al principio.
-    // CORRECCIÓN: Volvemos a usar 'ephemeral: true' que es estable.
+    // CORRECCIÓN: Usamos ephemeral: true, que es la sintaxis estable.
     await interaction.deferReply({ ephemeral: true });
 
     if (customId === 'create_league_modal') {
@@ -64,6 +63,13 @@ module.exports = async (client, interaction) => {
         }
     }
     
+    if (customId.startsWith('approve_modal_')) {
+        const esAprobador = member.permissions.has(PermissionFlagsBits.Administrator) || member.roles.cache.has(process.env.APPROVER_ROLE_ID);
+        if (!esAprobador) return interaction.editReply({ content: 'No tienes permiso.' });
+        // Lógica de aprobación final aquí
+        return interaction.editReply({ content: 'Lógica de aprobación de equipo en construcción.' });
+    }
+
     // Este debe estar al final como fallback.
-    await interaction.editReply({ content: 'Acción no reconocida.' });
+    return interaction.editReply({ content: 'Acción no reconocida.' });
 };
