@@ -135,7 +135,6 @@ client.on(Events.InteractionCreate, async interaction => {
         if (interaction.isButton()) {
             const customId = interaction.customId;
 
-            // --- AMISTOSOS: ACEPTAR/RECHAZAR EN MD ---
             if (customId.startsWith('accept_challenge_') || customId.startsWith('reject_challenge_')) {
                 const parts = customId.split('_');
                 const panelId = parts[2];
@@ -174,11 +173,44 @@ client.on(Events.InteractionCreate, async interaction => {
                 return;
             }
 
+            if (customId.startsWith('accept_application_') || customId.startsWith('reject_application_')) {
+                const applicationId = customId.split('_')[2];
+                await interaction.deferUpdate();
+                const application = await PlayerApplication.findById(applicationId).populate('teamId');
+                if(!application || application.status !== 'pending') return interaction.editReply({ content: 'Esta solicitud ya no es válida o ya ha sido gestionada.', components: [], embeds: [] });
+                const applicantUser = await client.users.fetch(application.userId).catch(()=>null);
+                
+                if (customId.startsWith('accept_application_')) {
+                    application.status = 'accepted';
+                    await application.save();
+                    
+                    if (applicantUser) {
+                        const guild = await client.guilds.fetch(application.teamId.guildId);
+                        const applicantMember = await guild.members.fetch(application.userId).catch(()=>null);
+                        if (applicantMember) {
+                            await applicantMember.roles.add(process.env.PLAYER_ROLE_ID);
+                            await applicantMember.setNickname(`${application.teamId.abbreviation} ${applicantUser.username}`).catch(()=>{});
+                            application.teamId.players.push(applicantUser.id);
+                            await application.teamId.save();
+                        }
+                        await applicantUser.send(`¡Enhorabuena! Tu solicitud para unirte a **${application.teamId.name}** ha sido **aceptada**.`);
+                    }
+                    await interaction.editReply({ content: `Has aceptado a ${applicantUser ? applicantUser.tag : 'un usuario'} en tu equipo.`, components: [], embeds: [] });
+                } else { // Rechazar
+                    application.status = 'rejected';
+                    await application.save();
+                    if(applicantUser) {
+                        await applicantUser.send(`Lo sentimos, tu solicitud para unirte a **${application.teamId.name}** ha sido **rechazada**.`);
+                    }
+                    await interaction.editReply({ content: `Has rechazado la solicitud de ${applicantUser ? applicantUser.tag : 'un usuario'}.`, components: [], embeds: [] });
+                }
+                return;
+            }
+
             if (!interaction.inGuild()) return;
             const isAdmin = interaction.member.permissions.has(PermissionFlagsBits.Administrator);
             const esAprobador = isAdmin || interaction.member.roles.cache.has(process.env.APPROVER_ROLE_ID);
 
-            // --- AMISTOSOS: GESTIÓN DE PANELES Y DESAFÍOS ---
             if (customId === 'post_scheduled_panel' || customId === 'post_instant_panel' || customId === 'delete_my_panel') {
                 await interaction.deferReply({ ephemeral: true });
                 const team = await Team.findOne({ guildId: interaction.guildId, $or: [{ managerId: interaction.user.id }, { captains: interaction.user.id }] });
@@ -205,7 +237,7 @@ client.on(Events.InteractionCreate, async interaction => {
                     const timeOptions = timeSlots.map(time => ({ label: time, value: time }));
                     const selectMenu = new StringSelectMenuBuilder().setCustomId('select_available_times').setPlaceholder('Selecciona tus horarios disponibles').addOptions(timeOptions).setMinValues(1).setMaxValues(timeSlots.length);
                     await interaction.editReply({ content: 'Elige los horarios en los que tu equipo está disponible para jugar:', components: [new ActionRowBuilder().addComponents(selectMenu)] });
-                } else { // post_instant_panel
+                } else {
                     const channelId = '1396367574882717869';
                     const channel = await client.channels.fetch(channelId).catch(() => null);
                     if (!channel) return interaction.editReply({ content: 'Error: No se encontró el canal de amistosos instantáneos.' });
@@ -462,7 +494,7 @@ client.on(Events.InteractionCreate, async interaction => {
                 const applicant = await interaction.guild.members.fetch(applicantId);
                 const disabledRow = new ActionRowBuilder().addComponents(ButtonBuilder.from(interaction.message.components[0].components[0]).setDisabled(true), ButtonBuilder.from(interaction.message.components[0].components[1]).setDisabled(true));
                 await interaction.message.edit({ components: [disabledRow] });
-                await interaction.followUp({ content: `La solicitud de **${applicant.user.tag}** ha sido rechazada.`, ephemeral: false });
+                await interaction.followUp({ content: `La solicitud de **${applicant.user.tag}** ha sido rechazada.`});
                 await applicant.send(`Tu solicitud para registrar un equipo ha sido rechazada.`).catch(() => {});
             }
             else if (customId.startsWith('reject_invite_')) {
@@ -578,22 +610,12 @@ client.on(Events.InteractionCreate, async interaction => {
             else if (customId === 'apply_to_team_button') {
                 await interaction.deferReply({ ephemeral: true });
                 const existingApplication = await PlayerApplication.findOne({ userId: interaction.user.id, status: 'pending' });
-                if (existingApplication) {
-                    return interaction.editReply({ content: 'Ya tienes una solicitud de aplicación pendiente. No puedes enviar otra hasta que se resuelva la actual.' });
-                }
+                if (existingApplication) return interaction.editReply({ content: 'Ya tienes una solicitud de aplicación pendiente.' });
                 const openTeams = await Team.find({ guildId: interaction.guildId, recruitmentOpen: true });
-                if (openTeams.length === 0) {
-                    return interaction.editReply({ content: 'Actualmente no hay equipos con el reclutamiento abierto.' });
-                }
+                if (openTeams.length === 0) return interaction.editReply({ content: 'No hay equipos con reclutamiento abierto.' });
                 const teamOptions = openTeams.map(t => ({ label: t.name, value: t._id.toString() }));
                 const selectMenu = new StringSelectMenuBuilder().setCustomId('apply_to_team_select').setPlaceholder('Elige un equipo').addOptions(teamOptions);
                 await interaction.editReply({ content: 'Selecciona el equipo al que quieres aplicar:', components: [new ActionRowBuilder().addComponents(selectMenu)] });
-            }
-            else if (customId.startsWith('accept_application_')) {
-                // ... (Lógica de aceptar aplicación)
-            }
-            else if (customId.startsWith('reject_application_')) {
-                // ... (Lógica de rechazar aplicación)
             }
         } 
         
