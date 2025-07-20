@@ -49,30 +49,21 @@ if (fs.existsSync(handlersPath)) {
     }
 }
 
-
 // --- EVENTO CLIENT READY ---
 client.once(Events.ClientReady, () => {
     console.log(`¡Listo! ${client.user.tag} está online.`);
 
-    // ======================================================================
-    // AÑADIDO: TAREA PROGRAMADA DE LIMPIEZA DIARIA DE AMISTOSOS
-    // ======================================================================
     cron.schedule('0 6 * * *', async () => {
         console.log('Ejecutando limpieza diaria de amistosos a las 6:00 AM (Madrid)...');
         try {
-            // 1. Limpia la base de datos de paneles de disponibilidad
             await AvailabilityPanel.deleteMany({});
             console.log(`Base de datos de paneles de disponibilidad limpiada.`);
             
-            // 2. Lee los IDs de los canales desde las variables de entorno
             const scheduledChannelId = process.env.SCHEDULED_FRIENDLY_CHANNEL_ID;
             const instantChannelId = process.env.INSTANT_FRIENDLY_CHANNEL_ID;
 
             const clearChannel = async (channelId, channelName) => {
-                if (!channelId) {
-                    console.log(`No se ha configurado el ID para el canal de ${channelName}, se omite la limpieza.`);
-                    return;
-                }
+                if (!channelId) return;
                 try {
                     const channel = await client.channels.fetch(channelId);
                     if (!channel || !channel.isTextBased()) return;
@@ -80,44 +71,46 @@ client.once(Events.ClientReady, () => {
                     let fetched;
                     do {
                         fetched = await channel.messages.fetch({ limit: 100 });
-                        if (fetched.size > 0) {
-                            await channel.bulkDelete(fetched, true);
-                        }
+                        if (fetched.size > 0) await channel.bulkDelete(fetched, true);
                     } while (fetched.size > 0);
                     console.log(`Canal de ${channelName} limpiado con éxito.`);
-                } catch (e) {
-                    console.error(`Error limpiando el canal de ${channelName} (${channelId}):`, e.message);
-                }
+                } catch (e) { console.error(`Error limpiando el canal de ${channelName} (${channelId}):`, e.message); }
             };
             
             await clearChannel(scheduledChannelId, "Amistosos Programados");
             await clearChannel(instantChannelId, "Amistosos Instantáneos");
-
             console.log('Limpieza diaria completada.');
-        } catch (error) {
-            console.error('Error fatal durante la limpieza diaria:', error);
-        }
-    }, {
-        scheduled: true,
-        timezone: "Europe/Madrid"
-    });
+        } catch (error) { console.error('Error fatal durante la limpieza diaria:', error); }
+    }, { scheduled: true, timezone: "Europe/Madrid" });
 });
 
-// --- EVENTO DE CREACIÓN DE MENSAJE ---
+// --- EVENTO DE CREACIÓN DE MENSAJE (CORREGIDO) ---
 client.on(Events.MessageCreate, async message => {
     if (message.author.bot || !message.inGuild()) return;
+
     const activeChannel = await TeamChatChannel.findOne({ channelId: message.channel.id, guildId: message.guildId });
     if (!activeChannel) return;
+
     if (message.member.roles.cache.has(process.env.MUTED_ROLE_ID)) return;
+
     const team = await Team.findOne({ guildId: message.guildId, $or: [{ managerId: message.member.id }, { captains: message.member.id }, { players: message.member.id }] });
     if (!team) return;
+
     try {
         await message.delete();
         const webhooks = await message.channel.fetchWebhooks();
-        let webhook = webhooks.find(wh => wh.owner.id === client.user.id && wh.name.startsWith('VPG Bot'));
+        // CORRECCIÓN: Usar un nombre único y específico para el webhook del chat para evitar conflictos.
+        const webhookName = 'VPG Team Chat';
+        let webhook = webhooks.find(wh => wh.name === webhookName);
+
         if (!webhook) {
-            webhook = await message.channel.createWebhook({ name: `VPG Bot - Chat`, avatar: client.user.displayAvatarURL() });
+            webhook = await message.channel.createWebhook({
+                name: webhookName,
+                avatar: client.user.displayAvatarURL(),
+                reason: 'Webhook para el chat de equipos'
+            });
         }
+        
         await webhook.send({
             content: message.content,
             username: message.member.displayName,
@@ -125,8 +118,8 @@ client.on(Events.MessageCreate, async message => {
             allowedMentions: { parse: ['users', 'roles', 'everyone'] }
         });
     } catch (error) {
-        if (error.code !== 10008) {
-            console.error(`Error en la lógica del chat de equipo:`, error.message);
+        if (error.code !== 10008) { // Ignorar error "Unknown Message"
+            console.error(`Error en la lógica del chat de equipo:`, error);
         }
     }
 });
@@ -137,8 +130,7 @@ client.on(Events.InteractionCreate, async interaction => {
     try {
         if (interaction.isChatInputCommand()) {
             const command = client.commands.get(interaction.commandName);
-            if (!command) return;
-            await command.execute(interaction);
+            if (command) await command.execute(interaction);
         } 
         else if (interaction.isButton()) {
             const buttonHandler = client.handlers.get('buttonHandler');
@@ -159,10 +151,10 @@ client.on(Events.InteractionCreate, async interaction => {
     } catch (error) {
         console.error("Fallo crítico durante el procesamiento de una interacción:", error);
         if (interaction.replied || interaction.deferred) {
-            await interaction.followUp({ content: 'Ha ocurrido un error inesperado al procesar tu solicitud.', ephemeral: true }).catch(() => {});
+            await interaction.followUp({ content: 'Ha ocurrido un error al procesar esta solicitud.', ephemeral: true }).catch(() => {});
         } else {
-            if (error.code !== 10062) {
-                await interaction.reply({ content: 'Ha ocurrido un error inesperado al procesar tu solicitud.', ephemeral: true }).catch(() => {});
+            if (error.code !== 'InteractionAlreadyReplied' && error.code !== 10062) {
+                await interaction.reply({ content: 'Ha ocurrido un error al procesar esta solicitud.', ephemeral: true }).catch(() => {});
             }
         }
     }
