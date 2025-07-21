@@ -8,7 +8,7 @@ const VPGUser = require('../models/user.js');
 module.exports = async (client, interaction) => {
     const { customId, fields, guild, user, member, message } = interaction;
     
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: 64 });
 
     if (customId.startsWith('manager_request_modal_')) {
         const leagueName = customId.split('_')[3];
@@ -90,11 +90,12 @@ module.exports = async (client, interaction) => {
 
         const playerNameInput = fields.getTextInputValue('playerName').toLowerCase();
         
-        // CORRECCIÓN: Búsqueda flexible
         const members = await guild.members.fetch();
         const targetMembers = members.filter(m => 
-            m.user.username.toLowerCase().includes(playerNameInput) || 
-            (m.nickname && m.nickname.toLowerCase().includes(playerNameInput))
+            !m.user.bot && (
+                m.user.username.toLowerCase().includes(playerNameInput) || 
+                (m.nickname && m.nickname.toLowerCase().includes(playerNameInput))
+            )
         );
 
         if (targetMembers.size === 0) {
@@ -107,6 +108,12 @@ module.exports = async (client, interaction) => {
         }
 
         const targetMember = targetMembers.first();
+
+        // VALIDACIÓN: Comprobar si el usuario ya es mánager
+        const isManager = await Team.findOne({ managerId: targetMember.id });
+        if (isManager) {
+            return interaction.editReply({ content: `❌ No puedes invitar a **${targetMember.user.tag}** porque ya es Mánager del equipo **${isManager.name}**.` });
+        }
 
         const embed = new EmbedBuilder().setTitle(`📩 Invitación de Equipo`).setDescription(`Has sido invitado a unirte a **${team.name}**.`).setColor('Green').setThumbnail(team.logoUrl);
         const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`accept_invite_${team._id}_${targetMember.id}`).setLabel('Aceptar').setStyle(ButtonStyle.Success), new ButtonBuilder().setCustomId(`reject_invite_${team._id}_${targetMember.id}`).setLabel('Rechazar').setStyle(ButtonStyle.Danger));
