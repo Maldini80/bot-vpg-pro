@@ -42,7 +42,6 @@ async function updatePanelMessage(client, panelId) {
             .setDescription(description)
             .setThumbnail(hostTeam.logoUrl);
 
-        // --- LÓGICA DE AGRUPACIÓN DE BOTONES CORREGIDA ---
         const components = [];
         let currentRow = new ActionRowBuilder();
         const timeSlots = panel.timeSlots.sort((a, b) => a.time.localeCompare(b.time));
@@ -57,7 +56,6 @@ async function updatePanelMessage(client, panelId) {
                 const abandonButton = new ButtonBuilder().setCustomId(`abandon_challenge_${panel._id}_${slot.time}`).setLabel('Abandonar').setStyle(ButtonStyle.Danger).setEmoji('❌');
                 const matchInfoButton = new ButtonBuilder().setCustomId(`match_info_${slot.time}`).setLabel(`vs ${challengerTeam.name} (${slot.time})`).setStyle(ButtonStyle.Success).setDisabled(true);
                 
-                // Un partido confirmado usa 3 botones, siempre va en su propia fila.
                 if (currentRow.components.length > 0) {
                     components.push(currentRow);
                     currentRow = new ActionRowBuilder();
@@ -65,9 +63,9 @@ async function updatePanelMessage(client, panelId) {
                 currentRow.addComponents(matchInfoButton, contactButton, abandonButton);
                 components.push(currentRow);
                 currentRow = new ActionRowBuilder();
-                continue; // Pasa al siguiente slot
+                continue;
 
-            } else { // AVAILABLE
+            } else { 
                 const label = slot.time === 'INSTANT' ? `⚔️ Desafiar Ahora` : `⚔️ Desafiar (${slot.time})`;
                 const pendingText = slot.pendingChallenges.length > 0 ? ` (${slot.pendingChallenges.length} ⏳)` : '';
                 buttonSet.push(
@@ -75,23 +73,21 @@ async function updatePanelMessage(client, panelId) {
                 );
             }
 
-            // Comprobar si los botones caben en la fila actual
             if (currentRow.components.length + buttonSet.length > 5) {
-                components.push(currentRow); // La fila está llena, la añadimos
-                currentRow = new ActionRowBuilder(); // Creamos una nueva
+                components.push(currentRow);
+                currentRow = new ActionRowBuilder();
             }
 
             currentRow.addComponents(...buttonSet);
         }
 
-        // Añadir la última fila si tiene componentes
         if (currentRow.components.length > 0) {
             components.push(currentRow);
         }
         
         if (components.length > 5) {
              console.error(`ERROR CRÍTICO: Se intentaron generar ${components.length} filas de componentes para el panel ${panel._id}. Se truncará a 5 para evitar un crash.`);
-             components.length = 5; // Medida de seguridad final
+             components.length = 5;
         }
 
         await webhook.editMessage(panel.messageId, {
@@ -117,10 +113,12 @@ async function getOrCreateWebhook(channel, client) {
 }
 
 const handler = async (client, interaction) => {
+    // --- Lógica de Interacciones fuera del servidor (MDs) ---
     if (!interaction.inGuild()) {
+        await interaction.deferUpdate();
         const { customId } = interaction;
+        
         if (customId.startsWith('accept_challenge_') || customId.startsWith('reject_challenge_')) {
-            await interaction.deferUpdate();
             const [, action, panelId, time, challengeId] = customId.split('_');
             const panel = await AvailabilityPanel.findById(panelId).populate('teamId');
             if (!panel) return interaction.editReply({ content: 'Este panel de amistosos ya no existe.', components: [] });
@@ -160,13 +158,12 @@ const handler = async (client, interaction) => {
                     if (loserUser) await loserUser.send(`Lo sentimos, tu desafío contra **${panel.teamId.name}** para las **${time}** no pudo ser aceptado. El anfitrión ha elegido a otro rival.`).catch(()=>{});
                 }
 
-                // LÓGICA DE ACTUALIZACIÓN RECÍPROCA
                 const challengerPanel = await AvailabilityPanel.findOne({ teamId: winnerTeam._id, panelType: 'SCHEDULED' });
                 if (challengerPanel) {
                     const challengerSlot = challengerPanel.timeSlots.find(s => s.time === time);
                     if (challengerSlot) {
                         challengerSlot.status = 'CONFIRMED';
-                        challengerSlot.challengerTeamId = panel.teamId._id; // El rival es el anfitrión
+                        challengerSlot.challengerTeamId = panel.teamId._id;
                         challengerSlot.pendingChallenges = [];
                         await challengerPanel.save();
                         await updatePanelMessage(client, challengerPanel._id);
@@ -181,14 +178,11 @@ const handler = async (client, interaction) => {
 
             await panel.save();
             await updatePanelMessage(client, panel._id);
-            return;
-        }
-
-        if (customId.startsWith('accept_application_') || customId.startsWith('reject_application_')) {
-            await interaction.deferUpdate();
+        } else if (customId.startsWith('accept_application_') || customId.startsWith('reject_application_')) {
             const applicationId = customId.split('_')[2];
             const application = await PlayerApplication.findById(applicationId).populate('teamId');
             if(!application || application.status !== 'pending') return interaction.editReply({ content: 'Esta solicitud ya no es válida o ya ha sido gestionada.', components: [], embeds: [] });
+            
             const applicantUser = await client.users.fetch(application.userId).catch(()=>null);
             if (customId.startsWith('accept_application_')) {
                 application.status = 'accepted';
@@ -214,17 +208,35 @@ const handler = async (client, interaction) => {
         return;
     }
 
+    // --- Lógica de Interacciones DENTRO del servidor ---
     const { customId, member, guild, user } = interaction;
     const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
     const esAprobador = isAdmin || member.roles.cache.has(process.env.APPROVER_ROLE_ID);
     
     if (customId.startsWith('challenge_slot_')) {
-        await interaction.deferReply({ ephemeral: true });
-
+        await interaction.deferReply({ flags: 64 });
+        
         const challengerTeam = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
         if (!challengerTeam) return interaction.editReply({ content: 'Debes ser Mánager o Capitán de un equipo para desafiar.' });
 
         const [, , panelId, time] = customId.split('_');
+
+        // VALIDACIÓN: Comprobar si el retador ya tiene un partido a esa hora
+        const existingMatch = await AvailabilityPanel.findOne({
+            guildId: guild.id,
+            "timeSlots.time": time,
+            "timeSlots.status": "CONFIRMED",
+            $or: [
+                { teamId: challengerTeam._id },
+                { "timeSlots.challengerTeamId": challengerTeam._id }
+            ]
+        }).populate('teamId timeSlots.challengerTeamId');
+
+        if (existingMatch) {
+            const opponentTeam = existingMatch.teamId._id.equals(challengerTeam._id) ? existingMatch.timeSlots.find(s=>s.time === time).challengerTeamId : existingMatch.teamId;
+            return interaction.editReply({ content: `❌ No puedes desafiar a este horario. Ya tienes un partido confirmado a las **${time}** contra **${opponentTeam.name}**. Debes abandonar ese partido primero.` });
+        }
+
         const panel = await AvailabilityPanel.findById(panelId).populate('teamId');
         if (!panel) return interaction.editReply({ content: 'Este panel de amistosos ya no existe.' });
         if (panel.teamId._id.equals(challengerTeam._id)) return interaction.editReply({ content: 'No puedes desafiar a tu propio equipo.' });
@@ -250,7 +262,7 @@ const handler = async (client, interaction) => {
                 panel.timeSlots.find(s => s.time === time).pendingChallenges.pop();
                 await panel.save();
                 await interaction.editReply({ content: 'No se pudo enviar el desafío. El mánager rival tiene los MDs cerrados.' });
-                await updatePanelMessage(client, panel._id); // Actualizar para quitar la petición visualmente
+                await updatePanelMessage(client, panel._id);
                 return;
             });
         }
@@ -259,7 +271,7 @@ const handler = async (client, interaction) => {
     }
 
     if (customId.startsWith('abandon_challenge_')) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: 64 });
         const [, , panelId, time] = customId.split('_');
         const panel = await AvailabilityPanel.findById(panelId);
         if (!panel) return interaction.editReply({ content: 'Este panel ya no existe.' });
@@ -299,7 +311,7 @@ const handler = async (client, interaction) => {
     }
 
     if (customId.startsWith('contact_opponent_')) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: 64 });
         const [, , teamId1, teamId2] = customId.split('_');
         
         const userTeam = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
@@ -321,49 +333,38 @@ const handler = async (client, interaction) => {
     }
     
     if (customId === 'team_view_confirmed_matches') {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: 64 });
         const userTeam = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }, { players: user.id }] });
         if (!userTeam) return interaction.editReply({ content: 'Debes pertenecer a un equipo para ver los partidos.' });
 
         const confirmedPanels = await AvailabilityPanel.find({
             guildId: guild.id,
             "timeSlots.status": "CONFIRMED",
-            $or: [
-                { teamId: userTeam._id },
-                { "timeSlots.challengerTeamId": userTeam._id }
-            ]
+            $or: [ { teamId: userTeam._id }, { "timeSlots.challengerTeamId": userTeam._id } ]
         }).populate('teamId timeSlots.challengerTeamId').lean();
 
         let description = '';
-
         const allConfirmedSlots = [];
         for (const panel of confirmedPanels) {
              for (const slot of panel.timeSlots) {
                 if (slot.status === 'CONFIRMED') {
                     const isHost = panel.teamId._id.equals(userTeam._id);
-                     if (isHost || userTeam._id.equals(slot.challengerTeamId?._id)) {
+                     if (isHost || (slot.challengerTeamId && userTeam._id.equals(slot.challengerTeamId._id))) {
                         const opponent = isHost ? slot.challengerTeamId : panel.teamId;
-                        if (opponent) {
-                            allConfirmedSlots.push({ time: slot.time, opponent });
-                        }
+                        if (opponent) { allConfirmedSlots.push({ time: slot.time, opponent }); }
                     }
                 }
             }
         }
 
-        // Ordenar por hora
-        allConfirmedSlots.sort((a,b) => a.time.localeCompare(b.time));
-
-        // Eliminar duplicados (si ambos equipos tienen panel, el partido aparecerá dos veces)
         const uniqueMatches = [...new Map(allConfirmedSlots.map(item => [item.time, item])).values()];
+        uniqueMatches.sort((a,b) => a.time.localeCompare(b.time));
 
         for(const match of uniqueMatches) {
             description += `**🕕 ${match.time}** vs **${match.opponent.name}**\n> Contacto: <@${match.opponent.managerId}>\n\n`;
         }
         
-        if (description === '') {
-            description = 'No tienes ningún partido programado.';
-        }
+        if (description === '') { description = 'No tienes ningún partido programado.'; }
 
         const embed = new EmbedBuilder()
             .setTitle(`🗓️ Amistosos Confirmados de ${userTeam.name}`)
@@ -374,7 +375,6 @@ const handler = async (client, interaction) => {
 
         return interaction.editReply({ embeds: [embed] });
     }
-
 
     if (customId === 'admin_create_league_button' || customId.startsWith('admin_dissolve_team_') || customId.startsWith('approve_request_') || customId.startsWith('admin_change_data_') || customId === 'team_edit_data_button' || customId === 'team_invite_player_button') {
         if (customId === 'admin_create_league_button') {
@@ -442,8 +442,7 @@ const handler = async (client, interaction) => {
             await interaction.message.edit({ components: [disabledRow] });
             await interaction.followUp({ content: `La solicitud de **${applicant ? applicant.user.tag : 'un usuario'}** ha sido rechazada.`, ephemeral: true });
             if (applicant) await applicant.send(`Tu solicitud para registrar un equipo ha sido rechazada.`).catch(() => {});
-        }
-        if(customId.startsWith('promote_player_') || customId.startsWith('demote_captain_') || customId.startsWith('kick_player_') || customId.startsWith('toggle_mute_player_')) {
+        } else if (customId.startsWith('promote_player_') || customId.startsWith('demote_captain_') || customId.startsWith('kick_player_') || customId.startsWith('toggle_mute_player_')) {
             const targetId = customId.substring(customId.lastIndexOf('_') + 1);
             const team = await Team.findOne({ guildId: interaction.guildId, $or: [{ managerId: user.id }, { captains: user.id }] });
             if(!team) return interaction.editReply({ content: 'No tienes permisos sobre este equipo.', components: []});
@@ -462,16 +461,16 @@ const handler = async (client, interaction) => {
                 if(!isManagerAction) return interaction.editReply({content: 'Solo el Mánager puede ascender.', components: []});
                 team.players = team.players.filter(p => p !== targetId);
                 team.captains.push(targetId);
-                await targetMember.roles.remove(process.env.PLAYER_ROLE_ID);
-                await targetMember.roles.add(process.env.CAPTAIN_ROLE_ID);
+                await targetMember.roles.remove(process.env.PLAYER_ROLE_ID).catch(()=>{});
+                await targetMember.roles.add(process.env.CAPTAIN_ROLE_ID).catch(()=>{});
                 if (targetMember.id !== interaction.guild.ownerId) await targetMember.setNickname(`|C| ${team.abbreviation} ${targetMember.user.username}`).catch(()=>{});
                 await interaction.editReply({ content: `✅ **${targetMember.user.username}** ascendido a Capitán.`, components: [] });
             } else if (customId.startsWith('demote_captain_')) {
                 if(!isManagerAction) return interaction.editReply({content: 'Solo el Mánager puede degradar.', components: []});
                 team.captains = team.captains.filter(c => c !== targetId);
                 team.players.push(targetId);
-                await targetMember.roles.remove(process.env.CAPTAIN_ROLE_ID);
-                await targetMember.roles.add(process.env.PLAYER_ROLE_ID);
+                await targetMember.roles.remove(process.env.CAPTAIN_ROLE_ID).catch(()=>{});
+                await targetMember.roles.add(process.env.PLAYER_ROLE_ID).catch(()=>{});
                 if (targetMember.id !== interaction.guild.ownerId) await targetMember.setNickname(`${team.abbreviation} ${targetMember.user.username}`).catch(()=>{});
                 await interaction.editReply({ content: `✅ **${targetMember.user.username}** degradado a Jugador.`, components: [] });
             } else if (customId.startsWith('toggle_mute_player_')) {
@@ -490,7 +489,8 @@ const handler = async (client, interaction) => {
         return; 
     }
     
-    await interaction.deferReply({ ephemeral: true });
+    // --- Interacciones que requieren deferReply ---
+    await interaction.deferReply({ flags: 64 });
 
     if (customId === 'request_manager_role_button') {
         const existingTeam = await Team.findOne({ $or: [{ managerId: user.id }, { captains: user.id }, { players: user.id }], guildId: guild.id });
@@ -664,10 +664,10 @@ const handler = async (client, interaction) => {
         }
         const button = new ButtonBuilder().setCustomId(`continue_panel_creation_${panelType}_all`).setLabel('Buscar en TODAS las Ligas').setStyle(ButtonStyle.Primary);
         if (components.length === 0) {
-            return interaction.editReply({ content: 'Pulsa el botón para continuar.', components: [new ActionRowBuilder().addComponents(button)], ephemeral: true });
+            return interaction.editReply({ content: 'Pulsa el botón para continuar.', components: [new ActionRowBuilder().addComponents(button)] });
         }
         components.push(new ActionRowBuilder().addComponents(button));
-        return interaction.editReply({ content: 'Selecciona las ligas para las que quieres buscar rival, o busca en todas.', components: components, ephemeral: true });
+        return interaction.editReply({ content: 'Selecciona las ligas para las que quieres buscar rival, o busca en todas.', components: components });
     }
 
     if (customId.startsWith('continue_panel_creation_')) {
@@ -687,16 +687,18 @@ const handler = async (client, interaction) => {
             if (!channelId) return interaction.editReply({ content: 'Error: El ID del canal de amistosos instantáneos no está configurado.' });
             const channel = await client.channels.fetch(channelId).catch(()=>null);
             if (!channel) return interaction.editReply({ content: 'Error: No se encontró el canal de amistosos instantáneos.' });
+            
+            const initialEmbed = new EmbedBuilder().setTitle(`Buscando Rival - ${team.name} (Disponible)`).setColor("Greyple");
             const webhook = await getOrCreateWebhook(channel, client);
-            const message = await webhook.send({ content: "Creando panel...", username: team.name, avatarURL: team.logoUrl });
+            const message = await webhook.send({ embeds: [initialEmbed], username: team.name, avatarURL: team.logoUrl });
+            
             const panel = new AvailabilityPanel({ 
                 guildId: guild.id, channelId, messageId: message.id, teamId: team._id, postedById: user.id, panelType: 'INSTANT', leagues,
                 timeSlots: [{ time: 'INSTANT', status: 'AVAILABLE' }] 
             });
             await panel.save();
             await updatePanelMessage(client, panel._id);
-            // CORRECCIÓN: Respuesta silenciosa
-            return interaction.editReply({ content: '​', components: [] }); // Espacio de ancho cero
+            return interaction.editReply({ content: '​' }); // Espacio de ancho cero
         }
     }
 
