@@ -87,11 +87,30 @@ module.exports = async (client, interaction) => {
         const teamId = customId.split('_')[3];
         const team = await Team.findById(teamId);
         if (!team) return interaction.editReply({ content: 'Tu equipo ya no existe.' });
-        const playerName = fields.getTextInputValue('playerName');
-        const targetMember = guild.members.cache.find(m => m.user.username.toLowerCase() === playerName.toLowerCase());
-        if (!targetMember) return interaction.editReply({ content: `No se encontró a ningún miembro con el nombre de usuario "${playerName}".` });
+
+        const playerNameInput = fields.getTextInputValue('playerName').toLowerCase();
+        
+        // CORRECCIÓN: Búsqueda flexible
+        const members = await guild.members.fetch();
+        const targetMembers = members.filter(m => 
+            m.user.username.toLowerCase().includes(playerNameInput) || 
+            (m.nickname && m.nickname.toLowerCase().includes(playerNameInput))
+        );
+
+        if (targetMembers.size === 0) {
+            return interaction.editReply({ content: `❌ No se encontró a ningún miembro que contenga "${playerNameInput}" en su nombre.` });
+        }
+
+        if (targetMembers.size > 1) {
+            const memberNames = targetMembers.map(m => m.user.tag).slice(0, 10).join(', ');
+            return interaction.editReply({ content: `Se encontraron varios miembros: **${memberNames}**... Por favor, sé más específico.` });
+        }
+
+        const targetMember = targetMembers.first();
+
         const embed = new EmbedBuilder().setTitle(`📩 Invitación de Equipo`).setDescription(`Has sido invitado a unirte a **${team.name}**.`).setColor('Green').setThumbnail(team.logoUrl);
         const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`accept_invite_${team._id}_${targetMember.id}`).setLabel('Aceptar').setStyle(ButtonStyle.Success), new ButtonBuilder().setCustomId(`reject_invite_${team._id}_${targetMember.id}`).setLabel('Rechazar').setStyle(ButtonStyle.Danger));
+        
         try {
             await targetMember.send({ embeds: [embed], components: [row] });
             return interaction.editReply({ content: `✅ Invitación enviada a **${targetMember.user.tag}**.` });
@@ -150,7 +169,6 @@ module.exports = async (client, interaction) => {
         }
     }
     
-    // --- Lógica para el modal de desafío de amistoso ---
     if (customId.startsWith('challenge_modal_')) {
         const parts = customId.split('_');
         const panelId = parts[2];
