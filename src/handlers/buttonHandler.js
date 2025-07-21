@@ -81,7 +81,6 @@ async function updatePanelMessage(client, panelId) {
             components.push(currentRow);
         }
 
-        // AÑADIDO: Botón para cancelar todas las peticiones
         if (pendingCount > 0) {
             const cancelRow = new ActionRowBuilder().addComponents(
                 new ButtonBuilder().setCustomId(`cancel_all_challenges_${panel._id}`).setLabel('Cancelar Todas las Peticiones').setStyle(ButtonStyle.Danger)
@@ -124,7 +123,6 @@ const handler = async (client, interaction) => {
         const { customId, message } = interaction;
         
         if (customId.startsWith('accept_challenge_') || customId.startsWith('reject_challenge_')) {
-            // CORRECCIÓN: Extraer la acción correctamente
             const parts = customId.split('_');
             const action = parts[0]; 
             const panelId = parts[2];
@@ -288,7 +286,6 @@ const handler = async (client, interaction) => {
         return interaction.editReply({ content: '✅ ¡Desafío enviado!' });
     }
     
-    // --- LÓGICA DEL NUEVO BOTÓN "CANCELAR PETICIONES" ---
     if (customId.startsWith('cancel_all_challenges_')) {
         await interaction.deferReply({ flags: 64 });
         const panelId = customId.split('_')[3];
