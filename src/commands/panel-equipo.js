@@ -25,7 +25,7 @@ module.exports = {
         
         const row2 = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId('post_scheduled_panel').setLabel('Programar Amistoso').setStyle(ButtonStyle.Primary).setEmoji('🗓️'),
-            new ButtonBuilder().setCustomId('post_instant_panel').setLabel('Amistoso (Ahora)').setStyle(ButtonStyle.Success).setEmoji('⚡'),
+            new ButtonBuilder().setCustomId('post_instant_panel').setLabel('Amistoso (Ahora)').setStyle(ButtonStyle.Primary).setEmoji('⚡'),
             new ButtonBuilder().setCustomId('delete_friendly_panel').setLabel('Borrar Búsqueda').setStyle(ButtonStyle.Danger).setEmoji('🗑️'),
             new ButtonBuilder().setCustomId('team_view_confirmed_matches').setLabel('Amistosos Confirmados').setStyle(ButtonStyle.Secondary).setEmoji('🗓️')
         );
