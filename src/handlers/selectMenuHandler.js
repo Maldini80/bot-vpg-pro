@@ -9,6 +9,7 @@ module.exports = async (client, interaction) => {
     const { customId, values, guild, user } = interaction;
     const selectedValue = values[0];
 
+    // Interacciones que muestran un modal, no necesitan defer.
     if (customId === 'apply_to_team_select') {
         const teamId = selectedValue;
         const modal = new ModalBuilder().setCustomId(`application_modal_${teamId}`).setTitle('Aplicar a Equipo');
@@ -27,24 +28,24 @@ module.exports = async (client, interaction) => {
         return interaction.showModal(modal);
     }
 
-    if (customId.startsWith('select_league_filter_')) {
+    // Interacciones que actualizan el mensaje, necesitan deferUpdate.
+    if (customId.startsWith('select_league_filter_') || customId === 'admin_select_team_to_manage' || customId === 'roster_management_menu' || customId === 'admin_change_league_menu') {
         await interaction.deferUpdate();
-        const panelType = customId.split('_')[3];
-        const selectedLeagues = values;
-        const leaguesString = selectedLeagues.length > 0 ? selectedLeagues.join(',') : 'none';
-        const continueButton = new ButtonBuilder()
-            .setCustomId(`continue_panel_creation_${panelType}_${leaguesString}`)
-            .setLabel('Continuar con la Creación del Panel')
-            .setStyle(ButtonStyle.Success);
-        await interaction.editReply({
-            content: `Has seleccionado las ligas: **${selectedLeagues.length > 0 ? selectedLeagues.join(', ') : 'Ninguna'}**. Pulsa continuar.`,
-            components: [new ActionRowBuilder().addComponents(continueButton)]
-        });
-        return;
-    }
 
-    if (customId === 'admin_select_team_to_manage' || customId === 'roster_management_menu' || customId === 'admin_change_league_menu') {
-        await interaction.deferUpdate();
+        if (customId.startsWith('select_league_filter_')) {
+            const panelType = customId.split('_')[3];
+            const selectedLeagues = values;
+            const leaguesString = selectedLeagues.length > 0 ? selectedLeagues.join(',') : 'none';
+            const continueButton = new ButtonBuilder()
+                .setCustomId(`continue_panel_creation_${panelType}_${leaguesString}`)
+                .setLabel('Continuar con la Creación del Panel')
+                .setStyle(ButtonStyle.Success);
+            return interaction.editReply({
+                content: `Has seleccionado las ligas: **${selectedLeagues.length > 0 ? selectedLeagues.join(', ') : 'Ninguna'}**. Pulsa continuar.`,
+                components: [new ActionRowBuilder().addComponents(continueButton)]
+            });
+        }
+
         if (customId === 'admin_select_team_to_manage') {
             const teamId = selectedValue;
             const team = await Team.findById(teamId).lean();
@@ -58,6 +59,7 @@ module.exports = async (client, interaction) => {
             const row3 = new ActionRowBuilder().addComponents(leagueMenu);
             return interaction.editReply({ content: '', embeds: [embed], components: [row1, row2, row3] });
         }
+
         if (customId === 'roster_management_menu') {
             const targetId = selectedValue;
             const managerTeam = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
@@ -68,35 +70,32 @@ module.exports = async (client, interaction) => {
             const isTargetCaptain = managerTeam.captains.includes(targetId);
             const row = new ActionRowBuilder();
             if (isManager) {
-                if (isTargetCaptain) {
-                    row.addComponents(new ButtonBuilder().setCustomId(`demote_captain_${targetId}`).setLabel('Degradar a Jugador').setStyle(ButtonStyle.Secondary));
-                } else {
-                    row.addComponents(new ButtonBuilder().setCustomId(`promote_player_${targetId}`).setLabel('Ascender a Capitán').setStyle(ButtonStyle.Success));
-                }
+                if (isTargetCaptain) { row.addComponents(new ButtonBuilder().setCustomId(`demote_captain_${targetId}`).setLabel('Degradar a Jugador').setStyle(ButtonStyle.Secondary)); }
+                else { row.addComponents(new ButtonBuilder().setCustomId(`promote_player_${targetId}`).setLabel('Ascender a Capitán').setStyle(ButtonStyle.Success)); }
             }
             row.addComponents(new ButtonBuilder().setCustomId(`kick_player_${targetId}`).setLabel('Expulsar del Equipo').setStyle(ButtonStyle.Danger));
             row.addComponents(new ButtonBuilder().setCustomId(`toggle_mute_player_${targetId}`).setLabel('Mutear/Desmutear Chat').setStyle(ButtonStyle.Secondary));
             return interaction.editReply({ content: `Acciones para **${targetMember.user.username}**:`, components: [row] });
         }
+
         if (customId === 'admin_change_league_menu') {
             const parts = selectedValue.split('_');
             const teamId = parts[3];
             const leagueId = parts[4];
             const team = await Team.findById(teamId);
             const league = await League.findById(leagueId);
-            if (!team || !league) {
-                return interaction.followUp({ content: 'El equipo o la liga ya no existen.', ephemeral: true });
-            }
+            if (!team || !league) return interaction.followUp({ content: 'El equipo o la liga ya no existen.', ephemeral: true });
             team.league = league.name;
             await team.save();
             return interaction.followUp({ content: `✅ La liga del equipo **${team.name}** ha sido cambiada a **${league.name}**.`, ephemeral: true });
         }
         return;
     }
-
+    
+    // Interacciones que crean un nuevo mensaje o tienen un flujo más largo.
+    await interaction.deferReply({ flags: 64 });
+    
     if (customId.startsWith('select_available_times')) {
-        await interaction.deferReply({ ephemeral: true });
-        
         const parts = customId.split('_');
         const leaguesString = parts.slice(3).join('_');
         const leagues = leaguesString === 'all' || !leaguesString || leaguesString === 'none' ? [] : leaguesString.split(',');
@@ -134,7 +133,9 @@ module.exports = async (client, interaction) => {
         
         const buttonHandler = client.handlers.get('buttonHandler');
         const webhook = await buttonHandler.getOrCreateWebhook(channel, client);
-        const message = await webhook.send({ content: "Creando panel...", username: team.name, avatarURL: team.logoUrl });
+
+        const initialEmbed = new EmbedBuilder().setTitle(`Panel de Amistosos de ${team.name}`).setColor("Greyple");
+        const message = await webhook.send({ embeds: [initialEmbed], username: team.name, avatarURL: team.logoUrl });
 
         const panel = new AvailabilityPanel({ 
             guildId: guild.id, channelId, messageId: message.id, teamId: team._id, postedById: user.id, panelType: 'SCHEDULED', 
@@ -147,12 +148,10 @@ module.exports = async (client, interaction) => {
             await buttonHandler.updatePanelMessage(client, panel._id);
         }
         
-        return interaction.editReply({ content: '​', components: [] }); // Espacio de ancho cero
+        return interaction.editReply({ content: '​' });
     }
     
     if (customId === 'view_team_roster_select') {
-        await interaction.deferReply({ ephemeral: true });
-        
         const team = await Team.findById(selectedValue).lean();
         if (!team) return interaction.editReply({ content: 'Este equipo ya no existe.' });
         const allMemberIds = [team.managerId, ...team.captains, ...team.players].filter(id => id);
@@ -179,8 +178,6 @@ module.exports = async (client, interaction) => {
     }
     
     if (customId === 'delete_league_select_menu') {
-        await interaction.deferReply({ ephemeral: true });
-        
         const leaguesToDelete = values;
         const result = await League.deleteMany({ guildId: guild.id, name: { $in: leaguesToDelete } });
         return interaction.editReply({ content: `✅ Se han eliminado ${result.deletedCount} ligas.` });
