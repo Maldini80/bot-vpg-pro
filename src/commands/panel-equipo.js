@@ -18,7 +18,7 @@ module.exports = {
 
         const row1 = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId('team_invite_player_button').setLabel('📧 Invitar Jugador').setStyle(ButtonStyle.Success),
-            new ButtonBuilder().setCustomId('team_manage_roster_button').setLabel('📋 Gestionar Plantilla').setStyle(ButtonStyle.Primary),
+            new ButtonBuilder().setCustomId('team_manage_roster_button').setLabel('📋 Gestionar Plantilla').setStyle(ButtonStyle.Secondary),
             new ButtonBuilder().setCustomId('team_view_roster_button').setLabel('👥 Ver Plantilla').setStyle(ButtonStyle.Secondary),
             new ButtonBuilder().setCustomId('team_toggle_recruitment_button').setLabel('📢 Reclutamiento').setStyle(ButtonStyle.Secondary)
         );
