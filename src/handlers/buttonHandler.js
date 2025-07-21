@@ -10,16 +10,16 @@ async function updatePanelMessage(client, panelId) {
     try {
         const panel = await AvailabilityPanel.findById(panelId).populate('teamId').lean();
         if (!panel) return;
+        
         const channel = await client.channels.fetch(panel.channelId);
         const webhook = await getOrCreateWebhook(channel, client);
         const hostTeam = panel.teamId;
 
-        // Determinar el estado general del panel para el título
         const hasConfirmedMatch = panel.timeSlots.some(s => s.status === 'CONFIRMED');
         const pendingCount = panel.timeSlots.reduce((acc, slot) => acc + (slot.pendingChallenges?.length || 0), 0);
+        
         let panelTitle;
         let panelColor;
-
         if (hasConfirmedMatch) {
             panelTitle = `Panel de Amistosos de ${hostTeam.name}`;
             panelColor = "Green";
@@ -41,34 +41,57 @@ async function updatePanelMessage(client, panelId) {
             .setColor(panelColor)
             .setDescription(description)
             .setThumbnail(hostTeam.logoUrl);
-            
+
+        // --- LÓGICA DE AGRUPACIÓN DE BOTONES CORREGIDA ---
         const components = [];
+        let currentRow = new ActionRowBuilder();
         const timeSlots = panel.timeSlots.sort((a, b) => a.time.localeCompare(b.time));
 
         for (const slot of timeSlots) {
-            const row = new ActionRowBuilder();
+            let buttonSet = [];
             if (slot.status === 'CONFIRMED') {
                 const challengerTeam = await Team.findById(slot.challengerTeamId).lean();
-                if (!challengerTeam) continue; // Si el equipo rival no se encuentra, saltar
-                const label = `${slot.time} - ⚔️ vs ${challengerTeam.name}`;
+                if (!challengerTeam) continue;
+                
                 const contactButton = new ButtonBuilder().setCustomId(`contact_opponent_${panel.teamId._id}_${challengerTeam._id}`).setLabel(`Contactar`).setStyle(ButtonStyle.Primary).setEmoji('💬');
                 const abandonButton = new ButtonBuilder().setCustomId(`abandon_challenge_${panel._id}_${slot.time}`).setLabel('Abandonar').setStyle(ButtonStyle.Danger).setEmoji('❌');
+                const matchInfoButton = new ButtonBuilder().setCustomId(`match_info_${slot.time}`).setLabel(`vs ${challengerTeam.name} (${slot.time})`).setStyle(ButtonStyle.Success).setDisabled(true);
                 
-                row.addComponents(
-                    new ButtonBuilder().setCustomId(`match_info_${slot.time}`).setLabel(label).setStyle(ButtonStyle.Success).setDisabled(true),
-                    contactButton,
-                    abandonButton
-                );
+                // Un partido confirmado usa 3 botones, siempre va en su propia fila.
+                if (currentRow.components.length > 0) {
+                    components.push(currentRow);
+                    currentRow = new ActionRowBuilder();
+                }
+                currentRow.addComponents(matchInfoButton, contactButton, abandonButton);
+                components.push(currentRow);
+                currentRow = new ActionRowBuilder();
+                continue; // Pasa al siguiente slot
 
             } else { // AVAILABLE
                 const label = slot.time === 'INSTANT' ? `⚔️ Desafiar Ahora` : `⚔️ Desafiar (${slot.time})`;
                 const pendingText = slot.pendingChallenges.length > 0 ? ` (${slot.pendingChallenges.length} ⏳)` : '';
-                
-                row.addComponents(
+                buttonSet.push(
                     new ButtonBuilder().setCustomId(`challenge_slot_${panel._id}_${slot.time}`).setLabel(label + pendingText).setStyle(ButtonStyle.Success)
                 );
             }
-             components.push(row);
+
+            // Comprobar si los botones caben en la fila actual
+            if (currentRow.components.length + buttonSet.length > 5) {
+                components.push(currentRow); // La fila está llena, la añadimos
+                currentRow = new ActionRowBuilder(); // Creamos una nueva
+            }
+
+            currentRow.addComponents(...buttonSet);
+        }
+
+        // Añadir la última fila si tiene componentes
+        if (currentRow.components.length > 0) {
+            components.push(currentRow);
+        }
+        
+        if (components.length > 5) {
+             console.error(`ERROR CRÍTICO: Se intentaron generar ${components.length} filas de componentes para el panel ${panel._id}. Se truncará a 5 para evitar un crash.`);
+             components.length = 5; // Medida de seguridad final
         }
 
         await webhook.editMessage(panel.messageId, {
@@ -198,7 +221,6 @@ const handler = async (client, interaction) => {
     if (customId.startsWith('challenge_slot_')) {
         await interaction.deferReply({ ephemeral: true });
 
-        // CORRECCIÓN: Restringir a MG y Capitán
         const challengerTeam = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
         if (!challengerTeam) return interaction.editReply({ content: 'Debes ser Mánager o Capitán de un equipo para desafiar.' });
 
@@ -245,7 +267,6 @@ const handler = async (client, interaction) => {
         const slot = panel.timeSlots.find(s => s.time === time);
         if (!slot || slot.status !== 'CONFIRMED') return interaction.editReply({ content: 'No hay un partido que abandonar aquí.' });
         
-        // Permisos: MG o Capitán de uno de los dos equipos
         const userTeam = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
         const isHost = userTeam?._id.equals(panel.teamId);
         const isChallenger = userTeam?._id.equals(slot.challengerTeamId);
@@ -255,12 +276,10 @@ const handler = async (client, interaction) => {
         const otherTeam = await Team.findById(otherTeamId);
         const otherManager = await client.users.fetch(otherTeam.managerId).catch(() => null);
         
-        // Resetear el slot del anfitrión
         slot.status = 'AVAILABLE';
         slot.challengerTeamId = null;
         await panel.save();
         
-        // Lógica de actualización recíproca para el abandono
         const otherTeamPanel = await AvailabilityPanel.findOne({ teamId: otherTeamId, panelType: panel.panelType });
         if (otherTeamPanel) {
             const otherTeamSlot = otherTeamPanel.timeSlots.find(s => s.time === time);
@@ -283,7 +302,6 @@ const handler = async (client, interaction) => {
         await interaction.deferReply({ ephemeral: true });
         const [, , teamId1, teamId2] = customId.split('_');
         
-        // Permisos: MG o Capitán de uno de los dos equipos
         const userTeam = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
         if (!userTeam) return interaction.editReply({ content: 'No tienes permisos para esta acción.' });
         
@@ -302,7 +320,6 @@ const handler = async (client, interaction) => {
         return interaction.editReply({ content: `Para hablar con el rival, contacta a su mánager: <@${opponentTeam.managerId}>` });
     }
     
-    // --- LÓGICA DEL BOTÓN DE CALENDARIO ---
     if (customId === 'team_view_confirmed_matches') {
         await interaction.deferReply({ ephemeral: true });
         const userTeam = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }, { players: user.id }] });
@@ -319,18 +336,29 @@ const handler = async (client, interaction) => {
 
         let description = '';
 
+        const allConfirmedSlots = [];
         for (const panel of confirmedPanels) {
-            for (const slot of panel.timeSlots) {
+             for (const slot of panel.timeSlots) {
                 if (slot.status === 'CONFIRMED') {
                     const isHost = panel.teamId._id.equals(userTeam._id);
-                    if (isHost || userTeam._id.equals(slot.challengerTeamId?._id)) {
-                         const opponent = isHost ? slot.challengerTeamId : panel.teamId;
-                         if (opponent) {
-                            description += `**🕕 ${slot.time}** vs **${opponent.name}**\n> Contacto: <@${opponent.managerId}>\n\n`;
-                         }
+                     if (isHost || userTeam._id.equals(slot.challengerTeamId?._id)) {
+                        const opponent = isHost ? slot.challengerTeamId : panel.teamId;
+                        if (opponent) {
+                            allConfirmedSlots.push({ time: slot.time, opponent });
+                        }
                     }
                 }
             }
+        }
+
+        // Ordenar por hora
+        allConfirmedSlots.sort((a,b) => a.time.localeCompare(b.time));
+
+        // Eliminar duplicados (si ambos equipos tienen panel, el partido aparecerá dos veces)
+        const uniqueMatches = [...new Map(allConfirmedSlots.map(item => [item.time, item])).values()];
+
+        for(const match of uniqueMatches) {
+            description += `**🕕 ${match.time}** vs **${match.opponent.name}**\n> Contacto: <@${match.opponent.managerId}>\n\n`;
         }
         
         if (description === '') {
@@ -611,19 +639,21 @@ const handler = async (client, interaction) => {
         return interaction.editReply({ embeds: [embed] });
     }
     
-    const userTeam = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
-    if (!userTeam && (customId.startsWith('team_') || customId.startsWith('post_') || customId.startsWith('delete_'))) return interaction.editReply({content: 'Debes ser mánager o capitán para usar este botón.'});
+    const userTeamMg = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
+    if (!userTeamMg && (customId.startsWith('team_') || customId.startsWith('post_') || customId.startsWith('delete_'))) {
+        return interaction.editReply({content: 'Debes ser mánager o capitán para usar este botón.'});
+    }
     
     if (customId === 'team_toggle_recruitment_button') {
-        if (userTeam.managerId !== user.id) return interaction.editReply({ content: 'Solo los mánagers pueden hacer esto.' });
-        userTeam.recruitmentOpen = !userTeam.recruitmentOpen;
-        await userTeam.save();
-        return interaction.editReply({ content: `El reclutamiento está ahora **${userTeam.recruitmentOpen ? 'ABIERTO' : 'CERRADO'}**.` });
+        if (userTeamMg.managerId !== user.id) return interaction.editReply({ content: 'Solo los mánagers pueden hacer esto.' });
+        userTeamMg.recruitmentOpen = !userTeamMg.recruitmentOpen;
+        await userTeamMg.save();
+        return interaction.editReply({ content: `El reclutamiento está ahora **${userTeamMg.recruitmentOpen ? 'ABIERTO' : 'CERRADO'}**.` });
     }
 
     if (customId === 'post_scheduled_panel' || customId === 'post_instant_panel') {
         const panelType = customId === 'post_scheduled_panel' ? 'SCHEDULED' : 'INSTANT';
-        const existingPanel = await AvailabilityPanel.findOne({ teamId: userTeam._id, panelType });
+        const existingPanel = await AvailabilityPanel.findOne({ teamId: userTeamMg._id, panelType });
         if (existingPanel) return interaction.editReply({ content: `Tu equipo ya tiene un panel de amistosos de tipo ${panelType} activo. Bórralo primero.` });
         const leagues = await League.find({ guildId: guild.id });
         const components = [];
@@ -633,7 +663,7 @@ const handler = async (client, interaction) => {
             components.push(new ActionRowBuilder().addComponents(selectMenu));
         }
         const button = new ButtonBuilder().setCustomId(`continue_panel_creation_${panelType}_all`).setLabel('Buscar en TODAS las Ligas').setStyle(ButtonStyle.Primary);
-        if (components.length === 0) { // Si no hay ligas, solo mostrar este botón
+        if (components.length === 0) {
             return interaction.editReply({ content: 'Pulsa el botón para continuar.', components: [new ActionRowBuilder().addComponents(button)], ephemeral: true });
         }
         components.push(new ActionRowBuilder().addComponents(button));
@@ -665,7 +695,8 @@ const handler = async (client, interaction) => {
             });
             await panel.save();
             await updatePanelMessage(client, panel._id);
-            return interaction.editReply({ content: ' ', components: [] });
+            // CORRECCIÓN: Respuesta silenciosa
+            return interaction.editReply({ content: '​', components: [] }); // Espacio de ancho cero
         }
     }
 
