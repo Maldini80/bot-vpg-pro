@@ -9,7 +9,6 @@ module.exports = async (client, interaction) => {
     const { customId, values, guild, user } = interaction;
     const selectedValue = values[0];
 
-    // Este bloque ya era correcto porque .showModal() es una respuesta inmediata.
     if (customId === 'apply_to_team_select') {
         const teamId = selectedValue;
         const modal = new ModalBuilder().setCustomId(`application_modal_${teamId}`).setTitle('Aplicar a Equipo');
@@ -18,7 +17,6 @@ module.exports = async (client, interaction) => {
         return interaction.showModal(modal);
     }
     
-    // Este bloque también era correcto.
     if (customId === 'select_league_for_registration') {
         const leagueName = selectedValue;
         const modal = new ModalBuilder().setCustomId(`manager_request_modal_${leagueName}`).setTitle(`Registrar Equipo en ${leagueName}`);
@@ -92,8 +90,7 @@ module.exports = async (client, interaction) => {
     }
 
     if (customId.startsWith('select_available_times')) {
-        // CORRECCIÓN: deferReply ahora es la primera línea y usa la sintaxis de flags.
-        await interaction.deferReply({ flags: 64 }); // 64 es el flag para Ephemeral
+        await interaction.deferReply({ ephemeral: true });
         
         const parts = customId.split('_');
         const leaguesString = parts.slice(3).join('_');
@@ -107,7 +104,43 @@ module.exports = async (client, interaction) => {
         const channel = await client.channels.fetch(channelId).catch(() => null);
         if (!channel) return interaction.editReply({ content: 'Error: No se encontró el canal de amistosos programados.' });
 
-        const timeSlots = values.map(time => ({ time, status: 'AVAILABLE' }));
+        // LÓGICA AÑADIDA: Buscar partidos ya confirmados para este equipo
+        const existingConfirmedMatches = await AvailabilityPanel.find({
+            "timeSlots.status": "CONFIRMED",
+            $or: [
+                { teamId: team._id },
+                { "timeSlots.challengerTeamId": team._id }
+            ]
+        }).lean();
+
+        const confirmedSlotsMap = new Map();
+        for (const panel of existingConfirmedMatches) {
+            for (const slot of panel.timeSlots) {
+                if (slot.status === 'CONFIRMED' && (team._id.equals(panel.teamId) || team._id.equals(slot.challengerTeamId))) {
+                    const opponentTeamId = team._id.equals(panel.teamId) ? slot.challengerTeamId : panel.teamId;
+                    confirmedSlotsMap.set(slot.time, opponentTeamId);
+                }
+            }
+        }
+        
+        const timeSlots = values.map(time => {
+            if (confirmedSlotsMap.has(time)) {
+                // Este horario ya está ocupado por un partido confirmado
+                return {
+                    time,
+                    status: 'CONFIRMED',
+                    challengerTeamId: confirmedSlotsMap.get(time),
+                    pendingChallenges: []
+                };
+            } else {
+                // Este horario está disponible
+                return {
+                    time,
+                    status: 'AVAILABLE',
+                    pendingChallenges: []
+                };
+            }
+        });
         
         const buttonHandler = client.handlers.get('buttonHandler');
         const webhook = await buttonHandler.getOrCreateWebhook(channel, client);
@@ -124,16 +157,17 @@ module.exports = async (client, interaction) => {
             await buttonHandler.updatePanelMessage(client, panel._id);
         }
         
-        return interaction.editReply({ content: '✅ Tu panel de amistosos programados ha sido publicado.' });
+        // CORRECCIÓN: Respuesta silenciosa
+        return interaction.editReply({ content: ' ', components: [] });
     }
     
     if (customId === 'view_team_roster_select') {
-        // CORRECCIÓN: deferReply ahora es la primera línea.
-        await interaction.deferReply({ flags: 64 });
+        await interaction.deferReply({ ephemeral: true });
         
         const team = await Team.findById(selectedValue).lean();
         if (!team) return interaction.editReply({ content: 'Este equipo ya no existe.' });
         const allMemberIds = [team.managerId, ...team.captains, ...team.players].filter(id => id);
+        if (allMemberIds.length === 0) return interaction.editReply({ content: 'Este equipo no tiene miembros.' });
         const memberProfiles = await VPGUser.find({ discordId: { $in: allMemberIds } }).lean();
         const memberMap = new Map(memberProfiles.map(p => [p.discordId, p]));
         let rosterString = '';
@@ -156,8 +190,7 @@ module.exports = async (client, interaction) => {
     }
     
     if (customId === 'delete_league_select_menu') {
-        // CORRECCIÓN: deferReply ahora es la primera línea.
-        await interaction.deferReply({ flags: 64 });
+        await interaction.deferReply({ ephemeral: true });
         
         const leaguesToDelete = values;
         const result = await League.deleteMany({ guildId: guild.id, name: { $in: leaguesToDelete } });
