@@ -6,10 +6,10 @@ const PlayerApplication = require('../models/playerApplication.js');
 const VPGUser = require('../models/user.js');
 
 module.exports = async (client, interaction) => {
+    // CORRECCIÓN: Deferir la respuesta INMEDIATAMENTE para evitar timeouts.
+    await interaction.deferReply({ flags: 64 });
     const { customId, fields, guild, user, member, message } = interaction;
     
-    await interaction.deferReply({ flags: 64 });
-
     if (customId.startsWith('manager_request_modal_')) {
         const leagueName = customId.split('_')[3];
         const vpgUsername = fields.getTextInputValue('vpgUsername');
@@ -109,7 +109,7 @@ module.exports = async (client, interaction) => {
 
         const targetMember = targetMembers.first();
 
-        // VALIDACIÓN: Comprobar si el usuario ya es mánager
+        // VALIDACIÓN AÑADIDA: Comprobar si el usuario ya es mánager
         const isManager = await Team.findOne({ managerId: targetMember.id });
         if (isManager) {
             return interaction.editReply({ content: `❌ No puedes invitar a **${targetMember.user.tag}** porque ya es Mánager del equipo **${isManager.name}**.` });
