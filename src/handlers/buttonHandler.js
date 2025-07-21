@@ -47,7 +47,6 @@ async function updatePanelMessage(client, panelId) {
         const timeSlots = panel.timeSlots.sort((a, b) => a.time.localeCompare(b.time));
 
         for (const slot of timeSlots) {
-            let buttonSet = [];
             if (slot.status === 'CONFIRMED') {
                 const challengerTeam = await Team.findById(slot.challengerTeamId).lean();
                 if (!challengerTeam) continue;
@@ -68,17 +67,14 @@ async function updatePanelMessage(client, panelId) {
             } else { 
                 const label = slot.time === 'INSTANT' ? `⚔️ Desafiar Ahora` : `⚔️ Desafiar (${slot.time})`;
                 const pendingText = slot.pendingChallenges.length > 0 ? ` (${slot.pendingChallenges.length} ⏳)` : '';
-                buttonSet.push(
-                    new ButtonBuilder().setCustomId(`challenge_slot_${panel._id}_${slot.time}`).setLabel(label + pendingText).setStyle(ButtonStyle.Success)
-                );
+                const challengeButton = new ButtonBuilder().setCustomId(`challenge_slot_${panel._id}_${slot.time}`).setLabel(label + pendingText).setStyle(ButtonStyle.Success);
+                
+                if (currentRow.components.length >= 5) {
+                    components.push(currentRow);
+                    currentRow = new ActionRowBuilder();
+                }
+                currentRow.addComponents(challengeButton);
             }
-
-            if (currentRow.components.length + buttonSet.length > 5) {
-                components.push(currentRow);
-                currentRow = new ActionRowBuilder();
-            }
-
-            currentRow.addComponents(...buttonSet);
         }
 
         if (currentRow.components.length > 0) {
@@ -113,7 +109,6 @@ async function getOrCreateWebhook(channel, client) {
 }
 
 const handler = async (client, interaction) => {
-    // --- Lógica de Interacciones fuera del servidor (MDs) ---
     if (!interaction.inGuild()) {
         await interaction.deferUpdate();
         const { customId } = interaction;
@@ -137,7 +132,7 @@ const handler = async (client, interaction) => {
             }
 
             const challengeIndex = slot.pendingChallenges.findIndex(c => c._id.toString() === challengeId);
-            if (challengeIndex === -1) return interaction.editReply({ content: 'Esta petición de desafío ya no es válida.', components: [] });
+            if (challengeIndex === -1) return interaction.editReply({ content: 'Esta petición de desafío ya no es válida o ya ha sido gestionada.', components: [] });
 
             const [acceptedChallenge] = slot.pendingChallenges.splice(challengeIndex, 1);
             const rejectedChallenges = slot.pendingChallenges;
@@ -208,7 +203,6 @@ const handler = async (client, interaction) => {
         return;
     }
 
-    // --- Lógica de Interacciones DENTRO del servidor ---
     const { customId, member, guild, user } = interaction;
     const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
     const esAprobador = isAdmin || member.roles.cache.has(process.env.APPROVER_ROLE_ID);
@@ -221,15 +215,11 @@ const handler = async (client, interaction) => {
 
         const [, , panelId, time] = customId.split('_');
 
-        // VALIDACIÓN: Comprobar si el retador ya tiene un partido a esa hora
         const existingMatch = await AvailabilityPanel.findOne({
             guildId: guild.id,
             "timeSlots.time": time,
             "timeSlots.status": "CONFIRMED",
-            $or: [
-                { teamId: challengerTeam._id },
-                { "timeSlots.challengerTeamId": challengerTeam._id }
-            ]
+            $or: [ { teamId: challengerTeam._id }, { "timeSlots.challengerTeamId": challengerTeam._id } ]
         }).populate('teamId timeSlots.challengerTeamId');
 
         if (existingMatch) {
@@ -248,24 +238,35 @@ const handler = async (client, interaction) => {
         if (slot.pendingChallenges.some(c => c.teamId.equals(challengerTeam._id))) {
             return interaction.editReply({ content: 'Ya has enviado una petición para este horario.' });
         }
+        
         const newChallenge = { teamId: challengerTeam._id, userId: user.id };
         slot.pendingChallenges.push(newChallenge);
+        
         await panel.save();
+        
+        const updatedSlot = panel.timeSlots.find(s => s.time === time);
+        const savedChallenge = updatedSlot.pendingChallenges.find(c => c.userId === user.id && c.teamId.equals(challengerTeam._id));
+
+        if (!savedChallenge) {
+            return interaction.editReply({ content: 'Hubo un error al procesar tu desafío. Inténtalo de nuevo.' });
+        }
+
         const hostManager = await client.users.fetch(panel.teamId.managerId).catch(() => null);
         if (hostManager) {
             const embed = new EmbedBuilder().setTitle('⚔️ ¡Nuevo Desafío!').setDescription(`El equipo **${challengerTeam.name}** te ha desafiado para un partido a las **${time}**.`).setColor('Gold').setThumbnail(challengerTeam.logoUrl);
             const row = new ActionRowBuilder().addComponents(
-                new ButtonBuilder().setCustomId(`accept_challenge_${panel._id}_${time}_${newChallenge._id}`).setLabel('Aceptar').setStyle(ButtonStyle.Success),
-                new ButtonBuilder().setCustomId(`reject_challenge_${panel._id}_${time}_${newChallenge._id}`).setLabel('Rechazar').setStyle(ButtonStyle.Danger)
+                new ButtonBuilder().setCustomId(`accept_challenge_${panel._id}_${time}_${savedChallenge._id}`).setLabel('Aceptar').setStyle(ButtonStyle.Success),
+                new ButtonBuilder().setCustomId(`reject_challenge_${panel._id}_${time}_${savedChallenge._id}`).setLabel('Rechazar').setStyle(ButtonStyle.Danger)
             );
             await hostManager.send({ embeds: [embed], components: [row] }).catch(async () => {
-                panel.timeSlots.find(s => s.time === time).pendingChallenges.pop();
+                panel.timeSlots.find(s => s.time === time).pendingChallenges = panel.timeSlots.find(s => s.time === time).pendingChallenges.filter(c => !c._id.equals(savedChallenge._id));
                 await panel.save();
                 await interaction.editReply({ content: 'No se pudo enviar el desafío. El mánager rival tiene los MDs cerrados.' });
                 await updatePanelMessage(client, panel._id);
                 return;
             });
         }
+
         await updatePanelMessage(client, panel._id);
         return interaction.editReply({ content: '✅ ¡Desafío enviado!' });
     }
@@ -489,7 +490,6 @@ const handler = async (client, interaction) => {
         return; 
     }
     
-    // --- Interacciones que requieren deferReply ---
     await interaction.deferReply({ flags: 64 });
 
     if (customId === 'request_manager_role_button') {
@@ -698,7 +698,7 @@ const handler = async (client, interaction) => {
             });
             await panel.save();
             await updatePanelMessage(client, panel._id);
-            return interaction.editReply({ content: '​' }); // Espacio de ancho cero
+            return interaction.editReply({ content: '​' });
         }
     }
 
