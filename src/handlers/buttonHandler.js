@@ -80,6 +80,16 @@ async function updatePanelMessage(client, panelId) {
         if (currentRow.components.length > 0) {
             components.push(currentRow);
         }
+
+        // AÑADIDO: Botón para cancelar todas las peticiones
+        if (pendingCount > 0) {
+            const cancelRow = new ActionRowBuilder().addComponents(
+                new ButtonBuilder().setCustomId(`cancel_all_challenges_${panel._id}`).setLabel('Cancelar Todas las Peticiones').setStyle(ButtonStyle.Danger)
+            );
+            if (components.length < 5) {
+                components.push(cancelRow);
+            }
+        }
         
         if (components.length > 5) {
              console.error(`ERROR CRÍTICO: Se intentaron generar ${components.length} filas de componentes para el panel ${panel._id}. Se truncará a 5 para evitar un crash.`);
@@ -111,28 +121,35 @@ async function getOrCreateWebhook(channel, client) {
 const handler = async (client, interaction) => {
     if (!interaction.inGuild()) {
         await interaction.deferUpdate();
-        const { customId } = interaction;
+        const { customId, message } = interaction;
         
         if (customId.startsWith('accept_challenge_') || customId.startsWith('reject_challenge_')) {
-            const [, action, panelId, time, challengeId] = customId.split('_');
+            // CORRECCIÓN: Extraer la acción correctamente
+            const parts = customId.split('_');
+            const action = parts[0]; 
+            const panelId = parts[2];
+            const time = parts[3];
+            const challengeId = parts[4];
+            
             const panel = await AvailabilityPanel.findById(panelId).populate('teamId');
             if (!panel) return interaction.editReply({ content: 'Este panel de amistosos ya no existe.', components: [] });
             
             const slot = panel.timeSlots.find(s => s.time === time);
-            if (!slot) return interaction.editReply({ content: 'Este horario ya no existe.', components: [] });
+            if (!slot) {
+                await message.edit({ content: 'Este horario de partido ya no existe en el panel.', components: [] });
+                return interaction.followUp({ content: 'El horario ya no existe.', ephemeral: true });
+            }
             
             if (slot.status === 'CONFIRMED') {
-                await interaction.editReply({ content: '❌ ¡Demasiado tarde! Ya has aceptado otro desafío para este horario.', components: [], embeds: [] });
-                const lateChallenger = slot.pendingChallenges.find(c => c._id.toString() === challengeId);
-                if(lateChallenger) {
-                    const lateUser = await client.users.fetch(lateChallenger.userId).catch(()=>{});
-                    if(lateUser) await lateUser.send(`El equipo **${panel.teamId.name}** intentó aceptar tu desafío para las **${time}**, pero ya habían confirmado otro partido.`).catch(()=>{});
-                }
-                return;
+                await message.edit({ content: '❌ Este desafío ha expirado porque ya se ha confirmado otro partido en este horario.', components: [] });
+                return interaction.followUp({ content: '¡Demasiado tarde! Ya has aceptado otro desafío para este horario.', ephemeral: true });
             }
 
             const challengeIndex = slot.pendingChallenges.findIndex(c => c._id.toString() === challengeId);
-            if (challengeIndex === -1) return interaction.editReply({ content: 'Esta petición de desafío ya no es válida o ya ha sido gestionada.', components: [] });
+            if (challengeIndex === -1) {
+                await message.edit({ content: 'Esta petición de desafío ya no es válida o ya fue gestionada.', components: [] });
+                return interaction.followUp({ content: 'La petición ya no es válida.', ephemeral: true });
+            }
 
             const [acceptedChallenge] = slot.pendingChallenges.splice(challengeIndex, 1);
             const rejectedChallenges = slot.pendingChallenges;
@@ -146,7 +163,7 @@ const handler = async (client, interaction) => {
                 const winnerUser = await client.users.fetch(acceptedChallenge.userId);
                 
                 await winnerUser.send(`✅ ¡Enhorabuena! Tu desafío contra **${panel.teamId.name}** para las **${time}** ha sido **ACEPTADO**!`).catch(()=>{});
-                await interaction.editReply({ content: `✅ Has aceptado el desafío de **${winnerTeam.name}**. Se ha notificado a todos los equipos.`, components: [], embeds: [] });
+                await message.edit({ content: `✅ Has aceptado el desafío de **${winnerTeam.name}**. Se ha notificado a todos los equipos.`, components: [], embeds: [] });
 
                 for (const loser of rejectedChallenges) {
                     const loserUser = await client.users.fetch(loser.userId).catch(() => null);
@@ -166,7 +183,7 @@ const handler = async (client, interaction) => {
                 }
 
             } else { // REJECT
-                await interaction.editReply({ content: `❌ Has rechazado el desafío.`, components: [], embeds: [] });
+                 await message.edit({ content: `❌ Has rechazado el desafío.`, components: [], embeds: [] });
                  const rejectedUser = await client.users.fetch(acceptedChallenge.userId);
                  await rejectedUser.send(`Tu desafío contra **${panel.teamId.name}** para las **${time}** ha sido **RECHAZADO**.`).catch(()=>{});
             }
@@ -269,6 +286,43 @@ const handler = async (client, interaction) => {
 
         await updatePanelMessage(client, panel._id);
         return interaction.editReply({ content: '✅ ¡Desafío enviado!' });
+    }
+    
+    // --- LÓGICA DEL NUEVO BOTÓN "CANCELAR PETICIONES" ---
+    if (customId.startsWith('cancel_all_challenges_')) {
+        await interaction.deferReply({ flags: 64 });
+        const panelId = customId.split('_')[3];
+        const panel = await AvailabilityPanel.findById(panelId).populate('teamId');
+        if (!panel) return interaction.editReply({ content: 'Este panel ya no existe.' });
+
+        const userTeam = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
+        if (!userTeam || !userTeam._id.equals(panel.teamId._id)) {
+            return interaction.editReply({ content: 'No tienes permiso para cancelar las peticiones de este panel.' });
+        }
+
+        const challengesToNotify = [];
+        panel.timeSlots.forEach(slot => {
+            if (slot.pendingChallenges && slot.pendingChallenges.length > 0) {
+                challengesToNotify.push(...slot.pendingChallenges);
+                slot.pendingChallenges = [];
+            }
+        });
+
+        if (challengesToNotify.length === 0) {
+            return interaction.editReply({ content: 'No había peticiones pendientes que cancelar.' });
+        }
+
+        await panel.save();
+
+        for (const challenge of challengesToNotify) {
+            const userToNotify = await client.users.fetch(challenge.userId).catch(() => null);
+            if (userToNotify) {
+                await userToNotify.send(`El equipo **${panel.teamId.name}** ha cancelado todas sus peticiones de desafío pendientes, incluyendo la tuya.`).catch(() => {});
+            }
+        }
+        
+        await updatePanelMessage(client, panel._id);
+        return interaction.editReply({ content: '✅ Todas las peticiones de desafío pendientes han sido canceladas.' });
     }
 
     if (customId.startsWith('abandon_challenge_')) {
