@@ -616,13 +616,21 @@ const handler = async (client, interaction) => {
              const fetchMemberInfo = async (ids, roleName) => {
                  if (!ids || ids.length === 0) return;
                  rosterString += `\n**${roleName}**\n`;
-                 for (const memberId of ids) {
+                                  for (const memberId of ids) {
                      try {
                          const memberData = await guild.members.fetch(memberId);
                          const profile = memberMap.get(memberId);
+
+                         // Construimos el string de la posición
+                         let positionString = profile?.primaryPosition ? ` - ${profile.primaryPosition}` : '';
+                         if (profile?.secondaryPosition && profile.secondaryPosition.toUpperCase() !== 'NINGUNA') {
+                             positionString += ` / ${profile.secondaryPosition}`;
+                         }
+
                          const vpgUsername = profile?.vpgUsername || 'N/A';
-                         const twitterInfo = profile?.twitterHandle ? ` - @${profile.twitterHandle}` : '';
-                         rosterString += `> ${memberData.user.username} (${vpgUsername})${twitterInfo}\n`;
+                         const twitterInfo = profile?.twitterHandle ? ` (@${profile.twitterHandle})` : '';
+                         
+                         rosterString += `> ${memberData.user.username} (${vpgUsername})${positionString}${twitterInfo}\n`;
                      } catch (error) {
                          rosterString += `> *Usuario no encontrado (ID: ${memberId})*\n`;
                      }
