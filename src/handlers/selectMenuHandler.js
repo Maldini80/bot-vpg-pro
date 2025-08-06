@@ -29,30 +29,59 @@ if (customId === 'search_team_pos_filter' || customId === 'search_team_league_fi
 if (customId === 'search_player_pos_filter') {
     await interaction.deferReply({ flags: 64 });
     const selectedPositions = values;
-    const agents = await FreeAgent.find({ guildId: guild.id, status: 'ACTIVE' }).limit(25);
-    const agentUserIds = agents.map(a => a.userId);
+
+    // Buscamos primero los perfiles que coincidan con la posición
     const profiles = await VPGUser.find({
-        discordId: { $in: agentUserIds },
-        $or: [
-            { primaryPosition: { $in: selectedPositions } },
-            { secondaryPosition: { $in: selectedPositions } }
-        ]
+        'primaryPosition': { $in: selectedPositions } 
+        // Podríamos añadir la posición secundaria también con un $or
     }).lean();
 
     if (profiles.length === 0) {
-        return interaction.editReply({ content: 'No se encontraron agentes libres que coincidan con esas posiciones.' });
+        return interaction.editReply({ content: 'No se encontraron jugadores con esas posiciones.' });
+    }
+    
+    const profileUserIds = profiles.map(p => p.discordId);
+
+    // Ahora, de esos jugadores, vemos cuáles están anunciados como agentes libres
+    const agents = await FreeAgent.find({ 
+        guildId: guild.id, 
+        status: 'ACTIVE',
+        userId: { $in: profileUserIds }
+    });
+
+    if (agents.length === 0) {
+        return interaction.editReply({ content: 'Se encontraron jugadores con esas posiciones, pero ninguno está anunciado como agente libre ahora mismo.' });
     }
 
-    let description = '';
-    for (const profile of profiles) {
-        const agentData = agents.find(a => a.userId === profile.discordId);
-        description += `**<@${profile.discordId}>** - \`${profile.primaryPosition} / ${profile.secondaryPosition || 'N/A'}\`\n`;
-        if (agentData) description += `> *"${agentData.description}"*\n\n`;
-    }
+    // Confirmamos al mánager que hemos encontrado resultados y vamos a enviarlos
+    await interaction.editReply({ content: `✅ ¡Búsqueda exitosa! Se encontraron ${agents.length} agentes libres. Te los enviaré a continuación...` });
 
-    const embed = new EmbedBuilder().setTitle(`Agentes Libres Encontrados (${profiles.length})`).setDescription(description).setColor('Blue');
-    await interaction.editReply({ embeds: [embed] });
-    return;
+    // Ahora, creamos una "ficha" (embed) para cada agente y la enviamos como un nuevo mensaje
+    for (const agent of agents) {
+        const profile = profiles.find(p => p.discordId === agent.userId);
+        const member = await guild.members.fetch(agent.userId).catch(() => null);
+
+        // Si el jugador ya no está en el servidor, lo ignoramos
+        if (!member) continue;
+
+        const playerEmbed = new EmbedBuilder()
+            .setAuthor({ name: member.user.tag, iconURL: member.user.displayAvatarURL() })
+            .setThumbnail(member.user.displayAvatarURL())
+            .setColor('Blue')
+            .addFields(
+                { name: 'Posiciones', value: `**${profile.primaryPosition}** / ${profile.secondaryPosition || 'N/A'}`, inline: true },
+                { name: 'VPG / Twitter', value: `${profile.vpgUsername || 'N/A'} / @${profile.twitterHandle || 'N/A'}`, inline: true },
+                { name: 'Disponibilidad', value: agent.availability || 'No especificada', inline: false },
+                { name: 'Descripción del Jugador', value: agent.description || 'Sin descripción.' }
+            )
+            .setFooter({ text: `Puedes contactar directamente con este jugador.` });
+        
+        // Usamos followUp para enviar mensajes adicionales después de la respuesta inicial.
+        // Como la respuesta inicial fue efímera (solo visible para el mánager), esta también lo será.
+        await interaction.followUp({ embeds: [playerEmbed] });
+    }
+    
+    return; // Terminamos la ejecución para este customId
 }
 
     if (customId === 'select_primary_position' || customId === 'select_secondary_position') {
