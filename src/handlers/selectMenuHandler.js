@@ -189,4 +189,32 @@ module.exports = async (client, interaction) => {
         const result = await League.deleteMany({ guildId: guild.id, name: { $in: leaguesToDelete } });
         return interaction.editReply({ content: `✅ Se han eliminado ${result.deletedCount} ligas.` });
     }
+    // =======================================================
+    // == LÓGICA PARA LOS MENÚS DE POSICIÓN ==================
+    // =======================================================
+    if (customId === 'select_primary_position' || customId === 'select_secondary_position') {
+        const selectedPosition = values[0];
+
+        // Buscamos el perfil del usuario o creamos uno nuevo si no existe
+        const userProfile = await VPGUser.findOneAndUpdate(
+            { discordId: user.id },
+            { $set: { discordId: user.id } }, // Esto asegura que se cree si no existe
+            { upsert: true, new: true }
+        );
+
+        // Actualizamos la posición correspondiente
+        if (customId === 'select_primary_position') {
+            userProfile.primaryPosition = selectedPosition;
+        } else {
+            userProfile.secondaryPosition = selectedPosition;
+        }
+
+        await userProfile.save();
+
+        // Le confirmamos al usuario que se ha guardado, actualizando el mensaje original
+        await interaction.update({
+            content: `✅ Posición guardada: **${selectedPosition}**. Puedes cambiarla de nuevo o cerrar este mensaje.`,
+            components: interaction.message.components // Mantenemos los menús para que pueda cambiar de opinión
+        });
+    }
 };
