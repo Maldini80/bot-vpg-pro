@@ -158,7 +158,7 @@ client.on(Events.InteractionCreate, async interaction => {
 // == SERVIDOR WEB PARA MANTENER EL BOT DESPIERTO =======
 // =======================================================
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 10000;
 
 app.get('/', (req, res) => {
   res.send('VPG Order Bot está online y funcionando.');
