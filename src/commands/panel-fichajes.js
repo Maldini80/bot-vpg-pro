@@ -8,36 +8,19 @@ module.exports = {
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
     async execute(interaction) {
-        await interaction.deferReply({ flags: 64 });
+        await interaction.reply({ content: 'Creando el panel de fichajes...', flags: 64 });
 
         const embed = new EmbedBuilder()
             .setTitle('CENTRO DE OPERACIONES: MERCADO DE FICHAJES')
             .setDescription('Interactúa con los botones de abajo para navegar por el mercado. La mayoría de acciones se realizarán por mensajes privados para mantener este canal limpio.')
             .setColor('Gold')
-            .setImage('https://i.imgur.com/your-header-image.png') // Opcional: puedes poner una imagen de cabecera
             .setFooter({ text: 'VPG Transfer Market' });
 
         const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                .setCustomId('market_search_players')
-                .setLabel('Buscar Jugadores')
-                .setStyle(ButtonStyle.Primary)
-                .setEmoji('🔎'),
-            new ButtonBuilder()
-                .setCustomId('market_search_teams')
-                .setLabel('Buscar Equipos')
-                .setStyle(ButtonStyle.Primary)
-                .setEmoji('🔎'),
-            new ButtonBuilder()
-                .setCustomId('market_post_agent')
-                .setLabel('Anunciarse como Agente Libre')
-                .setStyle(ButtonStyle.Success)
-                .setEmoji('📣'),
-            new ButtonBuilder()
-                .setCustomId('market_post_offer')
-                .setLabel('Publicar Oferta de Equipo')
-                .setStyle(ButtonStyle.Secondary)
-                .setEmoji('📄')
+            new ButtonBuilder().setCustomId('market_search_players').setLabel('Buscar Jugadores').setStyle(ButtonStyle.Primary).setEmoji('🔎'),
+            new ButtonBuilder().setCustomId('market_search_teams').setLabel('Buscar Equipos').setStyle(ButtonStyle.Primary).setEmoji('🔎'),
+            new ButtonBuilder().setCustomId('market_post_agent').setLabel('Anunciarse como Agente Libre').setStyle(ButtonStyle.Success).setEmoji('📣'),
+            new ButtonBuilder().setCustomId('market_post_offer').setLabel('Publicar Oferta de Equipo').setStyle(ButtonStyle.Secondary).setEmoji('📄')
         );
 
         await interaction.channel.send({ embeds: [embed], components: [row] });
