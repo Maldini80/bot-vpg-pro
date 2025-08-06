@@ -243,10 +243,10 @@ const handler = async (client, interaction) => {
 
         const profile = await VPGUser.findOne({ discordId: user.id });
         
-        primaryPositionMenu.addOptions(positionOptions.map(opt => ({ ...opt, default: profile && opt.value === profile.primaryPosition })));
+                primaryPositionMenu.addOptions(positionOptions.map(opt => ({ ...opt, default: !!(profile && opt.value === profile.primaryPosition) })));
         
         const secondaryOptions = [{ label: 'Ninguna', value: 'NINGUNA' }, ...positionOptions];
-        secondaryPositionMenu.addOptions(secondaryOptions.map(opt => ({ ...opt, default: profile && opt.value === profile.secondaryPosition })));
+         secondaryPositionMenu.addOptions(secondaryOptions.map(opt => ({ ...opt, default: !!(profile && opt.value === profile.secondaryPosition) })));
 
         const continueButton = new ButtonBuilder().setCustomId('continue_to_profile_modal').setLabel('Continuar con Nombre y Twitter').setStyle(ButtonStyle.Success);
 
