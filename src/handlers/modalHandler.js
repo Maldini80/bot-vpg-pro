@@ -7,15 +7,12 @@ const VPGUser = require('../models/user.js');
 const FreeAgent = require('../models/freeAgent.js');
 
 module.exports = async (client, interaction) => {
-    // Todos los envíos de modales son potencialmente lentos, así que hacemos defer.
+    // CORRECCIÓN: Responder inmediatamente a la interacción del modal.
+    // Usamos flags: 64 que es lo mismo que ephemeral: true, para evitar el warning de deprecación.
     await interaction.deferReply({ flags: 64 });
 
     const { customId, fields, guild, user, member, message } = interaction;
     
-    // =======================================================
-    // == LÓGICA DEL PERFIL Y MERCADO ========================
-    // =======================================================
-
     if (customId === 'edit_profile_modal') {
         const vpgUsername = fields.getTextInputValue('vpgUsernameInput');
         const twitterHandle = fields.getTextInputValue('twitterInput');
@@ -41,10 +38,6 @@ module.exports = async (client, interaction) => {
         );
         return interaction.editReply({ content: '✅ ¡Tu anuncio como agente libre ha sido publicado/actualizado! Los mánagers ahora podrán encontrarte usando el buscador.' });
     }
-
-    // =======================================================
-    // == COMIENZO DEL CÓDIGO ORIGINAL (RESTO DE MODALES) ====
-    // =======================================================
     
     if (customId.startsWith('manager_request_modal_')) {
         const leagueName = customId.split('_')[3];
