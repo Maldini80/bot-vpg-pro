@@ -430,9 +430,9 @@ const handler = async (client, interaction) => {
         return interaction.editReply({ embeds: [embed] });
     }
         // NUEVO: Bloque para manejar el clic en el botón de editar perfil
-    if (customId === 'edit_profile_button') {
-        // Buscamos el perfil existente para rellenar los campos del formulario
-        const existingProfile = await VPGUser.findOne({ discordId: user.id });
+        if (customId === 'edit_profile_button') {
+        // CORRECCIÓN: Se elimina la búsqueda en la base de datos para evitar timeouts.
+        // El formulario se mostrará instantáneamente, pero vacío.
 
         const modal = new ModalBuilder()
             .setCustomId('edit_profile_modal')
@@ -443,21 +443,21 @@ const handler = async (client, interaction) => {
             .setLabel("Tu nombre de usuario en VPG")
             .setStyle(TextInputStyle.Short)
             .setRequired(true)
-            .setValue(existingProfile?.vpgUsername || '');
+            .setPlaceholder('Escribe tu nombre de VPG'); // Usamos placeholder en lugar de rellenar
 
         const twitterInput = new TextInputBuilder()
             .setCustomId('twitterInput')
             .setLabel("Tu usuario de Twitter (sin @)")
             .setStyle(TextInputStyle.Short)
             .setRequired(false)
-            .setValue(existingProfile?.twitterHandle || '');
+            .setPlaceholder('Opcional: Escribe tu usuario de Twitter');
 
         modal.addComponents(
             new ActionRowBuilder().addComponents(vpgUsernameInput),
             new ActionRowBuilder().addComponents(twitterInput)
         );
-
-        // Mostrar el modal es la respuesta a la interacción
+        
+        // Esta acción ahora es instantánea y nunca fallará por tiempo.
         return interaction.showModal(modal);
     }
 
