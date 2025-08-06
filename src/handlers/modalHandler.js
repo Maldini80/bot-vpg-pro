@@ -66,37 +66,26 @@ module.exports = async (client, interaction) => {
         return interaction.editReply({ content: `✅ ¡Tu anuncio ha sido publicado/actualizado con éxito en el canal ${channel}!` });
     }
 
-    if (customId.startsWith('market_offer_modal_')) {
-        const teamId = customId.split('_')[3];
-        const positions = fields.getTextInputValue('positionsInput').split(',').map(p => p.trim().toUpperCase()).filter(p => p);
-        const requirements = fields.getTextInputValue('requirementsInput');
-        
-        await TeamOffer.findOneAndUpdate({ teamId }, { guildId: guild.id, postedById: user.id, positions, requirements, status: 'ACTIVE' }, { upsert: true });
+   if (customId.startsWith('market_offer_modal_')) {
+    const parts = customId.split('_');
+    const teamId = parts[3];
+    
+    const positions = fields.getTextInputValue('positionsInput').split(',').map(p => p.trim().toUpperCase()).filter(p => p);
+    const requirements = fields.getTextInputValue('requirementsInput');
+    
+    // Usamos findOneAndUpdate con upsert:true. Esto crea la oferta si no existe, o la actualiza si ya existe.
+    // Es una forma muy eficiente de manejar ambos casos (crear y editar).
+    await TeamOffer.findOneAndUpdate(
+        { teamId: teamId },
+        { guildId: guild.id, postedById: user.id, positions, requirements, status: 'ACTIVE' },
+        { upsert: true, new: true }
+    );
 
-        const channelId = process.env.TEAMS_AD_CHANNEL_ID;
-        if (!channelId) return interaction.editReply({ content: '❌ Error de configuración: El canal de ofertas de equipos no está definido.' });
-
-        const channel = await client.channels.fetch(channelId).catch(() => null);
-        if (!channel) return interaction.editReply({ content: '❌ Error: No se pudo encontrar el canal de ofertas de equipos.' });
-
-        const team = await Team.findById(teamId).lean();
-
-        const teamOfferEmbed = new EmbedBuilder()
-            .setAuthor({ name: team.name, iconURL: team.logoUrl })
-            .setThumbnail(team.logoUrl)
-            .setTitle(`¡${team.name} está buscando jugadores!`)
-            .setColor('Green')
-            .addFields(
-                { name: 'Posiciones Buscadas', value: `\`\`\`${positions.join(', ')}\`\`\``, inline: false },
-                { name: 'Requisitos y Descripción', value: requirements, inline: false },
-                { name: 'Contacto Principal', value: `<@${team.managerId}>`, inline: true },
-                { name: 'Liga', value: team.league, inline: true }
-            )
-            .setTimestamp();
-
-        await channel.send({ embeds: [teamOfferEmbed] });
-        return interaction.editReply({ content: `✅ ¡La oferta de tu equipo ha sido publicada/actualizada con éxito en el canal ${channel}!` });
-    }
+    // Opcional: Actualizar también el mensaje en el canal público.
+    
+    // Confirmamos al mánager
+    return interaction.editReply({ content: `✅ ¡La oferta de tu equipo ha sido publicada/actualizada con éxito!` });
+}
 
     // --- LÓGICA ORIGINAL DE OTROS MODALES (Mantenida y Funcional) ---
 
