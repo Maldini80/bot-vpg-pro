@@ -1,4 +1,6 @@
 // src/index.js
+
+// 1. DEPENDENCIAS
 require('dotenv').config();
 const fs = require('node:fs');
 const path = require('node:path');
@@ -6,16 +8,26 @@ const { Client, Collection, GatewayIntentBits, Events } = require('discord.js');
 const mongoose = require('mongoose');
 const cron = require('node-cron');
 const express = require('express');
-
 const AvailabilityPanel = require('./models/availabilityPanel.js');
 const TeamChatChannel = require('./models/teamChatChannel.js');
 const Team = require('./models/team.js');
 
+// 2. SERVIDOR WEB (PARA MANTENER EL BOT DESPIERTO)
+const app = express();
+const port = process.env.PORT || 10000; // Usa el puerto de Render
+app.get('/', (req, res) => {
+  res.send('VPG Order Bot está online y funcionando.');
+});
+app.listen(port, () => {
+  console.log(`Servidor web escuchando en el puerto ${port}.`);
+});
 
+// 3. CONEXIÓN A BASE DE DATOS
 mongoose.connect(process.env.DATABASE_URL)
     .then(() => console.log('Conectado a MongoDB.'))
     .catch(err => console.error('Error de conexión con MongoDB:', err));
 
+// 4. CONFIGURACIÓN DEL CLIENTE DE DISCORD
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -25,6 +37,7 @@ const client = new Client({
     ]
 });
 
+// 5. CARGA DE COMANDOS
 client.commands = new Collection();
 const commandsPath = path.join(__dirname, 'commands');
 const commandFilesToExclude = ['panel-amistosos.js', 'admin-gestionar-equipo.js'];
@@ -37,6 +50,7 @@ for (const file of commandFiles) {
     }
 }
 
+// 6. CARGA DE HANDLERS (BOTONES, MENÚS, ETC.)
 client.handlers = new Map();
 const handlersPath = path.join(__dirname, 'handlers');
 if (fs.existsSync(handlersPath)) {
@@ -47,10 +61,12 @@ if (fs.existsSync(handlersPath)) {
     }
 }
 
+// 7. EVENTO CLIENT READY (CUANDO EL BOT SE CONECTA)
 client.once(Events.ClientReady, () => {
     console.log(`¡Listo! ${client.user.tag} está online.`);
+    // Tarea de limpieza diaria
     cron.schedule('0 6 * * *', async () => {
-        console.log('Ejecutando limpieza diaria de amistosos a las 6:00 AM (Madrid)...');
+        console.log('Ejecutando limpieza diaria de amistosos...');
         try {
             await AvailabilityPanel.deleteMany({});
             console.log(`Base de datos de paneles de disponibilidad limpiada.`);
@@ -76,7 +92,7 @@ client.once(Events.ClientReady, () => {
     }, { scheduled: true, timezone: "Europe/Madrid" });
 });
 
-// --- EVENTO DE CREACIÓN DE MENSAJE (CORREGIDO) ---
+// 8. EVENTO DE MENSAJES (PARA CHAT DE EQUIPO)
 client.on(Events.MessageCreate, async message => {
     if (message.author.bot || !message.inGuild()) return;
     const activeChannel = await TeamChatChannel.findOne({ channelId: message.channel.id, guildId: message.guildId });
@@ -87,7 +103,6 @@ client.on(Events.MessageCreate, async message => {
     try {
         await message.delete();
         const webhooks = await message.channel.fetchWebhooks();
-        // CORRECCIÓN: Usar un nombre único y específico para el webhook del chat para evitar conflictos.
         const webhookName = 'VPG Team Chat';
         let webhook = webhooks.find(wh => wh.name === webhookName);
         if (!webhook) {
@@ -106,24 +121,17 @@ client.on(Events.MessageCreate, async message => {
     }
 });
 
+// 9. GESTOR DE INTERACCIONES
 client.on(Events.InteractionCreate, async interaction => {
-    // ==================================================================
-    // == INICIO DE LA SOLUCIÓN DEFINITIVA =============================
-    // ==================================================================
-    // Esto reconoce el envío del formulario al instante para evitar que se cancele por tiempo.
+    // Respuesta instantánea para el modal de perfil para evitar timeouts
     if (interaction.isModalSubmit() && interaction.customId === 'edit_profile_modal') {
         try {
-            // Le decimos a Discord "recibido, estoy pensando...", de forma privada.
             await interaction.deferReply({ flags: 64 });
         } catch (e) {
-            // Si incluso esto falla, lo registramos y nos detenemos.
             console.error("Fallo al intentar aplazar la respuesta del modal:", e);
             return;
         }
     }
-    // ==================================================================
-    // == FIN DE LA SOLUCIÓN DEFINITIVA ================================
-    // ==================================================================
 
     try {
         if (interaction.isChatInputCommand()) {
@@ -147,25 +155,12 @@ client.on(Events.InteractionCreate, async interaction => {
         if (interaction.replied || interaction.deferred) {
             await interaction.followUp({ content: 'Ha ocurrido un error al procesar esta solicitud.', flags: 64 }).catch(() => {});
         } else {
-            // Solo intentamos responder si el error no es que ya se ha respondido.
             if (error.code !== 'InteractionAlreadyReplied' && error.code !== 10062) {
                 await interaction.reply({ content: 'Ha ocurrido un error al procesar esta solicitud.', flags: 64 }).catch(() => {});
             }
         }
     }
 });
-// =======================================================
-// == SERVIDOR WEB PARA MANTENER EL BOT DESPIERTO =======
-// =======================================================
-const app = express();
-const port = process.env.PORT || 10000;
 
-app.get('/', (req, res) => {
-  res.send('VPG Order Bot está online y funcionando.');
-});
-
-app.listen(port, () => {
-  console.log(`Servidor web escuchando en el puerto ${port} para las comprobaciones de Uptime Robot.`);
-});
-// =======================================================
+// 10. LOGIN FINAL
 client.login(process.env.DISCORD_TOKEN);
