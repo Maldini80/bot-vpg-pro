@@ -593,16 +593,24 @@ const handler = async (client, interaction) => {
              if (!teamToView) return interaction.editReply({ content: 'No perteneces a ningún equipo.' });
              const allMemberIds = [teamToView.managerId, ...teamToView.captains, ...teamToView.players].filter(id => id);
              if (allMemberIds.length === 0) return interaction.editReply({ content: 'Tu equipo no tiene miembros.' });
-             const memberProfiles = await VPGUser.find({ discordId: { $in: allMemberIds } }).lean();
+                          const memberProfiles = await VPGUser.find({ discordId: { $in: allMemberIds } }).lean();
              const memberMap = new Map(memberProfiles.map(p => [p.discordId, p]));
              let rosterString = '';
-             for (const memberId of ids) {
+             const fetchMemberInfo = async (ids, roleName) => {
+                 if (!ids || ids.length === 0) return;
+                 rosterString += `\n**${roleName}**\n`;
+                 for (const memberId of ids) {
                      try {
-                        const memberData = await guild.members.fetch(memberId);
-                        const vpgUser = memberMap.get(memberId)?.vpgUsername || 'N/A';
-                        rosterString += `> ${memberData.user.username} (${vpgUser})\n`;
-                     } catch (error) { rosterString += `> *Usuario no encontrado (ID: ${memberId})*\n`; }
-                 };
+                         const memberData = await guild.members.fetch(memberId);
+                         const profile = memberMap.get(memberId);
+                         const vpgUsername = profile?.vpgUsername || 'N/A';
+                         const twitterInfo = profile?.twitterHandle ? ` - @${profile.twitterHandle}` : '';
+                         rosterString += `> ${memberData.user.username} (${vpgUsername})${twitterInfo}\n`;
+                     } catch (error) {
+                         rosterString += `> *Usuario no encontrado (ID: ${memberId})*\n`;
+                     }
+                 }
+             };
              await fetchMemberInfo([teamToView.managerId].filter(Boolean), '👑 Mánager');
              await fetchMemberInfo(teamToView.captains, '🛡️ Capitanes');
              await fetchMemberInfo(teamToView.players, 'Jugadores');
