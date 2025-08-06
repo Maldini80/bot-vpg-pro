@@ -4,10 +4,56 @@ const Team = require('../models/team.js');
 const VPGUser = require('../models/user.js');
 const League = require('../models/league.js');
 const AvailabilityPanel = require('../models/availabilityPanel.js');
+const FreeAgent = require('../models/freeAgent.js');
+const TeamOffer = require('../models/teamOffer.js');
 
 module.exports = async (client, interaction) => {
     const { customId, values, guild, user } = interaction;
     const selectedValue = values[0];
+    // --- Lógica para el Perfil de Jugador y Búsquedas del Mercado ---
+if (customId === 'select_primary_position' || customId === 'select_secondary_position') {
+    await interaction.deferUpdate();
+    const updateData = customId === 'select_primary_position' 
+        ? { primaryPosition: selectedValue } 
+        : { secondaryPosition: selectedValue === 'NINGUNA' ? null : selectedValue };
+    await VPGUser.findOneAndUpdate({ discordId: user.id }, updateData, { upsert: true });
+    return; // Detenemos la ejecución
+}
+
+if (customId === 'search_team_pos_filter' || customId === 'search_team_league_filter') {
+    // Esta lógica puede ser compleja, por ahora la dejamos como placeholder funcional
+    await interaction.reply({ content: '✅ Búsqueda de equipos en desarrollo. Filtro recibido.', flags: 64 });
+    return;
+}
+
+if (customId === 'search_player_pos_filter') {
+    await interaction.deferReply({ flags: 64 });
+    const selectedPositions = values;
+    const agents = await FreeAgent.find({ guildId: guild.id, status: 'ACTIVE' }).limit(25);
+    const agentUserIds = agents.map(a => a.userId);
+    const profiles = await VPGUser.find({
+        discordId: { $in: agentUserIds },
+        $or: [
+            { primaryPosition: { $in: selectedPositions } },
+            { secondaryPosition: { $in: selectedPositions } }
+        ]
+    }).lean();
+
+    if (profiles.length === 0) {
+        return interaction.editReply({ content: 'No se encontraron agentes libres que coincidan con esas posiciones.' });
+    }
+
+    let description = '';
+    for (const profile of profiles) {
+        const agentData = agents.find(a => a.userId === profile.discordId);
+        description += `**<@${profile.discordId}>** - \`${profile.primaryPosition} / ${profile.secondaryPosition || 'N/A'}\`\n`;
+        if (agentData) description += `> *"${agentData.description}"*\n\n`;
+    }
+
+    const embed = new EmbedBuilder().setTitle(`Agentes Libres Encontrados (${profiles.length})`).setDescription(description).setColor('Blue');
+    await interaction.editReply({ embeds: [embed] });
+    return;
+}
 
     if (customId === 'select_primary_position' || customId === 'select_secondary_position') {
         // CORRECCIÓN: Responder inmediatamente.
