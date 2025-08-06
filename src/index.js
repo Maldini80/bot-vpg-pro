@@ -125,10 +125,10 @@ client.on(Events.InteractionCreate, async interaction => {
     } catch (error) {
         console.error("Fallo crítico durante el procesamiento de una interacción:", error);
         if (interaction.replied || interaction.deferred) {
-            await interaction.followUp({ content: 'Ha ocurrido un error al procesar esta solicitud.', ephemeral: true }).catch(() => {});
+            await interaction.followUp({ content: 'Ha ocurrido un error al procesar esta solicitud.', flags: 64 }).catch(() => {});
         } else {
             if (error.code !== 'InteractionAlreadyReplied' && error.code !== 10062) {
-                await interaction.reply({ content: 'Ha ocurrido un error al procesar esta solicitud.', ephemeral: true }).catch(() => {});
+                await interaction.reply({ content: 'Ha ocurrido un error al procesar esta solicitud.', flags: 64 }).catch(() => {});
             }
         }
     }
