@@ -220,14 +220,11 @@ const handler = async (client, interaction) => {
     }
 
     const { customId, member, guild, user } = interaction;
-    const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
-    const esAprobador = isAdmin || member.roles.cache.has(process.env.APPROVER_ROLE_ID);
     
-    // =======================================================
-    // == LÓGICA DEL PERFIL Y MERCADO ========================
-    // =======================================================
-
-        if (customId === 'edit_profile_button') {
+    // Todas las interacciones de botones son potencialmente lentas, así que hacemos defer.
+    await interaction.deferReply({ flags: 64 });
+    
+    if (customId === 'edit_profile_button') {
         const positionOptions = [
             { label: 'GK', value: 'POR' },
             { label: 'DFC', value: 'DFC' },
@@ -237,48 +234,25 @@ const handler = async (client, interaction) => {
             { label: 'MCO', value: 'MCO' },
             { label: 'DC', value: 'DC' },
         ];
-
-        const primaryPositionMenu = new StringSelectMenuBuilder()
-            .setCustomId('select_primary_position')
-            .setPlaceholder('Selecciona tu posición principal');
-
-        const secondaryPositionMenu = new StringSelectMenuBuilder()
-            .setCustomId('select_secondary_position')
-            .setPlaceholder('Selecciona tu posición secundaria (opcional)');
-
+        const primaryPositionMenu = new StringSelectMenuBuilder().setCustomId('select_primary_position').setPlaceholder('Selecciona tu posición principal');
+        const secondaryPositionMenu = new StringSelectMenuBuilder().setCustomId('select_secondary_position').setPlaceholder('Selecciona tu posición secundaria (opcional)');
         const profile = await VPGUser.findOne({ discordId: user.id });
-        
-        // CORRECCIÓN: Usamos !! para asegurar que el valor sea siempre true/false
         primaryPositionMenu.addOptions(positionOptions.map(opt => ({ ...opt, default: !!(profile && opt.value === profile.primaryPosition) })));
-        
         const secondaryOptions = [{ label: 'Ninguna', value: 'NINGUNA' }, ...positionOptions];
-        // CORRECCIÓN: Usamos !! para asegurar que el valor sea siempre true/false
         secondaryPositionMenu.addOptions(secondaryOptions.map(opt => ({ ...opt, default: !!(profile && opt.value === profile.secondaryPosition) })));
-
-        const continueButton = new ButtonBuilder()
-            .setCustomId('continue_to_profile_modal')
-            .setLabel('Continuar con Nombre y Twitter')
-            .setStyle(ButtonStyle.Success);
-
+        const continueButton = new ButtonBuilder().setCustomId('continue_to_profile_modal').setLabel('Continuar con Nombre y Twitter').setStyle(ButtonStyle.Success);
         return interaction.editReply({
             content: 'Selecciona tus posiciones. Cuando termines, pulsa el botón para editar el resto de tu perfil.',
-            components: [
-                new ActionRowBuilder().addComponents(primaryPositionMenu),
-                new ActionRowBuilder().addComponents(secondaryPositionMenu),
-                new ActionRowBuilder().addComponents(continueButton)
-            ],
+            components: [ new ActionRowBuilder().addComponents(primaryPositionMenu), new ActionRowBuilder().addComponents(secondaryPositionMenu), new ActionRowBuilder().addComponents(continueButton) ],
         });
     }
 
     if (customId === 'continue_to_profile_modal') {
         const profile = await VPGUser.findOne({ discordId: user.id });
         const modal = new ModalBuilder().setCustomId('edit_profile_modal').setTitle('Editar Nombre y Twitter');
-
         const vpgUsernameInput = new TextInputBuilder().setCustomId('vpgUsernameInput').setLabel("Tu nombre de usuario en VPG").setStyle(TextInputStyle.Short).setRequired(true).setValue(profile?.vpgUsername || '');
         const twitterInput = new TextInputBuilder().setCustomId('twitterInput').setLabel("Tu usuario de Twitter (sin @)").setStyle(TextInputStyle.Short).setRequired(false).setValue(profile?.twitterHandle || '');
-        
         modal.addComponents(new ActionRowBuilder().addComponents(vpgUsernameInput), new ActionRowBuilder().addComponents(twitterInput));
-        
         return interaction.showModal(modal);
     }
 
@@ -288,28 +262,22 @@ const handler = async (client, interaction) => {
         if (!isPlayer && !isCaptain) {
             return interaction.editReply({ content: '❌ Solo los jugadores y capitanes pueden anunciarse como agentes libres.' });
         }
-
         const existingAd = await FreeAgent.findOne({ userId: user.id });
         const COOLDOWN_DAYS = 3;
         if (existingAd && (new Date() - existingAd.updatedAt) < (COOLDOWN_DAYS * 24 * 60 * 60 * 1000)) {
             const timeLeft = new Date(existingAd.updatedAt.getTime() + (COOLDOWN_DAYS * 24 * 60 * 60 * 1000));
             return interaction.editReply({ content: `❌ Ya has actualizado tu anuncio recientemente. Podrás hacerlo de nuevo el ${timeLeft.toLocaleDateString('es-ES')}.` });
         }
-        
         const modal = new ModalBuilder().setCustomId('market_agent_modal').setTitle('Anunciarse como Agente Libre');
-            
         const descriptionInput = new TextInputBuilder().setCustomId('descriptionInput').setLabel("Descríbete como jugador").setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(500).setValue(existingAd?.description || '');
         const availabilityInput = new TextInputBuilder().setCustomId('availabilityInput').setLabel("Disponibilidad horaria").setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(200).setValue(existingAd?.availability || '');
-
         modal.addComponents(new ActionRowBuilder().addComponents(descriptionInput), new ActionRowBuilder().addComponents(availabilityInput));
-        
         return interaction.showModal(modal);
     }
     
-    // =======================================================
-    // == COMIENZO DEL CÓDIGO ORIGINAL (RESTO DE BOTONES) ====
-    // =======================================================
-
+    const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
+    const esAprobador = isAdmin || member.roles.cache.has(process.env.APPROVER_ROLE_ID);
+    
     if (customId.startsWith('challenge_slot_')) {
         const challengerTeam = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
         if (!challengerTeam) return interaction.editReply({ content: 'Debes ser Mánager o Capitán de un equipo para desafiar.' });
@@ -510,15 +478,11 @@ const handler = async (client, interaction) => {
         switch (customId) {
             case 'admin_create_league_button':
                 if (!isAdmin) return interaction.editReply({ content: 'Acción restringida.' });
-                const modal = new ModalBuilder().setCustomId('create_league_modal').setTitle('Crear Nueva Liga');
-                const leagueNameInput = new TextInputBuilder().setCustomId('leagueNameInput').setLabel("Nombre de la nueva liga").setStyle(TextInputStyle.Short).setRequired(true);
-                modal.addComponents(new ActionRowBuilder().addComponents(leagueNameInput));
-                return interaction.showModal(modal);
+                return interaction.showModal(new ModalBuilder().setCustomId('create_league_modal').setTitle('Crear Nueva Liga').addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('leagueNameInput').setLabel("Nombre de la nueva liga").setStyle(TextInputStyle.Short).setRequired(true))));
             
             case 'team_edit_data_button':
                 team = await Team.findOne({ guildId: guild.id, managerId: user.id });
                 if (!team) return interaction.editReply({ content: 'Solo los mánagers pueden editar los datos.' });
-                // Sigue al modal de edición
                 break;
 
             case 'team_invite_player_button':
@@ -557,7 +521,6 @@ const handler = async (client, interaction) => {
         }
         
         if (team) {
-            if (!team) return interaction.editReply({ content: 'No se encontró el equipo.' });
             const modal = new ModalBuilder().setCustomId(`edit_data_modal_${team._id}`).setTitle(`Editar Datos de ${team.name}`);
             const newNameInput = new TextInputBuilder().setCustomId('newName').setLabel("Nuevo Nombre (opcional)").setStyle(TextInputStyle.Short).setRequired(false).setValue(team.name);
             const newAbbrInput = new TextInputBuilder().setCustomId('newAbbr').setLabel("Nueva Abreviatura (opcional)").setStyle(TextInputStyle.Short).setRequired(false).setValue(team.abbreviation).setMinLength(3).setMaxLength(3);
@@ -734,11 +697,11 @@ const handler = async (client, interaction) => {
         const memberIds = [teamToManage.managerId, ...teamToManage.captains, ...teamToManage.players].filter(id => id);
         if (memberIds.length === 0) return interaction.editReply({ content: 'Este equipo no tiene miembros.' });
         const membersCollection = await guild.members.fetch({ user: memberIds });
-        const memberOptions = membersCollection.map(member => {
+        const memberOptions = membersCollection.map(m => {
             let description = 'Jugador';
-            if (teamToManage.managerId === member.id) description = 'Mánager';
-            else if (teamToManage.captains.includes(member.id)) description = 'Capitán';
-            return { label: member.user.username, description: description, value: member.id, };
+            if (teamToManage.managerId === m.id) description = 'Mánager';
+            else if (teamToManage.captains.includes(m.id)) description = 'Capitán';
+            return { label: m.user.username, description: description, value: m.id, };
         });
         if (memberOptions.length === 0) return interaction.editReply({ content: 'No se encontraron miembros válidos.' });
         const selectMenu = new StringSelectMenuBuilder().setCustomId('roster_management_menu').setPlaceholder('Selecciona un miembro').addOptions(memberOptions);
@@ -870,87 +833,6 @@ const handler = async (client, interaction) => {
             console.log(`No se pudo borrar el mensaje del panel (ID: ${existingPanel.messageId}) porque probablemente ya no existía.`);
         }
         return interaction.editReply({ content: `✅ Tu panel de amistosos de tipo **${panelType}** ha sido eliminado.` });
-    }
-    // =======================================================
-    // == LÓGICA DEL MERCADO DE FICHAJES =====================
-    // =======================================================
-
-    if (customId === 'market_post_agent') {
-        // Obtenemos la información actualizada del miembro para asegurar que tenemos los roles.
-        const member = await interaction.guild.members.fetch(user.id);
-
-        // PERMISOS: Comprobamos que sea jugador o capitán
-        const isPlayer = member.roles.cache.has(process.env.PLAYER_ROLE_ID);
-        const isCaptain = member.roles.cache.has(process.env.CAPTAIN_ROLE_ID);
-        if (!isPlayer && !isCaptain) {
-            return interaction.editReply({ content: '❌ Solo los jugadores y capitanes pueden anunciarse como agentes libres.' });
-        }
-
-        // CONTROL DE SPAM: Comprobamos si ya se ha anunciado recientemente
-        const FreeAgent = require('../models/freeAgent.js');
-        const existingAd = await FreeAgent.findOne({ userId: user.id });
-        const COOLDOWN_DAYS = 3; // Puede anunciarse cada 3 días
-        if (existingAd && (new Date() - existingAd.updatedAt) < (COOLDOWN_DAYS * 24 * 60 * 60 * 1000)) {
-            const timeLeft = new Date(existingAd.updatedAt.getTime() + (COOLDOWN_DAYS * 24 * 60 * 60 * 1000));
-            return interaction.editReply({ content: `❌ Ya has actualizado tu anuncio recientemente. Podrás hacerlo de nuevo el ${timeLeft.toLocaleDateString('es-ES')} a las ${timeLeft.toLocaleTimeString('es-ES')}.` });
-        }
-        
-        // Si todo está bien, mostramos el formulario
-        const modal = new ModalBuilder()
-            .setCustomId('market_agent_modal')
-            .setTitle('Anunciarse como Agente Libre');
-
-        const descriptionInput = new TextInputBuilder()
-            .setCustomId('descriptionInput')
-            .setLabel("Descríbete como jugador (estilo, puntos fuertes)")
-            .setStyle(TextInputStyle.Paragraph)
-            .setRequired(true)
-            .setMaxLength(500)
-            .setValue(existingAd?.description || '');
-
-        const availabilityInput = new TextInputBuilder()
-            .setCustomId('availabilityInput')
-            .setLabel("¿Cuál es tu disponibilidad horaria?")
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true)
-            .setMaxLength(200)
-            .setValue(existingAd?.availability || '');
-
-        modal.addComponents(
-            new ActionRowBuilder().addComponents(descriptionInput),
-            new ActionRowBuilder().addComponents(availabilityInput)
-        );
-
-        return interaction.showModal(modal);
-    }
-        // =======================================================
-    // == LÓGICA DE REGISTRO DE NUEVO JUGADOR ===============
-    // =======================================================
-
-    if (customId === 'register_as_player_button') {
-        // 1. Comprobar que no pertenece ya a un equipo
-        const existingTeam = await Team.findOne({
-            guildId: guild.id,
-            $or: [{ managerId: user.id }, { captains: user.id }, { players: user.id }]
-        });
-        
-        if (existingTeam) {
-            return interaction.editReply({ content: `❌ Ya perteneces al equipo **${existingTeam.name}**. No necesitas registrarte.` });
-        }
-
-        // 2. Comprobar que no tenga ya el rol
-        if (member.roles.cache.has(process.env.PLAYER_ROLE_ID)) {
-            return interaction.editReply({ content: '✅ ¡Ya estás registrado como jugador!' });
-        }
-
-        // 3. Asignar el rol
-        try {
-            await member.roles.add(process.env.PLAYER_ROLE_ID);
-            return interaction.editReply({ content: '✅ ¡Bienvenido! Has sido registrado como Jugador. Ahora puedes usar el botón "✏️ Editar Perfil" para configurar tu posición y anunciarte en el mercado.' });
-        } catch (error) {
-            console.error("Error al asignar el rol de jugador:", error);
-            return interaction.editReply({ content: '❌ Hubo un error al intentar asignarte el rol. Por favor, contacta a un administrador.' });
-        }
     }
 };
 
