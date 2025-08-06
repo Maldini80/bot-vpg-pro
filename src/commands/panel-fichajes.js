@@ -8,25 +8,53 @@ module.exports = {
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
     async execute(interaction) {
-        // Usamos reply en lugar de deferReply porque respondemos inmediatamente con la confirmación
-        await interaction.reply({ content: 'Creando el panel de fichajes...', flags: 64 });
+        await interaction.reply({ content: 'Creando el nuevo panel de fichajes profesional...', flags: 64 });
 
         const embed = new EmbedBuilder()
-            .setTitle('CENTRO DE OPERACIONES: MERCADO DE FICHAJES')
-            .setDescription('Interactúa con los botones de abajo para navegar por el mercado. La mayoría de acciones se realizarán por mensajes privados para mantener este canal limpio.')
-            .setColor('Gold')
-            .setFooter({ text: 'VPG Transfer Market' });
+            .setColor(0x0099FF) // Un color azul más vibrante
+            .setTitle('CENTRAL DEL MERCADO DE FICHAJES')
+            .setDescription('Bienvenido al centro neurálgico del mercado. Utiliza los botones de abajo según tu rol para navegar por las distintas opciones.')
+            .addFields(
+                { name: '👤 PARA JUGADORES', value: 'Anúnciate como agente libre para que te encuentren los equipos o busca activamente ofertas que se ajusten a tu perfil.' },
+                { name: '👔 PARA MÁNAGERS Y CAPITANES', value: 'Publica las necesidades de tu plantilla para atraer talento o busca en la base de datos de agentes libres para encontrar a tu próxima estrella.' }
+            )
+            .setImage('https://i.imgur.com/your-awesome-banner-image.png') // Opcional: crea y sube una imagen a imgur.com para darle un toque único
+            .setFooter({ text: 'Todas las interacciones se gestionan por mensajes privados para mantener el canal limpio.' });
 
-        // ESTE BLOQUE ESTÁ CORREGIDO
-        const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('market_search_players').setLabel('Buscar Jugadores').setStyle(ButtonStyle.Primary).setEmoji('🔎'),
-            new ButtonBuilder().setCustomId('market_search_teams').setLabel('Buscar Equipos').setStyle(ButtonStyle.Primary).setEmoji('🔎'),
-            new ButtonBuilder().setCustomId('market_post_agent').setLabel('Anunciarse').setStyle(ButtonStyle.Success).setEmoji('📣'),
-            new ButtonBuilder().setCustomId('market_post_offer').setLabel('Publicar Oferta').setStyle(ButtonStyle.Secondary).setEmoji('📄'), // <-- SE HA AÑADIDO LA COMA
-            new ButtonBuilder().setCustomId('market_manage_ad').setLabel('Mi Anuncio').setStyle(ButtonStyle.Danger).setEmoji('⚙️')
+        // Fila de botones para JUGADORES
+        const playerRow = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId('market_post_agent')
+                .setLabel('Anunciarse como Agente Libre')
+                .setStyle(ButtonStyle.Success)
+                .setEmoji('📣'),
+            new ButtonBuilder()
+                .setCustomId('market_search_teams')
+                .setLabel('Buscar Ofertas de Equipo')
+                .setStyle(ButtonStyle.Primary)
+                .setEmoji('🔎'),
+            new ButtonBuilder()
+                .setCustomId('market_manage_ad')
+                .setLabel('Gestionar mi Anuncio')
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('⚙️')
+        );
+        
+        // Fila de botones para MÁNAGERS/CAPITANES
+        const managerRow = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId('market_post_offer')
+                .setLabel('Publicar Oferta de Equipo')
+                .setStyle(ButtonStyle.Success)
+                .setEmoji('📄'),
+            new ButtonBuilder()
+                .setCustomId('market_search_players')
+                .setLabel('Buscar Agentes Libres')
+                .setStyle(ButtonStyle.Primary)
+                .setEmoji(' scouting') // Puedes usar emojis personalizados si tu servidor los tiene
         );
 
-        await interaction.channel.send({ embeds: [embed], components: [row] });
-        await interaction.editReply({ content: '✅ ¡Panel de fichajes creado con éxito!' });
+        await interaction.channel.send({ embeds: [embed], components: [playerRow, managerRow] });
+        await interaction.editReply({ content: '✅ ¡Nuevo panel de fichajes creado con éxito!' });
     },
 };
