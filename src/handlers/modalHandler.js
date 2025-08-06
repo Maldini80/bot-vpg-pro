@@ -15,7 +15,7 @@ module.exports = async (client, interaction) => {
     const { customId, fields, guild, user, member, message } = interaction;
     // --- Lógica para los Modales del Mercado de Fichajes ---
 if (customId.startsWith('market_')) {
-    if (customId === 'market_agent_modal') {
+    if (customId === 'market_agent_modal' || customId === 'market_agent_modal_edit') {
         const description = fields.getTextInputValue('descriptionInput');
         const availability = fields.getTextInputValue('availabilityInput');
         await FreeAgent.findOneAndUpdate(
