@@ -256,6 +256,7 @@ const handler = async (client, interaction) => {
     }
     
     if (customId.startsWith('market_')) {
+        
         if (customId === 'market_post_agent') {
             const hasRequiredRole = member.roles.cache.has(process.env.PLAYER_ROLE_ID) || member.roles.cache.has(process.env.CAPTAIN_ROLE_ID);
             if (!hasRequiredRole) return interaction.reply({ content: '❌ Necesitas el rol de "Jugador" o "Capitán" para anunciarte.', flags: 64 });
@@ -300,6 +301,43 @@ const handler = async (client, interaction) => {
             const positionMenu = new StringSelectMenuBuilder().setCustomId('search_player_pos_filter').setPlaceholder('Selecciona las posiciones que buscas').addOptions(positionOptions).setMinValues(1).setMaxValues(5);
             await interaction.editReply({ content: 'Usa el menú para filtrar jugadores por su posición principal o secundaria.', components: [new ActionRowBuilder().addComponents(positionMenu)]});
         }
+        else if (customId === 'market_manage_ad') {
+    await interaction.deferReply({ flags: 64 });
+    const existingAd = await FreeAgent.findOne({ userId: user.id });
+
+    if (!existingAd) {
+        return interaction.editReply({ content: '❌ No tienes ningún anuncio de agente libre activo.' });
+    }
+
+    const embed = new EmbedBuilder()
+        .setTitle('Gestión de tu Anuncio de Agente Libre')
+        .setDescription('Aquí está tu anuncio actual. Puedes editarlo para actualizar la información o borrarlo si ya no buscas equipo.')
+        .addFields(
+            { name: 'Descripción actual', value: existingAd.description },
+            { name: 'Disponibilidad actual', value: existingAd.availability }
+        )
+        .setColor('Orange')
+        .setFooter({ text: 'Los mánagers ven esta información cuando te buscan.' });
+
+    const managementRow = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('market_edit_ad_button').setLabel('Editar Anuncio').setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId('market_delete_ad_button').setLabel('Borrar Anuncio').setStyle(ButtonStyle.Danger)
+    );
+    
+    await interaction.editReply({ embeds: [embed], components: [managementRow] });
+}
+        else if (customId === 'market_delete_ad_button') {
+    await interaction.deferUpdate(); // Confirmamos que hemos recibido el clic
+    
+    await FreeAgent.deleteOne({ userId: user.id });
+    
+    // Editamos el mensaje original para que los botones desaparezcan y se confirme la acción
+    await interaction.editReply({ 
+        content: '✅ Tu anuncio de agente libre ha sido borrado con éxito.',
+        embeds: [], // Quitamos el embed
+        components: [] // Quitamos los botones
+    });
+}
         return;
     }
 
