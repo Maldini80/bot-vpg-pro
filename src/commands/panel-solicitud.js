@@ -31,7 +31,7 @@ module.exports = {
         );
 
         // Enviamos el panel al canal
-        await interaction.channel.send({ embeds: [embed], components: [row] });
+        await interaction.channel.send({ embeds: [embed], components: [row, row2] });
 
         // Editamos la respuesta deferida para confirmar al admin
         await interaction.editReply({ content: '✅ Panel de solicitud creado con éxito.' });
