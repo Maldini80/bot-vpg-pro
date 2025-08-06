@@ -10,7 +10,7 @@ module.exports = {
     async execute(interaction) {
         // CORRECCIÓN: Se añade esta línea.
         // Esto le dice a Discord "Recibido, dame un segundo" y evita el error "Interacción fallida".
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: 64 });
 
         const embed = new EmbedBuilder()
             .setTitle('Centro de Control de Jugador VPG')
