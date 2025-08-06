@@ -8,7 +8,9 @@ module.exports = {
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     
     async execute(interaction) {
-        // La línea deferReply HA SIDO ELIMINADA de aquí.
+        // CORRECCIÓN: Se añade esta línea.
+        // Esto le dice a Discord "Recibido, dame un segundo" y evita el error "Interacción fallida".
+        await interaction.deferReply({ ephemeral: true });
 
         const embed = new EmbedBuilder()
             .setTitle('Centro de Control de Jugador VPG')
@@ -27,9 +29,10 @@ module.exports = {
             new ButtonBuilder().setCustomId('apply_to_team_button').setLabel('✉️ Aplicar a un Equipo').setStyle(ButtonStyle.Secondary)
         );
 
+        // Esto envía el panel al canal, para que todos lo vean.
         await interaction.channel.send({ embeds: [embed], components: [row, row2] });
 
-        // Usamos editReply porque el "portero" ya hizo defer.
+        // Esto le responde al administrador que ejecutó el comando, en un mensaje que solo él puede ver.
         return interaction.editReply({ content: '✅ Panel de solicitud creado con éxito.' });
     }
 };
