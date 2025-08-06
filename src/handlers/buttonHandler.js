@@ -338,6 +338,31 @@ const handler = async (client, interaction) => {
         components: [] // Quitamos los botones
     });
 }
+        else if (customId === 'market_edit_ad_button') {
+    // Buscamos el anuncio existente para precargar los datos
+    const existingAd = await FreeAgent.findOne({ userId: user.id });
+
+    const modal = new ModalBuilder().setCustomId('market_agent_modal_edit').setTitle('Editar Anuncio de Agente Libre');
+    
+    const descriptionInput = new TextInputBuilder()
+        .setCustomId('descriptionInput')
+        .setLabel("Tu estilo de juego, qué buscas, etc.")
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(true)
+        .setMaxLength(500)
+        .setValue(existingAd ? existingAd.description : ''); // Precargamos el dato
+
+    const availabilityInput = new TextInputBuilder()
+        .setCustomId('availabilityInput')
+        .setLabel("Tu disponibilidad horaria")
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true)
+        .setMaxLength(200)
+        .setValue(existingAd ? existingAd.availability : ''); // Precargamos el dato
+
+    modal.addComponents(new ActionRowBuilder().addComponents(descriptionInput), new ActionRowBuilder().addComponents(availabilityInput));
+    await interaction.showModal(modal);
+}
         return;
     }
 
