@@ -8,7 +8,7 @@ module.exports = {
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
     async execute(interaction) {
-        await interaction.deferReply({ flags: 64 });
+        // La línea deferReply ha sido ELIMINADA de aquí para evitar conflictos.
 
         const embed = new EmbedBuilder()
             .setTitle('Panel de Control de Equipo y Amistosos')
@@ -36,6 +36,7 @@ module.exports = {
 
         await interaction.channel.send({ embeds: [embed], components: [row1, row2, row3] });
 
-        await interaction.editReply({ content: '✅ Panel de equipo y amistosos creado con éxito.' });
+        // Usamos editReply porque el "portero" en index.js ya hizo defer.
+        return interaction.editReply({ content: '✅ Panel de equipo y amistosos creado con éxito.' });
     },
 };
