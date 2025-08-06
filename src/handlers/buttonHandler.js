@@ -430,9 +430,9 @@ const handler = async (client, interaction) => {
         return interaction.editReply({ embeds: [embed] });
     }
         // NUEVO: Bloque para manejar el clic en el botón de editar perfil
-        if (customId === 'edit_profile_button') {
-        // CORRECCIÓN: Se elimina la búsqueda en la base de datos para evitar timeouts.
-        // El formulario se mostrará instantáneamente, pero vacío.
+            if (customId === 'edit_profile_button') {
+        // CORRECCIÓN: Buscamos el perfil para rellenar el formulario con los datos existentes.
+        const existingProfile = await VPGUser.findOne({ discordId: user.id });
 
         const modal = new ModalBuilder()
             .setCustomId('edit_profile_modal')
@@ -443,21 +443,38 @@ const handler = async (client, interaction) => {
             .setLabel("Tu nombre de usuario en VPG")
             .setStyle(TextInputStyle.Short)
             .setRequired(true)
-            .setPlaceholder('Escribe tu nombre de VPG'); // Usamos placeholder en lugar de rellenar
+            .setValue(existingProfile?.vpgUsername || '');
 
         const twitterInput = new TextInputBuilder()
             .setCustomId('twitterInput')
             .setLabel("Tu usuario de Twitter (sin @)")
             .setStyle(TextInputStyle.Short)
             .setRequired(false)
-            .setPlaceholder('Opcional: Escribe tu usuario de Twitter');
+            .setValue(existingProfile?.twitterHandle || '');
+
+        // NUEVO CAMPO PARA POSICIÓN PRINCIPAL
+        const primaryPositionInput = new TextInputBuilder()
+            .setCustomId('primaryPositionInput')
+            .setLabel("Posición Principal (Ej: DFC, MC, DC)")
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setValue(existingProfile?.primaryPosition || '');
+
+        // NUEVO CAMPO PARA POSICIÓN SECUNDARIA
+        const secondaryPositionInput = new TextInputBuilder()
+            .setCustomId('secondaryPositionInput')
+            .setLabel("Posición Secundaria (o escribe 'Ninguna')")
+            .setStyle(TextInputStyle.Short)
+            .setRequired(false)
+            .setValue(existingProfile?.secondaryPosition || '');
 
         modal.addComponents(
             new ActionRowBuilder().addComponents(vpgUsernameInput),
-            new ActionRowBuilder().addComponents(twitterInput)
+            new ActionRowBuilder().addComponents(twitterInput),
+            new ActionRowBuilder().addComponents(primaryPositionInput),
+            new ActionRowBuilder().addComponents(secondaryPositionInput)
         );
         
-        // Esta acción ahora es instantánea y nunca fallará por tiempo.
         return interaction.showModal(modal);
     }
 
