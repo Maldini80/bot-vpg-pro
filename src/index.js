@@ -8,7 +8,7 @@ const cron = require('node-cron');
 const axios = require('axios'); // Herramienta para el despertador
 const AvailabilityPanel = require('./models/availabilityPanel.js');
 const TeamChatChannel = require('./models/teamChatChannel.js');
-const Team = require('./models/team.js');
+const Team = require('./models/team.js'); // VERIFICADO: Ruta correcta
 
 mongoose.connect(process.env.DATABASE_URL)
     .then(() => console.log('Conectado a MongoDB.'))
@@ -23,6 +23,7 @@ const client = new Client({
     ]
 });
 
+// Carga de comandos (sin cambios)
 client.commands = new Collection();
 const commandsPath = path.join(__dirname, 'commands');
 const commandFilesToExclude = ['panel-amistosos.js', 'admin-gestionar-equipo.js'];
@@ -35,6 +36,7 @@ for (const file of commandFiles) {
     }
 }
 
+// Carga de handlers (sin cambios)
 client.handlers = new Map();
 const handlersPath = path.join(__dirname, 'handlers');
 if (fs.existsSync(handlersPath)) {
@@ -45,9 +47,9 @@ if (fs.existsSync(handlersPath)) {
     }
 }
 
+// Evento ClientReady con limpieza diaria (sin cambios)
 client.once(Events.ClientReady, () => {
     console.log(`¡Listo! ${client.user.tag} está online.`);
-    // TAREA DE LIMPIEZA DIARIA (CÓDIGO ORIGINAL RESTAURADO)
     cron.schedule('0 6 * * *', async () => {
         console.log('Ejecutando limpieza diaria de amistosos a las 6:00 AM (Madrid)...');
         try {
@@ -75,7 +77,7 @@ client.once(Events.ClientReady, () => {
     }, { scheduled: true, timezone: "Europe/Madrid" });
 });
 
-// CHAT DE EQUIPO (CÓDIGO ORIGINAL RESTAURADO)
+// Evento de creación de mensaje para chat de equipo (sin cambios)
 client.on(Events.MessageCreate, async message => {
     if (message.author.bot || !message.inGuild()) return;
     const activeChannel = await TeamChatChannel.findOne({ channelId: message.channel.id, guildId: message.guildId });
@@ -104,7 +106,7 @@ client.on(Events.MessageCreate, async message => {
     }
 });
 
-// GESTOR DE INTERACCIONES
+// Gestor de interacciones (sin cambios)
 client.on(Events.InteractionCreate, async interaction => {
     try {
         if (interaction.isChatInputCommand()) {
@@ -144,10 +146,8 @@ setInterval(() => {
         axios.get(selfPingUrl).catch(err => {
             if (err.response && err.response.status !== 404) {
                 console.error("Error en el self-ping:", err.message);
-            } else {
-                // Mensaje opcional para saber que está funcionando
-                // console.log("Ping para mantener activo realizado.");
             }
+            // No es necesario mostrar un log cada 4 minutos, lo dejamos silencioso
         });
     }
 }, 4 * 60 * 1000); // Cada 4 minutos
