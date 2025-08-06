@@ -430,52 +430,50 @@ const handler = async (client, interaction) => {
         return interaction.editReply({ embeds: [embed] });
     }
         // NUEVO: Bloque para manejar el clic en el botón de editar perfil
-            if (customId === 'edit_profile_button') {
-        // CORRECCIÓN: Buscamos el perfil para rellenar el formulario con los datos existentes.
-        const existingProfile = await VPGUser.findOne({ discordId: user.id });
+                if (customId === 'edit_profile_button') {
+        // Definimos las opciones para los menús desplegables
+        const positionOptions = [
+            { label: 'Portero (POR)', value: 'POR' },
+            { label: 'Defensa Central (DFC)', value: 'DFC' },
+            { label: 'Lateral Derecho (LTD)', value: 'LTD' },
+            { label: 'Lateral Izquierdo (LTI)', value: 'LTI' },
+            { label: 'Mediocentro Defensivo (MCD)', value: 'MCD' },
+            { label: 'Mediocentro (MC)', value: 'MC' },
+            { label: 'Mediocentro Ofensivo (MCO)', value: 'MCO' },
+            { label: 'Extremo Derecho (ED)', value: 'ED' },
+            { label: 'Extremo Izquierdo (EI)', value: 'EI' },
+            { label: 'Delantero Centro (DC)', value: 'DC' },
+        ];
 
-        const modal = new ModalBuilder()
-            .setCustomId('edit_profile_modal')
-            .setTitle('Editar tu Perfil VPG');
+        // Creamos el menú para la Posición Principal
+        const primaryPositionMenu = new StringSelectMenuBuilder()
+            .setCustomId('select_primary_position')
+            .setPlaceholder('Selecciona tu posición principal')
+            .addOptions(positionOptions);
 
-        const vpgUsernameInput = new TextInputBuilder()
-            .setCustomId('vpgUsernameInput')
-            .setLabel("Tu nombre de usuario en VPG")
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true)
-            .setValue(existingProfile?.vpgUsername || '');
+        // Creamos el menú para la Posición Secundaria (con la opción "Ninguna")
+        const secondaryPositionMenu = new StringSelectMenuBuilder()
+            .setCustomId('select_secondary_position')
+            .setPlaceholder('Selecciona tu posición secundaria (opcional)')
+            .addOptions(
+                { label: 'Ninguna', value: 'NINGUNA' }, // Opción especial
+                ...positionOptions
+            );
 
-        const twitterInput = new TextInputBuilder()
-            .setCustomId('twitterInput')
-            .setLabel("Tu usuario de Twitter (sin @)")
-            .setStyle(TextInputStyle.Short)
-            .setRequired(false)
-            .setValue(existingProfile?.twitterHandle || '');
+        // Enviamos el mensaje privado con los menús
+        await interaction.reply({
+            content: 'Selecciona tus posiciones en los menús de abajo. Una vez elegidas, pulsa el botón para continuar.',
+            components: [
+                new ActionRowBuilder().addComponents(primaryPositionMenu),
+                new ActionRowRowBuilder().addComponents(secondaryPositionMenu)
+            ],
+            flags: 64 // Esto hace que el mensaje sea privado (solo lo ves tú)
+        });
 
-        // NUEVO CAMPO PARA POSICIÓN PRINCIPAL
-        const primaryPositionInput = new TextInputBuilder()
-            .setCustomId('primaryPositionInput')
-            .setLabel("Posición Principal (Ej: DFC, MC, DC)")
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true)
-            .setValue(existingProfile?.primaryPosition || '');
-
-        // NUEVO CAMPO PARA POSICIÓN SECUNDARIA
-        const secondaryPositionInput = new TextInputBuilder()
-            .setCustomId('secondaryPositionInput')
-            .setLabel("Posición Secundaria (o escribe 'Ninguna')")
-            .setStyle(TextInputStyle.Short)
-            .setRequired(false)
-            .setValue(existingProfile?.secondaryPosition || '');
-
-        modal.addComponents(
-            new ActionRowBuilder().addComponents(vpgUsernameInput),
-            new ActionRowBuilder().addComponents(twitterInput),
-            new ActionRowBuilder().addComponents(primaryPositionInput),
-            new ActionRowBuilder().addComponents(secondaryPositionInput)
-        );
-        
-        return interaction.showModal(modal);
+        // IMPORTANTE: Como la siguiente parte del flujo depende de los menús,
+        // no necesitamos hacer nada más aquí. El código para manejar la selección
+        // de los menús lo añadiremos en el archivo `selectMenuHandler.js`.
+        return;
     }
 
     if (customId === 'admin_create_league_button' || customId.startsWith('admin_dissolve_team_') || customId.startsWith('approve_request_') || customId.startsWith('admin_change_data_') || customId === 'team_edit_data_button' || customId === 'team_invite_player_button') {
