@@ -258,7 +258,7 @@ if (customId === 'continue_profile_modal') {
 
 // --- Flujo de Botones del Mercado ---
 if (customId.startsWith('market_')) {
-    await interaction.deferReply({ flags: 64 });
+    
     
     if (customId === 'market_post_agent') {
         const hasRequiredRole = member.roles.cache.has(process.env.PLAYER_ROLE_ID) || member.roles.cache.has(process.env.CAPTAIN_ROLE_ID);
@@ -278,7 +278,7 @@ if (customId.startsWith('market_')) {
     }
     
     else if (customId === 'market_post_offer') {
-        const team = await Team.findOne({ guildId, $or: [{ managerId: user.id }, { captains: user.id }] });
+        const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
         if (!team) return interaction.editReply({ content: '❌ Solo los Mánagers o Capitanes pueden publicar ofertas de equipo.' });
 
         const existingOffer = await TeamOffer.findOne({ teamId: team._id });
@@ -292,8 +292,9 @@ if (customId.startsWith('market_')) {
     }
 
     else if (customId === 'market_search_teams') {
+        await interaction.deferReply({ flags: 64 });
         const positionOptions = POSITIONS.map(p => ({ label: p, value: p }));
-        const leagues = await League.find({ guildId }).lean();
+        const leagues = await League.find({ guildId: guild.id }).lean();
         const leagueOptions = leagues.map(l => ({ label: l.name, value: l.name }));
         const positionMenu = new StringSelectMenuBuilder().setCustomId('search_team_pos_filter').setPlaceholder('Filtrar por posición que buscan').addOptions({ label: 'Cualquier Posición', value: 'ANY' }, ...positionOptions);
         const leagueMenu = new StringSelectMenuBuilder().setCustomId('search_team_league_filter').setPlaceholder('Filtrar por liga').addOptions({ label: 'Cualquier Liga', value: 'ANY' }, ...leagueOptions);
@@ -301,6 +302,7 @@ if (customId.startsWith('market_')) {
     }
     
     else if (customId === 'market_search_players') {
+        await interaction.deferReply({ flags: 64 });
         const positionOptions = POSITIONS.map(p => ({ label: p, value: p }));
         const positionMenu = new StringSelectMenuBuilder().setCustomId('search_player_pos_filter').setPlaceholder('Selecciona las posiciones que buscas').addOptions(positionOptions).setMinValues(1).setMaxValues(5);
         await interaction.editReply({ content: 'Usa el menú para filtrar jugadores por su posición principal o secundaria.', components: [new ActionRowBuilder().addComponents(positionMenu)], flags: 64 });
