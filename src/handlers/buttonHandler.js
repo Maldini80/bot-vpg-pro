@@ -854,6 +854,82 @@ const handler = async (client, interaction) => {
         await userTeamMg.save();
         return interaction.editReply({ content: `El reclutamiento está ahora **${userTeamMg.recruitmentOpen ? 'ABIERTO' : 'CERRADO'}**.` });
     }
+if (customId === 'team_manage_offer_button') {
+    await interaction.deferReply({ flags: 64 });
+    
+    // userTeamMg ya lo tenemos definido al principio de esta sección del código
+    if (!userTeamMg) return interaction.editReply({ content: 'No se pudo encontrar tu equipo.' });
+    
+    const existingOffer = await TeamOffer.findOne({ teamId: userTeamMg._id });
+
+    if (!existingOffer) {
+        return interaction.editReply({ content: '❌ Tu equipo no tiene ninguna oferta de fichajes activa. Puedes publicar una desde el panel de #mercado-de-fichajes.' });
+    }
+
+    const embed = new EmbedBuilder()
+        .setTitle(`Gestión de Oferta de Fichajes de ${userTeamMg.name}`)
+        .setDescription('Aquí está tu oferta actual. Puedes editarla para cambiar las posiciones o requisitos, o borrarla si ya no buscas jugadores.')
+        .addFields(
+            { name: 'Posiciones Buscadas', value: `\`${existingOffer.positions.join(', ')}\`` },
+            { name: 'Requisitos Actuales', value: existingOffer.requirements }
+        )
+        .setColor('Purple');
+
+    const managementRow = new ActionRowBuilder().addComponents(
+        // Añadimos el ID de la oferta al customId para saber cuál editar/borrar
+        new ButtonBuilder().setCustomId(`edit_team_offer_button_${existingOffer._id}`).setLabel('Editar Oferta').setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId(`delete_team_offer_button_${existingOffer._id}`).setLabel('Borrar Oferta').setStyle(ButtonStyle.Danger)
+    );
+    
+    await interaction.editReply({ embeds: [embed], components: [managementRow] });
+    return;
+}
+// Lógica para el botón de BORRAR
+if (customId.startsWith('delete_team_offer_button_')) {
+    await interaction.deferUpdate();
+    const offerId = customId.split('_')[4];
+
+    await TeamOffer.findByIdAndDelete(offerId);
+
+    // Opcional: Podríamos también buscar el mensaje en el canal público y borrarlo.
+    
+    await interaction.editReply({
+        content: '✅ La oferta de fichajes de tu equipo ha sido borrada con éxito.',
+        embeds: [],
+        components: []
+    });
+    return;
+}
+
+// Lógica para el botón de EDITAR (abre un formulario)
+if (customId.startsWith('edit_team_offer_button_')) {
+    const offerId = customId.split('_')[4];
+    const existingOffer = await TeamOffer.findById(offerId);
+
+    if (!existingOffer) {
+        return interaction.reply({ content: 'Esta oferta ya no existe.', flags: 64 });
+    }
+
+    const modal = new ModalBuilder().setCustomId(`market_offer_modal_${existingOffer.teamId}_edit`).setTitle('Editar Oferta de Equipo');
+    
+    const positionsInput = new TextInputBuilder()
+        .setCustomId('positionsInput')
+        .setLabel("Posiciones (separadas por coma)")
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true)
+        .setValue(existingOffer.positions.join(', ')); // Precargamos los datos
+
+    const requirementsInput = new TextInputBuilder()
+        .setCustomId('requirementsInput')
+        .setLabel("Requisitos y descripción")
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(true)
+        .setValue(existingOffer.requirements); // Precargamos los datos
+
+    modal.addComponents(new ActionRowBuilder().addComponents(positionsInput), new ActionRowBuilder().addComponents(requirementsInput));
+    await interaction.showModal(modal);
+    return;
+}
 
     if (customId === 'post_scheduled_panel' || customId === 'post_instant_panel') {
         await interaction.deferReply({ flags: 64 });
