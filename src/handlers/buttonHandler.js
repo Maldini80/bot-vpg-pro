@@ -465,7 +465,7 @@ const handler = async (client, interaction) => {
             content: 'Selecciona tus posiciones en los menús de abajo. Una vez elegidas, pulsa el botón para continuar.',
             components: [
                 new ActionRowBuilder().addComponents(primaryPositionMenu),
-                new ActionRowRowBuilder().addComponents(secondaryPositionMenu)
+                new ActionRowBuilder().addComponents(secondaryPositionMenu)
             ],
             flags: 64 // Esto hace que el mensaje sea privado (solo lo ves tú)
         });
