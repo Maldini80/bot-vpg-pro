@@ -876,11 +876,6 @@ const handler = async (client, interaction) => {
         }
         return interaction.editReply({ content: `✅ Tu panel de amistosos de tipo **${panelType}** ha sido eliminado.` });
     }
-};
-
-handler.updatePanelMessage = updatePanelMessage;
-handler.getOrCreateWebhook = getOrCreateWebhook;
-
 // =======================================================
 // == LÓGICA DEL MERCADO DE FICHAJES =====================
 // =======================================================
@@ -930,5 +925,11 @@ if (customId === 'market_post_agent') {
 
     return interaction.showModal(modal);
 }
+
+};
+
+handler.updatePanelMessage = updatePanelMessage;
+handler.getOrCreateWebhook = getOrCreateWebhook;
+
 
 module.exports = handler;
