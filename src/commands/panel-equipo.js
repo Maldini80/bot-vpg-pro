@@ -8,6 +8,7 @@ module.exports = {
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
     async execute(interaction) {
+        // CORRECCIÓN: Usamos deferReply para una respuesta instantánea.
         await interaction.deferReply({ flags: 64 });
 
         const embed = new EmbedBuilder()
@@ -30,14 +31,15 @@ module.exports = {
             new ButtonBuilder().setCustomId('team_view_confirmed_matches').setLabel('Amistosos Confirmados').setStyle(ButtonStyle.Secondary).setEmoji('🗓️')
         );
 
-        // ESTE BLOQUE ESTÁ CORREGIDO
         const row3 = new ActionRowBuilder().addComponents(
-             new ButtonBuilder().setCustomId('team_edit_data_button').setLabel('✏️ Editar Datos (Solo MG)').setStyle(ButtonStyle.Secondary), // <-- SE HA AÑADIDO LA COMA
+             new ButtonBuilder().setCustomId('team_edit_data_button').setLabel('✏️ Editar Datos (Solo MG)').setStyle(ButtonStyle.Secondary),
              new ButtonBuilder().setCustomId('team_manage_offer_button').setLabel('📄 Gestionar Oferta de Fichajes').setStyle(ButtonStyle.Primary)
         );
 
+        // Enviamos el panel al canal público
         await interaction.channel.send({ embeds: [embed], components: [row1, row2, row3] });
 
+        // Editamos la respuesta privada para confirmar
         await interaction.editReply({ content: '✅ Panel de equipo y amistosos creado con éxito.' });
     },
 };
