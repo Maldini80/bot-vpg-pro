@@ -118,7 +118,9 @@ async function getOrCreateWebhook(channel, client) {
 }
 
 const handler = async (client, interaction) => {
+    // LÓGICA PARA MENSAJES DIRECTOS (DMs)
     if (!interaction.inGuild()) {
+        // CORRECCIÓN: Se responde inmediatamente a la interacción.
         await interaction.deferUpdate();
         const { customId, message } = interaction;
         
@@ -218,11 +220,16 @@ const handler = async (client, interaction) => {
         return;
     }
 
+    // ==============================================================
+    // == LÓGICA PARA INTERACCIONES DENTRO DEL SERVIDOR (GUILD) ======
+    // ==============================================================
+
     const { customId, member, guild, user } = interaction;
     const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
     const esAprobador = isAdmin || member.roles.cache.has(process.env.APPROVER_ROLE_ID);
     
     if (customId.startsWith('challenge_slot_')) {
+        // CORRECCIÓN: Responder inmediatamente.
         await interaction.deferReply({ ephemeral: true });
         
         const challengerTeam = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
@@ -429,6 +436,7 @@ const handler = async (client, interaction) => {
     }
 
     if (customId === 'admin_create_league_button' || customId.startsWith('admin_dissolve_team_') || customId.startsWith('approve_request_') || customId.startsWith('admin_change_data_') || customId === 'team_edit_data_button' || customId === 'team_invite_player_button') {
+        // CORRECCIÓN: Estos botones abren un Modal. El modal es la respuesta, así que no necesitan defer.
         if (customId === 'admin_create_league_button') {
             if (!isAdmin) return interaction.reply({ content: 'Acción restringida.', ephemeral: true });
             const modal = new ModalBuilder().setCustomId('create_league_modal').setTitle('Crear Nueva Liga');
@@ -485,6 +493,7 @@ const handler = async (client, interaction) => {
     }
     
     if (customId.startsWith('reject_request_') || customId.startsWith('promote_player_') || customId.startsWith('demote_captain_') || customId.startsWith('kick_player_') || customId.startsWith('toggle_mute_player_')) {
+        // CORRECCIÓN: Responder inmediatamente.
         await interaction.deferUpdate();
         if (customId.startsWith('reject_request_')) {
             if (!esAprobador) return interaction.followUp({ content: 'No tienes permiso.', ephemeral: true });
@@ -696,6 +705,7 @@ const handler = async (client, interaction) => {
         return interaction.editReply({ embeds: [embed] });
     }
     
+    // Comprobación general para botones de mánager/capitán
     const userTeamMg = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
     if (!userTeamMg && (customId.startsWith('team_') || customId.startsWith('post_') || customId.startsWith('delete_'))) {
         return interaction.reply({content: 'Debes ser mánager o capitán para usar este botón.', ephemeral: true});
