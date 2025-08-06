@@ -1,70 +1,105 @@
 // src/handlers/modalHandler.js
-const TeamOffer = require('../models/teamOffer.js');
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits } = require('discord.js');
 const Team = require('../models/team.js');
 const League = require('../models/league.js');
 const PlayerApplication = require('../models/playerApplication.js');
 const VPGUser = require('../models/user.js');
 const FreeAgent = require('../models/freeAgent.js');
+const TeamOffer = require('../models/teamOffer.js');
 
 module.exports = async (client, interaction) => {
-    // CORRECCIÓN: Responder inmediatamente a la interacción del modal.
-    // Usamos flags: 64 que es lo mismo que ephemeral: true, para evitar el warning de deprecación.
+    // Todos los modales se responden aquí una sola vez, de forma privada
     await interaction.deferReply({ flags: 64 });
 
     const { customId, fields, guild, user, member, message } = interaction;
-    // --- Lógica para los Modales del Mercado de Fichajes ---
-if (customId.startsWith('market_')) {
-    if (customId === 'market_agent_modal' || customId === 'market_agent_modal_edit') {
-        const description = fields.getTextInputValue('descriptionInput');
-        const availability = fields.getTextInputValue('availabilityInput');
-        await FreeAgent.findOneAndUpdate(
-            { userId: user.id },
-            { guildId: guild.id, description, availability, status: 'ACTIVE' },
-            { upsert: true, new: true }
-        );
-        await interaction.editReply({ content: '✅ ¡Tu anuncio como agente libre ha sido publicado/actualizado!' });
-    }
-    else if (customId.startsWith('market_offer_modal_')) {
-        const teamId = customId.split('_')[3];
-        const positionsRaw = fields.getTextInputValue('positionsInput');
-        const requirements = fields.getTextInputValue('requirementsInput');
-        const positions = positionsRaw.split(',').map(p => p.trim().toUpperCase()).filter(p => p);
-        if (positions.length === 0) {
-            return interaction.editReply({ content: '❌ Debes especificar al menos una posición.' });
-        }
-        await TeamOffer.create({ teamId, guildId: guild.id, postedById: user.id, positions, requirements });
-        await interaction.editReply({ content: '✅ ¡La oferta de tu equipo ha sido publicada!' });
-    }
-    return; // Detenemos la ejecución
-}
-    
+
+    // --- LÓGICA DE PERFIL Y PUBLICACIÓN DE ANUNCIOS (NUEVA Y CORREGIDA) ---
+
     if (customId === 'edit_profile_modal') {
         const vpgUsername = fields.getTextInputValue('vpgUsernameInput');
         const twitterHandle = fields.getTextInputValue('twitterInput');
+        const psnId = fields.getTextInputValue('psnInput');
+        const eaId = fields.getTextInputValue('eaInput');
         await VPGUser.findOneAndUpdate(
-            { discordId: user.id },
-            { vpgUsername: vpgUsername, twitterHandle: twitterHandle, lastUpdated: Date.now() },
-            { upsert: true, new: true }
+            { discordId: user.id }, 
+            { vpgUsername, twitterHandle, psnId, eaId }, 
+            { upsert: true }
         );
-        return interaction.editReply({ content: '✅ ¡Perfil actualizado con éxito!' });
+        return interaction.editReply({ content: '✅ ¡Tu perfil ha sido actualizado con éxito!' });
     }
 
-    if (customId === 'market_agent_modal') {
-        const userProfile = await VPGUser.findOne({ discordId: user.id });
-        if (!userProfile || !userProfile.primaryPosition) {
-            return interaction.editReply({ content: '❌ Antes de anunciarte, debes configurar tu perfil y tu posición principal usando el botón "✏️ Editar Perfil".' });
-        }
-        const description = fields.getTextInputValue('descriptionInput');
+    if (customId === 'market_agent_modal' || customId === 'market_agent_modal_edit') {
+        const experience = fields.getTextInputValue('experienceInput');
+        const seeking = fields.getTextInputValue('seekingInput');
         const availability = fields.getTextInputValue('availabilityInput');
+        
         await FreeAgent.findOneAndUpdate(
-            { userId: user.id },
-            { guildId: guild.id, description: description, availability: availability, status: 'ACTIVE' },
+            { userId: user.id }, 
+            { guildId: guild.id, experience, seeking, availability, status: 'ACTIVE' }, 
             { upsert: true, new: true }
         );
-        return interaction.editReply({ content: '✅ ¡Tu anuncio como agente libre ha sido publicado/actualizado! Los mánagers ahora podrán encontrarte usando el buscador.' });
+
+        const channelId = process.env.PLAYERS_AD_CHANNEL_ID;
+        if (!channelId) return interaction.editReply({ content: '❌ Error de configuración: El canal de anuncios para jugadores no está definido.' });
+        
+        const channel = await client.channels.fetch(channelId).catch(() => null);
+        if (!channel) return interaction.editReply({ content: '❌ Error: No se pudo encontrar el canal de anuncios para jugadores.' });
+
+        const profile = await VPGUser.findOne({ discordId: user.id }).lean();
+        
+        const playerAdEmbed = new EmbedBuilder()
+            .setAuthor({ name: member.displayName, iconURL: user.displayAvatarURL() })
+            .setThumbnail(user.displayAvatarURL())
+            .setTitle(`Jugador en busca de equipo: ${member.displayName}`)
+            .setColor('Blue')
+            .addFields(
+                { name: 'Posiciones', value: `**${profile.primaryPosition || 'N/A'}** / ${profile.secondaryPosition || 'N/A'}`, inline: true },
+                { name: 'Contacto', value: `<@${user.id}>`, inline: true },
+                { name: 'IDs de Juego', value: `PSN: ${profile.psnId || 'N/A'}\nEA ID: ${profile.eaId || 'N/A'}`, inline: false },
+                { name: 'Experiencia', value: experience, inline: false },
+                { name: 'Busco un equipo que...', value: seeking, inline: false },
+                { name: 'Disponibilidad', value: availability, inline: false }
+            )
+            .setTimestamp();
+        
+        await channel.send({ embeds: [playerAdEmbed] });
+        return interaction.editReply({ content: `✅ ¡Tu anuncio ha sido publicado/actualizado con éxito en el canal ${channel}!` });
     }
-    
+
+    if (customId.startsWith('market_offer_modal_')) {
+        const teamId = customId.split('_')[3];
+        const positions = fields.getTextInputValue('positionsInput').split(',').map(p => p.trim().toUpperCase()).filter(p => p);
+        const requirements = fields.getTextInputValue('requirementsInput');
+        
+        await TeamOffer.findOneAndUpdate({ teamId }, { guildId: guild.id, postedById: user.id, positions, requirements, status: 'ACTIVE' }, { upsert: true });
+
+        const channelId = process.env.TEAMS_AD_CHANNEL_ID;
+        if (!channelId) return interaction.editReply({ content: '❌ Error de configuración: El canal de ofertas de equipos no está definido.' });
+
+        const channel = await client.channels.fetch(channelId).catch(() => null);
+        if (!channel) return interaction.editReply({ content: '❌ Error: No se pudo encontrar el canal de ofertas de equipos.' });
+
+        const team = await Team.findById(teamId).lean();
+
+        const teamOfferEmbed = new EmbedBuilder()
+            .setAuthor({ name: team.name, iconURL: team.logoUrl })
+            .setThumbnail(team.logoUrl)
+            .setTitle(`¡${team.name} está buscando jugadores!`)
+            .setColor('Green')
+            .addFields(
+                { name: 'Posiciones Buscadas', value: `\`\`\`${positions.join(', ')}\`\`\``, inline: false },
+                { name: 'Requisitos y Descripción', value: requirements, inline: false },
+                { name: 'Contacto Principal', value: `<@${team.managerId}>`, inline: true },
+                { name: 'Liga', value: team.league, inline: true }
+            )
+            .setTimestamp();
+
+        await channel.send({ embeds: [teamOfferEmbed] });
+        return interaction.editReply({ content: `✅ ¡La oferta de tu equipo ha sido publicada/actualizada con éxito en el canal ${channel}!` });
+    }
+
+    // --- LÓGICA ORIGINAL DE OTROS MODALES (Mantenida y Funcional) ---
+
     if (customId.startsWith('manager_request_modal_')) {
         const leagueName = customId.split('_')[3];
         const vpgUsername = fields.getTextInputValue('vpgUsername');
@@ -227,41 +262,6 @@ if (customId.startsWith('market_')) {
         } catch (error) {
             await PlayerApplication.findByIdAndDelete(application._id);
             return interaction.editReply({ content: `❌ No se pudo enviar la solicitud. El mánager tiene los MDs cerrados.` });
-        }
-    }
-    
-    if (customId.startsWith('challenge_modal_')) {
-        const parts = customId.split('_');
-        const panelId = parts[2];
-        const time = parts[3];
-        const challengerTeamId = parts[4];
-        
-        const presentation = fields.getTextInputValue('presentation');
-        const panel = await AvailabilityPanel.findOne({ _id: panelId }).populate('teamId');
-        if (!panel) return interaction.editReply({ content: 'Este panel de amistosos ya no existe.' });
-        
-        const hostManager = await client.users.fetch(panel.postedById).catch(() => null);
-        if (!hostManager) return interaction.editReply({ content: 'No se pudo encontrar al creador del panel.' });
-        
-        const challengerTeam = await Team.findById(challengerTeamId);
-        
-        const embed = new EmbedBuilder()
-            .setTitle(`⚔️ ¡Nuevo Desafío para las ${time}!`)
-            .setAuthor({ name: challengerTeam.name, iconURL: challengerTeam.logoUrl })
-            .setDescription(`**El equipo ${challengerTeam.name} quiere jugar contra vosotros.**\n\nMensaje:\n>>> ${presentation}`)
-            .setColor('Yellow')
-            .setFooter({ text: `Puedes aceptar o rechazar este desafío a continuación.` });
-            
-        const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId(`accept_challenge_${panel._id}_${time}_${challengerTeamId}_${user.id}`).setLabel('Aceptar Desafío').setStyle(ButtonStyle.Success),
-            new ButtonBuilder().setCustomId(`reject_challenge_${panel._id}_${time}_${challengerTeamId}_${user.id}`).setLabel('Rechazar').setStyle(ButtonStyle.Danger)
-        );
-        
-        try {
-            await hostManager.send({ embeds: [embed], components: [row] });
-            return interaction.editReply({ content: `✅ Tu desafío para las **${time}** ha sido enviado a **${panel.teamId.name}**.` });
-        } catch (error) {
-            return interaction.editReply({ content: `❌ No se pudo enviar el desafío. El mánager de ${panel.teamId.name} podría tener los MDs cerrados.` });
         }
     }
 };
