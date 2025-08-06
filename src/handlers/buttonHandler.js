@@ -5,7 +5,6 @@ const League = require('../models/league.js');
 const PlayerApplication = require('../models/playerApplication.js');
 const AvailabilityPanel = require('../models/availabilityPanel.js');
 const VPGUser = require('../models/user.js');
-const FreeAgent = require('../models/freeAgent.js');
 
 async function updatePanelMessage(client, panelId) {
     try {
@@ -136,18 +135,18 @@ const handler = async (client, interaction) => {
             const slot = panel.timeSlots.find(s => s.time === time);
             if (!slot) {
                 await message.edit({ content: 'Este horario de partido ya no existe en el panel.', components: [] });
-                return interaction.followUp({ content: 'El horario ya no existe.', flags: 64 });
+                return interaction.followUp({ content: 'El horario ya no existe.', ephemeral: true });
             }
             
             if (slot.status === 'CONFIRMED') {
                 await message.edit({ content: '❌ Este desafío ha expirado porque ya se ha confirmado otro partido en este horario.', components: [] });
-                return interaction.followUp({ content: '¡Demasiado tarde! Ya has aceptado otro desafío para este horario.', flags: 64 });
+                return interaction.followUp({ content: '¡Demasiado tarde! Ya has aceptado otro desafío para este horario.', ephemeral: true });
             }
 
             const challengeIndex = slot.pendingChallenges.findIndex(c => c._id.toString() === challengeId);
             if (challengeIndex === -1) {
                 await message.edit({ content: 'Esta petición de desafío ya no es válida o ya fue gestionada.', components: [] });
-                return interaction.followUp({ content: 'La petición ya no es válida.', flags: 64 });
+                return interaction.followUp({ content: 'La petición ya no es válida.', ephemeral: true });
             }
 
             const [acceptedChallenge] = slot.pendingChallenges.splice(challengeIndex, 1);
@@ -220,72 +219,21 @@ const handler = async (client, interaction) => {
     }
 
     const { customId, member, guild, user } = interaction;
-    
-    // Todas las interacciones de botones son potencialmente lentas, así que hacemos defer.
-    await interaction.deferReply({ flags: 64 });
-    
-    if (customId === 'edit_profile_button') {
-        const positionOptions = [
-            { label: 'GK', value: 'POR' },
-            { label: 'DFC', value: 'DFC' },
-            { label: 'CARR', value: 'LTD' },
-            { label: 'MCD', value: 'MCD' },
-            { label: 'MV', value: 'MC' },
-            { label: 'MCO', value: 'MCO' },
-            { label: 'DC', value: 'DC' },
-        ];
-        const primaryPositionMenu = new StringSelectMenuBuilder().setCustomId('select_primary_position').setPlaceholder('Selecciona tu posición principal');
-        const secondaryPositionMenu = new StringSelectMenuBuilder().setCustomId('select_secondary_position').setPlaceholder('Selecciona tu posición secundaria (opcional)');
-        const profile = await VPGUser.findOne({ discordId: user.id });
-        primaryPositionMenu.addOptions(positionOptions.map(opt => ({ ...opt, default: !!(profile && opt.value === profile.primaryPosition) })));
-        const secondaryOptions = [{ label: 'Ninguna', value: 'NINGUNA' }, ...positionOptions];
-        secondaryPositionMenu.addOptions(secondaryOptions.map(opt => ({ ...opt, default: !!(profile && opt.value === profile.secondaryPosition) })));
-        const continueButton = new ButtonBuilder().setCustomId('continue_to_profile_modal').setLabel('Continuar con Nombre y Twitter').setStyle(ButtonStyle.Success);
-        return interaction.editReply({
-            content: 'Selecciona tus posiciones. Cuando termines, pulsa el botón para editar el resto de tu perfil.',
-            components: [ new ActionRowBuilder().addComponents(primaryPositionMenu), new ActionRowBuilder().addComponents(secondaryPositionMenu), new ActionRowBuilder().addComponents(continueButton) ],
-        });
-    }
-
-    if (customId === 'continue_to_profile_modal') {
-        const profile = await VPGUser.findOne({ discordId: user.id });
-        const modal = new ModalBuilder().setCustomId('edit_profile_modal').setTitle('Editar Nombre y Twitter');
-        const vpgUsernameInput = new TextInputBuilder().setCustomId('vpgUsernameInput').setLabel("Tu nombre de usuario en VPG").setStyle(TextInputStyle.Short).setRequired(true).setValue(profile?.vpgUsername || '');
-        const twitterInput = new TextInputBuilder().setCustomId('twitterInput').setLabel("Tu usuario de Twitter (sin @)").setStyle(TextInputStyle.Short).setRequired(false).setValue(profile?.twitterHandle || '');
-        modal.addComponents(new ActionRowBuilder().addComponents(vpgUsernameInput), new ActionRowBuilder().addComponents(twitterInput));
-        return interaction.showModal(modal);
-    }
-
-    if (customId === 'market_post_agent') {
-        const isPlayer = member.roles.cache.has(process.env.PLAYER_ROLE_ID);
-        const isCaptain = member.roles.cache.has(process.env.CAPTAIN_ROLE_ID);
-        if (!isPlayer && !isCaptain) {
-            return interaction.editReply({ content: '❌ Solo los jugadores y capitanes pueden anunciarse como agentes libres.' });
-        }
-        const existingAd = await FreeAgent.findOne({ userId: user.id });
-        const COOLDOWN_DAYS = 3;
-        if (existingAd && (new Date() - existingAd.updatedAt) < (COOLDOWN_DAYS * 24 * 60 * 60 * 1000)) {
-            const timeLeft = new Date(existingAd.updatedAt.getTime() + (COOLDOWN_DAYS * 24 * 60 * 60 * 1000));
-            return interaction.editReply({ content: `❌ Ya has actualizado tu anuncio recientemente. Podrás hacerlo de nuevo el ${timeLeft.toLocaleDateString('es-ES')}.` });
-        }
-        const modal = new ModalBuilder().setCustomId('market_agent_modal').setTitle('Anunciarse como Agente Libre');
-        const descriptionInput = new TextInputBuilder().setCustomId('descriptionInput').setLabel("Descríbete como jugador").setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(500).setValue(existingAd?.description || '');
-        const availabilityInput = new TextInputBuilder().setCustomId('availabilityInput').setLabel("Disponibilidad horaria").setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(200).setValue(existingAd?.availability || '');
-        modal.addComponents(new ActionRowBuilder().addComponents(descriptionInput), new ActionRowBuilder().addComponents(availabilityInput));
-        return interaction.showModal(modal);
-    }
-    
     const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
     const esAprobador = isAdmin || member.roles.cache.has(process.env.APPROVER_ROLE_ID);
     
     if (customId.startsWith('challenge_slot_')) {
+        await interaction.deferReply({ flags: 64 });
+        
         const challengerTeam = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
         if (!challengerTeam) return interaction.editReply({ content: 'Debes ser Mánager o Capitán de un equipo para desafiar.' });
 
         const [, , panelId, time] = customId.split('_');
 
         const existingMatch = await AvailabilityPanel.findOne({
-            guildId: guild.id, "timeSlots.time": time, "timeSlots.status": "CONFIRMED",
+            guildId: guild.id,
+            "timeSlots.time": time,
+            "timeSlots.status": "CONFIRMED",
             $or: [ { teamId: challengerTeam._id }, { "timeSlots.challengerTeamId": challengerTeam._id } ]
         }).populate('teamId timeSlots.challengerTeamId');
 
@@ -308,6 +256,7 @@ const handler = async (client, interaction) => {
         
         const newChallenge = { teamId: challengerTeam._id, userId: user.id };
         slot.pendingChallenges.push(newChallenge);
+        
         await panel.save();
         
         const updatedSlot = panel.timeSlots.find(s => s.time === time);
@@ -338,6 +287,7 @@ const handler = async (client, interaction) => {
     }
     
     if (customId.startsWith('cancel_all_challenges_')) {
+        await interaction.deferReply({ flags: 64 });
         const panelId = customId.split('_')[3];
         const panel = await AvailabilityPanel.findById(panelId).populate('teamId');
         if (!panel) return interaction.editReply({ content: 'Este panel ya no existe.' });
@@ -373,6 +323,7 @@ const handler = async (client, interaction) => {
     }
 
     if (customId.startsWith('abandon_challenge_')) {
+        await interaction.deferReply({ flags: 64 });
         const [, , panelId, time] = customId.split('_');
         const panel = await AvailabilityPanel.findById(panelId);
         if (!panel) return interaction.editReply({ content: 'Este panel ya no existe.' });
@@ -405,12 +356,14 @@ const handler = async (client, interaction) => {
         }
         
         await updatePanelMessage(client, panel._id);
+
         await interaction.editReply({ content: '✅ El partido ha sido cancelado. Ambos paneles han sido actualizados.' });
         if (otherManager) await otherManager.send(`⚠️ El equipo **${userTeam.name}** ha cancelado vuestro partido de las **${time}**. El horario vuelve a estar libre.`).catch(()=>{});
         return;
     }
 
     if (customId.startsWith('contact_opponent_')) {
+        await interaction.deferReply({ flags: 64 });
         const [, , teamId1, teamId2] = customId.split('_');
         
         const userTeam = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
@@ -432,11 +385,13 @@ const handler = async (client, interaction) => {
     }
     
     if (customId === 'team_view_confirmed_matches') {
+        await interaction.deferReply({ flags: 64 });
         const userTeam = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }, { players: user.id }] });
         if (!userTeam) return interaction.editReply({ content: 'Debes pertenecer a un equipo para ver los partidos.' });
 
         const confirmedPanels = await AvailabilityPanel.find({
-            guildId: guild.id, "timeSlots.status": "CONFIRMED",
+            guildId: guild.id,
+            "timeSlots.status": "CONFIRMED",
             $or: [ { teamId: userTeam._id }, { "timeSlots.challengerTeamId": userTeam._id } ]
         }).populate('teamId timeSlots.challengerTeamId').lean();
 
@@ -453,7 +408,7 @@ const handler = async (client, interaction) => {
                 }
             }
         }
-        
+
         const uniqueMatches = [...new Map(allConfirmedSlots.map(item => [item.time, item])).values()];
         uniqueMatches.sort((a,b) => a.time.localeCompare(b.time));
 
@@ -474,38 +429,25 @@ const handler = async (client, interaction) => {
     }
 
     if (customId === 'admin_create_league_button' || customId.startsWith('admin_dissolve_team_') || customId.startsWith('approve_request_') || customId.startsWith('admin_change_data_') || customId === 'team_edit_data_button' || customId === 'team_invite_player_button') {
-        let team;
-        switch (customId) {
-            case 'admin_create_league_button':
-                if (!isAdmin) return interaction.editReply({ content: 'Acción restringida.' });
-                return interaction.showModal(new ModalBuilder().setCustomId('create_league_modal').setTitle('Crear Nueva Liga').addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('leagueNameInput').setLabel("Nombre de la nueva liga").setStyle(TextInputStyle.Short).setRequired(true))));
-            
-            case 'team_edit_data_button':
-                team = await Team.findOne({ guildId: guild.id, managerId: user.id });
-                if (!team) return interaction.editReply({ content: 'Solo los mánagers pueden editar los datos.' });
-                break;
-
-            case 'team_invite_player_button':
-                const teamToInvite = await Team.findOne({ guildId: guild.id, managerId: user.id });
-                if (!teamToInvite) return interaction.editReply({ content: 'Solo los mánagers pueden invitar.' });
-                const inviteModal = new ModalBuilder().setCustomId(`invite_player_modal_${teamToInvite._id}`).setTitle(`Invitar Jugador a ${teamToInvite.name}`);
-                const playerNameInput = new TextInputBuilder().setCustomId('playerName').setLabel("Nombre de usuario (o parte) del jugador").setStyle(TextInputStyle.Short).setRequired(true);
-                inviteModal.addComponents(new ActionRowBuilder().addComponents(playerNameInput));
-                return interaction.showModal(inviteModal);
+        if (customId === 'admin_create_league_button') {
+            if (!isAdmin) return interaction.reply({ content: 'Acción restringida.', ephemeral: true });
+            const modal = new ModalBuilder().setCustomId('create_league_modal').setTitle('Crear Nueva Liga');
+            const leagueNameInput = new TextInputBuilder().setCustomId('leagueNameInput').setLabel("Nombre de la nueva liga").setStyle(TextInputStyle.Short).setRequired(true);
+            modal.addComponents(new ActionRowBuilder().addComponents(leagueNameInput));
+            return interaction.showModal(modal);
         }
-        
         if (customId.startsWith('admin_dissolve_team_')) {
-            if (!isAdmin) return interaction.editReply({ content: 'Acción restringida.' });
+            if (!isAdmin) return interaction.reply({ content: 'Acción restringida.', ephemeral: true });
             const teamId = customId.split('_')[3];
-            team = await Team.findById(teamId);
-            if (!team) return interaction.editReply({ content: 'Equipo no encontrado.' });
+            const team = await Team.findById(teamId);
+            if (!team) return interaction.reply({ content: 'Equipo no encontrado.', ephemeral: true });
             const modal = new ModalBuilder().setCustomId(`confirm_dissolve_modal_${teamId}`).setTitle(`Disolver Equipo: ${team.name}`);
             const confirmationInput = new TextInputBuilder().setCustomId('confirmation_text').setLabel(`Escribe "${team.name}" para confirmar`).setStyle(TextInputStyle.Short).setRequired(true).setPlaceholder(team.name);
             modal.addComponents(new ActionRowBuilder().addComponents(confirmationInput));
             return interaction.showModal(modal);
         }
         if (customId.startsWith('approve_request_')) {
-            if (!esAprobador) return interaction.editReply({ content: 'No tienes permiso.' });
+            if (!esAprobador) return interaction.reply({ content: 'No tienes permiso.', ephemeral: true });
             const parts = customId.split('_');
             const applicantId = parts[2];
             const leagueName = parts[3];
@@ -514,13 +456,17 @@ const handler = async (client, interaction) => {
             modal.addComponents(new ActionRowBuilder().addComponents(teamLogoInput));
             return interaction.showModal(modal);
         }
-        if (customId.startsWith('admin_change_data_')) {
-            if (!isAdmin) return interaction.editReply({ content: 'Acción restringida.' });
-            const teamId = customId.split('_')[3];
-            team = await Team.findById(teamId);
-        }
-        
-        if (team) {
+        if (customId.startsWith('admin_change_data_') || customId === 'team_edit_data_button') {
+            let team;
+            if (customId.startsWith('admin_change_data_')) {
+                if (!isAdmin) return interaction.reply({ content: 'Acción restringida.', ephemeral: true });
+                const teamId = customId.split('_')[3];
+                team = await Team.findById(teamId);
+            } else {
+                team = await Team.findOne({ guildId: guild.id, managerId: user.id });
+                if (!team) return interaction.reply({ content: 'Solo los mánagers pueden editar los datos.', ephemeral: true });
+            }
+            if (!team) return interaction.reply({ content: 'No se encontró el equipo.', ephemeral: true });
             const modal = new ModalBuilder().setCustomId(`edit_data_modal_${team._id}`).setTitle(`Editar Datos de ${team.name}`);
             const newNameInput = new TextInputBuilder().setCustomId('newName').setLabel("Nuevo Nombre (opcional)").setStyle(TextInputStyle.Short).setRequired(false).setValue(team.name);
             const newAbbrInput = new TextInputBuilder().setCustomId('newAbbr').setLabel("Nueva Abreviatura (opcional)").setStyle(TextInputStyle.Short).setRequired(false).setValue(team.abbreviation).setMinLength(3).setMaxLength(3);
@@ -528,67 +474,75 @@ const handler = async (client, interaction) => {
             modal.addComponents(new ActionRowBuilder().addComponents(newNameInput), new ActionRowBuilder().addComponents(newAbbrInput), new ActionRowBuilder().addComponents(newLogoInput));
             return interaction.showModal(modal);
         }
-    }
-    
-    if (customId.startsWith('reject_request_')) {
-        await interaction.deferUpdate();
-        if (!esAprobador) return interaction.followUp({ content: 'No tienes permiso.', flags: 64 });
-        const applicantId = customId.split('_')[2];
-        const applicant = await guild.members.fetch(applicantId).catch(()=>null);
-        const disabledRow = new ActionRowBuilder().addComponents(ButtonBuilder.from(interaction.message.components[0].components[0]).setDisabled(true), ButtonBuilder.from(interaction.message.components[0].components[1]).setDisabled(true));
-        await interaction.message.edit({ components: [disabledRow] });
-        await interaction.followUp({ content: `La solicitud de **${applicant ? applicant.user.tag : 'un usuario'}** ha sido rechazada.`, flags: 64 });
-        if (applicant) await applicant.send(`Tu solicitud para registrar un equipo ha sido rechazada.`).catch(() => {});
-        return;
-    }
-    
-    if (customId.startsWith('promote_player_') || customId.startsWith('demote_captain_') || customId.startsWith('kick_player_') || customId.startsWith('toggle_mute_player_')) {
-        await interaction.deferUpdate();
-        const targetId = customId.substring(customId.lastIndexOf('_') + 1);
-        const team = await Team.findOne({ guildId: interaction.guildId, $or: [{ managerId: user.id }, { captains: user.id }] });
-        if(!team) return interaction.editReply({ content: 'No tienes permisos sobre este equipo.', components: []});
-        const targetMember = await interaction.guild.members.fetch(targetId).catch(() => null);
-        if(!targetMember) return interaction.editReply({ content: 'Miembro no encontrado.', components: []});
-        const isManagerAction = team.managerId === user.id;
-        if(customId.startsWith('kick_player_')) {
-            const isTargetCaptain = team.captains.includes(targetId);
-            if(isTargetCaptain && !isManagerAction) return interaction.editReply({content: 'Un capitán no puede expulsar a otro capitán.', components: []});
-            team.players = team.players.filter(p => p !== targetId);
-            team.captains = team.captains.filter(c => c !== targetId);
-            await targetMember.roles.remove([process.env.PLAYER_ROLE_ID, process.env.CAPTAIN_ROLE_ID, process.env.MUTED_ROLE_ID]).catch(() => {});
-            if (targetMember.id !== interaction.guild.ownerId) await targetMember.setNickname(targetMember.user.username).catch(()=>{});
-            await interaction.editReply({ content: `✅ **${targetMember.user.username}** ha sido expulsado.`, components: [] });
-        } else if (customId.startsWith('promote_player_')) {
-            if(!isManagerAction) return interaction.editReply({content: 'Solo el Mánager puede ascender.', components: []});
-            team.players = team.players.filter(p => p !== targetId);
-            team.captains.push(targetId);
-            await targetMember.roles.remove(process.env.PLAYER_ROLE_ID).catch(()=>{});
-            await targetMember.roles.add(process.env.CAPTAIN_ROLE_ID).catch(()=>{});
-            if (targetMember.id !== interaction.guild.ownerId) await targetMember.setNickname(`|C| ${team.abbreviation} ${targetMember.user.username}`).catch(()=>{});
-            await interaction.editReply({ content: `✅ **${targetMember.user.username}** ascendido a Capitán.`, components: [] });
-        } else if (customId.startsWith('demote_captain_')) {
-            if(!isManagerAction) return interaction.editReply({content: 'Solo el Mánager puede degradar.', components: []});
-            team.captains = team.captains.filter(c => c !== targetId);
-            team.players.push(targetId);
-            await targetMember.roles.remove(process.env.CAPTAIN_ROLE_ID).catch(()=>{});
-            await targetMember.roles.add(process.env.PLAYER_ROLE_ID).catch(()=>{});
-            if (targetMember.id !== interaction.guild.ownerId) await targetMember.setNickname(`${team.abbreviation} ${targetMember.user.username}`).catch(()=>{});
-            await interaction.editReply({ content: `✅ **${targetMember.user.username}** degradado a Jugador.`, components: [] });
-        } else if (customId.startsWith('toggle_mute_player_')) {
-            if(team.captains.includes(targetId) && !isManagerAction) return interaction.editReply({ content: 'No puedes mutear a un capitán.', components: [] });
-            const hasMutedRole = targetMember.roles.cache.has(process.env.MUTED_ROLE_ID);
-            if (hasMutedRole) {
-                await targetMember.roles.remove(process.env.MUTED_ROLE_ID);
-                await interaction.editReply({ content: `✅ **${targetMember.user.username}** desmuteado.`, components: [] });
-            } else {
-                await targetMember.roles.add(process.env.MUTED_ROLE_ID);
-                await interaction.editReply({ content: `🔇 **${targetMember.user.username}** muteado.`, components: [] });
-            }
+        if (customId === 'team_invite_player_button') {
+            const team = await Team.findOne({ guildId: guild.id, managerId: user.id });
+            if (!team) return interaction.reply({ content: 'Solo los mánagers pueden invitar.', ephemeral: true });
+            const modal = new ModalBuilder().setCustomId(`invite_player_modal_${team._id}`).setTitle(`Invitar Jugador a ${team.name}`);
+            const playerNameInput = new TextInputBuilder().setCustomId('playerName').setLabel("Nombre de usuario (o parte) del jugador").setStyle(TextInputStyle.Short).setRequired(true);
+            modal.addComponents(new ActionRowBuilder().addComponents(playerNameInput));
+            return interaction.showModal(modal);
         }
-        await team.save();
+    }
+    
+    if (customId.startsWith('reject_request_') || customId.startsWith('promote_player_') || customId.startsWith('demote_captain_') || customId.startsWith('kick_player_') || customId.startsWith('toggle_mute_player_')) {
+        await interaction.deferUpdate();
+        if (customId.startsWith('reject_request_')) {
+            if (!esAprobador) return interaction.followUp({ content: 'No tienes permiso.', ephemeral: true });
+            const applicantId = customId.split('_')[2];
+            const applicant = await guild.members.fetch(applicantId).catch(()=>null);
+            const disabledRow = new ActionRowBuilder().addComponents(ButtonBuilder.from(interaction.message.components[0].components[0]).setDisabled(true), ButtonBuilder.from(interaction.message.components[0].components[1]).setDisabled(true));
+            await interaction.message.edit({ components: [disabledRow] });
+            await interaction.followUp({ content: `La solicitud de **${applicant ? applicant.user.tag : 'un usuario'}** ha sido rechazada.`, ephemeral: true });
+            if (applicant) await applicant.send(`Tu solicitud para registrar un equipo ha sido rechazada.`).catch(() => {});
+        } else if (customId.startsWith('promote_player_') || customId.startsWith('demote_captain_') || customId.startsWith('kick_player_') || customId.startsWith('toggle_mute_player_')) {
+            const targetId = customId.substring(customId.lastIndexOf('_') + 1);
+            const team = await Team.findOne({ guildId: interaction.guildId, $or: [{ managerId: user.id }, { captains: user.id }] });
+            if(!team) return interaction.editReply({ content: 'No tienes permisos sobre este equipo.', components: []});
+            const targetMember = await interaction.guild.members.fetch(targetId).catch(() => null);
+            if(!targetMember) return interaction.editReply({ content: 'Miembro no encontrado.', components: []});
+            const isManagerAction = team.managerId === user.id;
+            if(customId.startsWith('kick_player_')) {
+                const isTargetCaptain = team.captains.includes(targetId);
+                if(isTargetCaptain && !isManagerAction) return interaction.editReply({content: 'Un capitán no puede expulsar a otro capitán.', components: []});
+                team.players = team.players.filter(p => p !== targetId);
+                team.captains = team.captains.filter(c => c !== targetId);
+                await targetMember.roles.remove([process.env.PLAYER_ROLE_ID, process.env.CAPTAIN_ROLE_ID, process.env.MUTED_ROLE_ID]).catch(() => {});
+                if (targetMember.id !== interaction.guild.ownerId) await targetMember.setNickname(targetMember.user.username).catch(()=>{});
+                await interaction.editReply({ content: `✅ **${targetMember.user.username}** ha sido expulsado.`, components: [] });
+            } else if (customId.startsWith('promote_player_')) {
+                if(!isManagerAction) return interaction.editReply({content: 'Solo el Mánager puede ascender.', components: []});
+                team.players = team.players.filter(p => p !== targetId);
+                team.captains.push(targetId);
+                await targetMember.roles.remove(process.env.PLAYER_ROLE_ID).catch(()=>{});
+                await targetMember.roles.add(process.env.CAPTAIN_ROLE_ID).catch(()=>{});
+                if (targetMember.id !== interaction.guild.ownerId) await targetMember.setNickname(`|C| ${team.abbreviation} ${targetMember.user.username}`).catch(()=>{});
+                await interaction.editReply({ content: `✅ **${targetMember.user.username}** ascendido a Capitán.`, components: [] });
+            } else if (customId.startsWith('demote_captain_')) {
+                if(!isManagerAction) return interaction.editReply({content: 'Solo el Mánager puede degradar.', components: []});
+                team.captains = team.captains.filter(c => c !== targetId);
+                team.players.push(targetId);
+                await targetMember.roles.remove(process.env.CAPTAIN_ROLE_ID).catch(()=>{});
+                await targetMember.roles.add(process.env.PLAYER_ROLE_ID).catch(()=>{});
+                if (targetMember.id !== interaction.guild.ownerId) await targetMember.setNickname(`${team.abbreviation} ${targetMember.user.username}`).catch(()=>{});
+                await interaction.editReply({ content: `✅ **${targetMember.user.username}** degradado a Jugador.`, components: [] });
+            } else if (customId.startsWith('toggle_mute_player_')) {
+                if(team.captains.includes(targetId) && !isManagerAction) return interaction.editReply({ content: 'No puedes mutear a un capitán.', components: [] });
+                const hasMutedRole = targetMember.roles.cache.has(process.env.MUTED_ROLE_ID);
+                if (hasMutedRole) {
+                    await targetMember.roles.remove(process.env.MUTED_ROLE_ID);
+                    await interaction.editReply({ content: `✅ **${targetMember.user.username}** desmuteado.`, components: [] });
+                } else {
+                    await targetMember.roles.add(process.env.MUTED_ROLE_ID);
+                    await interaction.editReply({ content: `🔇 **${targetMember.user.username}** muteado.`, components: [] });
+                }
+            }
+            await team.save();
+        }
         return; 
     }
     
+    await interaction.deferReply({ flags: 64 });
+
     if (customId === 'request_manager_role_button') {
         const existingTeam = await Team.findOne({ $or: [{ managerId: user.id }, { captains: user.id }, { players: user.id }], guildId: guild.id });
         if (existingTeam) return interaction.editReply({ content: `Ya perteneces al equipo **${existingTeam.name}**.` });
@@ -606,7 +560,7 @@ const handler = async (client, interaction) => {
              if (!teamToView) return interaction.editReply({ content: 'No perteneces a ningún equipo.' });
              const allMemberIds = [teamToView.managerId, ...teamToView.captains, ...teamToView.players].filter(id => id);
              if (allMemberIds.length === 0) return interaction.editReply({ content: 'Tu equipo no tiene miembros.' });
-                          const memberProfiles = await VPGUser.find({ discordId: { $in: allMemberIds } }).lean();
+             const memberProfiles = await VPGUser.find({ discordId: { $in: allMemberIds } }).lean();
              const memberMap = new Map(memberProfiles.map(p => [p.discordId, p]));
              let rosterString = '';
              const fetchMemberInfo = async (ids, roleName) => {
@@ -614,18 +568,10 @@ const handler = async (client, interaction) => {
                  rosterString += `\n**${roleName}**\n`;
                  for (const memberId of ids) {
                      try {
-                         const memberData = await guild.members.fetch(memberId);
-                         const profile = memberMap.get(memberId);
-                         let positionString = profile?.primaryPosition ? ` - ${profile.primaryPosition}` : '';
-                         if (profile?.secondaryPosition && profile.secondaryPosition.toUpperCase() !== 'NINGUNA') {
-                             positionString += ` / ${profile.secondaryPosition}`;
-                         }
-                         const vpgUsername = profile?.vpgUsername || 'N/A';
-                         const twitterInfo = profile?.twitterHandle ? ` (@${profile.twitterHandle})` : '';
-                         rosterString += `> ${memberData.user.username} (${vpgUsername})${positionString}${twitterInfo}\n`;
-                     } catch (error) {
-                         rosterString += `> *Usuario no encontrado (ID: ${memberId})*\n`;
-                     }
+                        const memberData = await guild.members.fetch(memberId);
+                        const vpgUser = memberMap.get(memberId)?.vpgUsername || 'N/A';
+                        rosterString += `> ${memberData.user.username} (${vpgUser})\n`;
+                     } catch (error) { rosterString += `> *Usuario no encontrado (ID: ${memberId})*\n`; }
                  }
              };
              await fetchMemberInfo([teamToView.managerId].filter(Boolean), '👑 Mánager');
@@ -697,11 +643,11 @@ const handler = async (client, interaction) => {
         const memberIds = [teamToManage.managerId, ...teamToManage.captains, ...teamToManage.players].filter(id => id);
         if (memberIds.length === 0) return interaction.editReply({ content: 'Este equipo no tiene miembros.' });
         const membersCollection = await guild.members.fetch({ user: memberIds });
-        const memberOptions = membersCollection.map(m => {
+        const memberOptions = membersCollection.map(member => {
             let description = 'Jugador';
-            if (teamToManage.managerId === m.id) description = 'Mánager';
-            else if (teamToManage.captains.includes(m.id)) description = 'Capitán';
-            return { label: m.user.username, description: description, value: m.id, };
+            if (teamToManage.managerId === member.id) description = 'Mánager';
+            else if (teamToManage.captains.includes(member.id)) description = 'Capitán';
+            return { label: member.user.username, description: description, value: member.id, };
         });
         if (memberOptions.length === 0) return interaction.editReply({ content: 'No se encontraron miembros válidos.' });
         const selectMenu = new StringSelectMenuBuilder().setCustomId('roster_management_menu').setPlaceholder('Selecciona un miembro').addOptions(memberOptions);
@@ -838,6 +784,4 @@ const handler = async (client, interaction) => {
 
 handler.updatePanelMessage = updatePanelMessage;
 handler.getOrCreateWebhook = getOrCreateWebhook;
-
-
 module.exports = handler;
