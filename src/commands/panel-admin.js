@@ -8,8 +8,8 @@ module.exports = {
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
     async execute(interaction) {
-        // CORRECCIÓN: Se añade esta línea para evitar el error.
-        await interaction.deferReply({ ephemeral: true });
+        // CORRECCIÓN: Usamos flags: 64 en lugar de ephemeral: true
+        await interaction.deferReply({ flags: 64 });
 
         const embed = new EmbedBuilder()
             .setTitle('Panel de Control de Administrador VPG')
@@ -23,8 +23,10 @@ module.exports = {
             new ButtonBuilder().setCustomId('admin_view_pending_requests').setLabel('⏳ Ver Solicitudes').setStyle(ButtonStyle.Secondary)
         );
         
+        // Enviamos el panel al canal
         await interaction.channel.send({ embeds: [embed], components: [row] });
         
+        // Editamos la respuesta privada para confirmar
         return interaction.editReply({ content: '✅ Panel de administrador creado con éxito.' });
     },
 };
