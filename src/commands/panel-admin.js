@@ -8,7 +8,8 @@ module.exports = {
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
     async execute(interaction) {
-        // La línea deferReply ha sido ELIMINADA de aquí para evitar conflictos.
+        // CORRECCIÓN: Se añade esta línea para evitar el error.
+        await interaction.deferReply({ ephemeral: true });
 
         const embed = new EmbedBuilder()
             .setTitle('Panel de Control de Administrador VPG')
@@ -22,10 +23,8 @@ module.exports = {
             new ButtonBuilder().setCustomId('admin_view_pending_requests').setLabel('⏳ Ver Solicitudes').setStyle(ButtonStyle.Secondary)
         );
         
-        // Enviamos el panel al canal
         await interaction.channel.send({ embeds: [embed], components: [row] });
         
-        // Usamos editReply porque el "portero" en index.js ya hizo defer.
         return interaction.editReply({ content: '✅ Panel de administrador creado con éxito.' });
     },
 };
