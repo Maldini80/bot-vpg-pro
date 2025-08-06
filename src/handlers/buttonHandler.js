@@ -408,6 +408,37 @@ const handler = async (client, interaction) => {
                 }
             }
         }
+     // NUEVO: Bloque para manejar el clic en el botón de editar perfil
+    if (customId === 'edit_profile_button') {
+        // Buscamos el perfil existente para rellenar los campos del formulario
+        const existingProfile = await VPGUser.findOne({ discordId: user.id });
+
+        const modal = new ModalBuilder()
+            .setCustomId('edit_profile_modal')
+            .setTitle('Editar tu Perfil VPG');
+
+        const vpgUsernameInput = new TextInputBuilder()
+            .setCustomId('vpgUsernameInput')
+            .setLabel("Tu nombre de usuario en VPG")
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setValue(existingProfile?.vpgUsername || '');
+
+        const twitterInput = new TextInputBuilder()
+            .setCustomId('twitterInput')
+            .setLabel("Tu usuario de Twitter (sin @)")
+            .setStyle(TextInputStyle.Short)
+            .setRequired(false)
+            .setValue(existingProfile?.twitterHandle || '');
+
+        modal.addComponents(
+            new ActionRowBuilder().addComponents(vpgUsernameInput),
+            new ActionRowBuilder().addComponents(twitterInput)
+        );
+
+        // Mostrar el modal es la respuesta a la interacción
+        return interaction.showModal(modal);
+    }
 
         const uniqueMatches = [...new Map(allConfirmedSlots.map(item => [item.time, item])).values()];
         uniqueMatches.sort((a,b) => a.time.localeCompare(b.time));
