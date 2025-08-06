@@ -9,15 +9,11 @@ module.exports = async (client, interaction) => {
     const { customId, values, guild, user } = interaction;
     const selectedValue = values[0];
 
-    // =======================================================
-    // == LÓGICA PARA LOS MENÚS DE POSICIÓN ==================
-    // =======================================================
     if (customId === 'select_primary_position' || customId === 'select_secondary_position') {
+        // CORRECCIÓN: Responder inmediatamente.
+        await interaction.deferUpdate(); 
         const selectedPosition = values[0];
         
-        // El deferReply/update debe hacerse aquí para confirmar la interacción del menú
-        await interaction.deferUpdate(); 
-
         const userProfile = await VPGUser.findOneAndUpdate(
             { discordId: user.id },
             { $set: { discordId: user.id } },
@@ -27,19 +23,16 @@ module.exports = async (client, interaction) => {
         if (customId === 'select_primary_position') {
             userProfile.primaryPosition = selectedPosition;
         } else {
-            // Aseguramos que 'NINGUNA' se guarde como null o un valor estandarizado
             userProfile.secondaryPosition = selectedPosition === 'NINGUNA' ? null : selectedPosition;
         }
 
         await userProfile.save();
-        
-        // Simplemente confirmamos al log que se guardó. La interacción ya está confirmada.
         console.log(`Posición ${customId} guardada para ${user.tag}: ${selectedPosition}`);
-        return; // Detenemos la ejecución aquí
+        return;
     }
 
-
     if (customId === 'apply_to_team_select') {
+        // CORRECCIÓN: Un modal ya es una respuesta, así que no necesita defer. Esto está bien.
         const teamId = selectedValue;
         const modal = new ModalBuilder().setCustomId(`application_modal_${teamId}`).setTitle('Aplicar a Equipo');
         const presentationInput = new TextInputBuilder().setCustomId('presentation').setLabel('Escribe una breve presentación').setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(200);
@@ -48,6 +41,7 @@ module.exports = async (client, interaction) => {
     }
     
     if (customId === 'select_league_for_registration') {
+        // CORRECCIÓN: Un modal ya es una respuesta. Esto está bien.
         const leagueName = selectedValue;
         const modal = new ModalBuilder().setCustomId(`manager_request_modal_${leagueName}`).setTitle(`Registrar Equipo en ${leagueName}`);
         const vpgUsernameInput = new TextInputBuilder().setCustomId('vpgUsername').setLabel("Tu nombre de usuario en VPG").setStyle(TextInputStyle.Short).setRequired(true);
@@ -58,6 +52,7 @@ module.exports = async (client, interaction) => {
     }
 
     if (customId.startsWith('select_league_filter_') || customId === 'admin_select_team_to_manage' || customId === 'roster_management_menu' || customId === 'admin_change_league_menu') {
+        // CORRECCIÓN: Responder inmediatamente.
         await interaction.deferUpdate();
 
         if (customId.startsWith('select_league_filter_')) {
@@ -120,7 +115,7 @@ module.exports = async (client, interaction) => {
         return;
     }
     
-    // El deferReply solo debe ocurrir UNA VEZ por interacción.
+    // CORRECCIÓN: Usar flags en lugar de ephemeral.
     await interaction.deferReply({ flags: 64 });
     
     if (customId.startsWith('select_available_times')) {
