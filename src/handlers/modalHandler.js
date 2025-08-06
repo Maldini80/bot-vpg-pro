@@ -236,4 +236,36 @@ module.exports = async (client, interaction) => {
             return interaction.editReply({ content: '❌ Hubo un error al guardar tu perfil. Por favor, inténtalo de nuevo.' });
         }
     }
+    // =======================================================
+    // == GUARDAR ANUNCIO DE AGENTE LIBRE ====================
+    // =======================================================
+
+    if (customId === 'market_agent_modal') {
+        // El deferReply ya se hizo en index.js, así que solo editamos
+        
+        // Primero, comprobamos que el jugador haya configurado su perfil (posiciones)
+        const userProfile = await VPGUser.findOne({ discordId: user.id });
+        if (!userProfile || !userProfile.primaryPosition) {
+            return interaction.editReply({ content: '❌ Antes de anunciarte, debes configurar tu perfil y tu posición principal usando el botón "✏️ Editar Perfil".' });
+        }
+
+        // Obtenemos los datos del formulario
+        const description = fields.getTextInputValue('descriptionInput');
+        const availability = fields.getTextInputValue('availabilityInput');
+
+        // Guardamos o actualizamos el anuncio en la base de datos
+        const FreeAgent = require('../models/freeAgent.js');
+        await FreeAgent.findOneAndUpdate(
+            { userId: user.id },
+            {
+                guildId: guild.id,
+                description: description,
+                availability: availability,
+                status: 'ACTIVE'
+            },
+            { upsert: true, new: true } // Upsert: si no existe, lo crea; si existe, lo actualiza
+        );
+
+        return interaction.editReply({ content: '✅ ¡Tu anuncio como agente libre ha sido publicado/actualizado! Los mánagers ahora podrán encontrarte usando el buscador.' });
+    }
 };
