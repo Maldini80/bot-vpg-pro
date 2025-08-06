@@ -105,6 +105,24 @@ client.on(Events.MessageCreate, async message => {
 });
 
 client.on(Events.InteractionCreate, async interaction => {
+    // ==================================================================
+    // == INICIO DE LA SOLUCIÓN DEFINITIVA =============================
+    // ==================================================================
+    // Esto reconoce el envío del formulario al instante para evitar que se cancele por tiempo.
+    if (interaction.isModalSubmit() && interaction.customId === 'edit_profile_modal') {
+        try {
+            // Le decimos a Discord "recibido, estoy pensando...", de forma privada.
+            await interaction.deferReply({ flags: 64 });
+        } catch (e) {
+            // Si incluso esto falla, lo registramos y nos detenemos.
+            console.error("Fallo al intentar aplazar la respuesta del modal:", e);
+            return;
+        }
+    }
+    // ==================================================================
+    // == FIN DE LA SOLUCIÓN DEFINITIVA ================================
+    // ==================================================================
+
     try {
         if (interaction.isChatInputCommand()) {
             const command = client.commands.get(interaction.commandName);
@@ -127,6 +145,7 @@ client.on(Events.InteractionCreate, async interaction => {
         if (interaction.replied || interaction.deferred) {
             await interaction.followUp({ content: 'Ha ocurrido un error al procesar esta solicitud.', flags: 64 }).catch(() => {});
         } else {
+            // Solo intentamos responder si el error no es que ya se ha respondido.
             if (error.code !== 'InteractionAlreadyReplied' && error.code !== 10062) {
                 await interaction.reply({ content: 'Ha ocurrido un error al procesar esta solicitud.', flags: 64 }).catch(() => {});
             }
