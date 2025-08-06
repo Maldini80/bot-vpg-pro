@@ -102,46 +102,69 @@ client.on(Events.MessageCreate, async message => {
     }
 });
 
-// CÓDIGO NUEVO (EL CORRECTO)
 
-// GESTOR DE INTERACCIONES
+// =================================================================
+// == INICIO DE LA CORRECCIÓN - GESTOR DE INTERACCIONES MEJORADO ====
+// =================================================================
+
 client.on(Events.InteractionCreate, async interaction => {
+    let handler;
+    let handlerName = '';
+
     try {
         if (interaction.isChatInputCommand()) {
-            const command = client.commands.get(interaction.commandName);
-            if (command) await command.execute(interaction);
+            handlerName = 'comando';
+            handler = client.commands.get(interaction.commandName);
+            if (handler) await handler.execute(interaction);
 
         } else if (interaction.isButton()) {
-            const buttonHandler = client.handlers.get('buttonHandler');
-            if (buttonHandler) await buttonHandler(client, interaction);
+            handlerName = 'buttonHandler';
+            handler = client.handlers.get('buttonHandler');
+            if (handler) await handler(client, interaction);
 
         } else if (interaction.isStringSelectMenu()) {
-            const selectMenuHandler = client.handlers.get('selectMenuHandler');
-            if (selectMenuHandler) await selectMenuHandler(client, interaction);
+            handlerName = 'selectMenuHandler';
+            handler = client.handlers.get('selectMenuHandler');
+            if (handler) await handler(client, interaction);
 
         } else if (interaction.isModalSubmit()) {
-            const modalHandler = client.handlers.get('modalHandler');
-            if (modalHandler) await modalHandler(client, interaction);
+            handlerName = 'modalHandler';
+            handler = client.handlers.get('modalHandler');
+            if (handler) await handler(client, interaction);
 
         } else if (interaction.isAutocomplete()) {
-            const autocompleteHandler = client.handlers.get('autocompleteHandler');
-            if (autocompleteHandler) await autocompleteHandler(client, interaction);
+            handlerName = 'autocompleteHandler';
+            handler = client.handlers.get('autocompleteHandler');
+            if (handler) await handler(client, interaction);
         }
+
     } catch (error) {
-        console.error("Fallo crítico durante el procesamiento de una interacción:", error);
+        console.error(`Fallo crítico durante el procesamiento de una interacción de tipo [${handlerName}]:`, error);
         
-        const replyPayload = { content: 'Ha ocurrido un error al procesar esta solicitud.', ephemeral: true };
+        const errorMessage = { 
+            content: 'Ha ocurrido un error al procesar esta solicitud. Por favor, inténtalo de nuevo.', 
+            ephemeral: true 
+        };
         
-        // Comprueba si ya se ha respondido de alguna forma a la interacción
+        // Esta comprobación es crucial. Solo intentamos responder si la interacción no ha sido ya respondida.
         if (interaction.replied || interaction.deferred) {
-            // Si ya se respondió, usa followUp para enviar un nuevo mensaje
-            await interaction.followUp(replyPayload).catch(() => {});
+            // Si ya se respondió (con deferReply, por ejemplo), usamos followUp para enviar un nuevo mensaje de error.
+            await interaction.followUp(errorMessage).catch(err => {
+                console.error("Error al intentar enviar un followUp de error:", err);
+            });
         } else {
-            // Si no se ha respondido, usa reply
-            await interaction.reply(replyPayload).catch(() => {});
+            // Si no se ha respondido en absoluto, usamos reply.
+            await interaction.reply(errorMessage).catch(err => {
+                console.error("Error al intentar enviar un reply de error:", err);
+            });
         }
     }
 });
+
+// =================================================================
+// == FIN DE LA CORRECCIÓN =========================================
+// =================================================================
+
 
 // DESPERTADOR INTERNO
 const selfPingUrl = `https://bot-vpg-pro.onrender.com`;
