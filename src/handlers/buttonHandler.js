@@ -5,6 +5,10 @@ const League = require('../models/league.js');
 const PlayerApplication = require('../models/playerApplication.js');
 const AvailabilityPanel = require('../models/availabilityPanel.js');
 const VPGUser = require('../models/user.js');
+const FreeAgent = require('../models/freeAgent.js');
+const TeamOffer = require('../models/teamOffer.js');
+
+const POSITIONS = ['POR', 'DFC', 'LD', 'LI', 'MCD', 'MC', 'MCO', 'MD', 'MI', 'ED', 'EI', 'DC'];
 
 async function updatePanelMessage(client, panelId) {
     try {
@@ -219,6 +223,91 @@ const handler = async (client, interaction) => {
     }
 
     const { customId, member, guild, user } = interaction;
+    // ===============================================
+// == LÓGICA DE PERFIL Y MERCADO DE FICHAJES ======
+// ===============================================
+
+// --- Flujo de Perfil y Registro de Jugador ---
+if (customId === 'edit_profile_button') {
+    await interaction.deferReply({ flags: 64 });
+    const positionOptions = POSITIONS.map(p => ({ label: p, value: p }));
+    const primaryMenu = new StringSelectMenuBuilder().setCustomId('select_primary_position').setPlaceholder('Selecciona tu posición principal').addOptions(positionOptions);
+    const secondaryMenu = new StringSelectMenuBuilder().setCustomId('select_secondary_position').setPlaceholder('Selecciona tu posición secundaria').addOptions({ label: 'Ninguna', value: 'NINGUNA' }, ...positionOptions);
+    const continueButton = new ButtonBuilder().setCustomId('continue_profile_modal').setLabel('Continuar').setStyle(ButtonStyle.Success);
+    
+    await interaction.editReply({ 
+        content: 'Por favor, define tus posiciones. Una vez seleccionadas, pulsa Continuar para añadir tus datos.',
+        components: [new ActionRowBuilder().addComponents(primaryMenu), new ActionRowBuilder().addComponents(secondaryMenu), new ActionRowBuilder().addComponents(continueButton)],
+        flags: 64
+    });
+    return; // Detenemos la ejecución aquí para no continuar con la lógica antigua
+}
+
+if (customId === 'continue_profile_modal') {
+    const userProfile = await VPGUser.findOne({ discordId: user.id }).lean();
+    if (!userProfile || !userProfile.primaryPosition) {
+        return interaction.reply({ content: '❌ Debes seleccionar al menos tu posición principal en los menús desplegables antes de continuar.', flags: 64 });
+    }
+    const modal = new ModalBuilder().setCustomId('edit_profile_modal').setTitle('Completar Perfil');
+    const vpgUsernameInput = new TextInputBuilder().setCustomId('vpgUsernameInput').setLabel("Tu nombre de usuario en VPG").setStyle(TextInputStyle.Short).setRequired(false).setValue(userProfile.vpgUsername || '');
+    const twitterInput = new TextInputBuilder().setCustomId('twitterInput').setLabel("Tu Twitter (sin @)").setStyle(TextInputStyle.Short).setRequired(false).setValue(userProfile.twitterHandle || '');
+    modal.addComponents(new ActionRowBuilder().addComponents(vpgUsernameInput), new ActionRowBuilder().addComponents(twitterInput));
+    await interaction.showModal(modal);
+    return; // Detenemos la ejecución
+}
+
+// --- Flujo de Botones del Mercado ---
+if (customId.startsWith('market_')) {
+    await interaction.deferReply({ flags: 64 });
+    
+    if (customId === 'market_post_agent') {
+        const hasRequiredRole = member.roles.cache.has(process.env.PLAYER_ROLE_ID) || member.roles.cache.has(process.env.CAPTAIN_ROLE_ID);
+        if (!hasRequiredRole) return interaction.editReply({ content: '❌ Necesitas el rol de "Jugador" o "Capitán" para anunciarte.' });
+        
+        const existingAd = await FreeAgent.findOne({ userId: user.id });
+        const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+        if (existingAd && existingAd.updatedAt > threeDaysAgo) {
+            return interaction.editReply({ content: `❌ Ya has actualizado tu anuncio en los últimos 3 días. Por favor, espera para evitar el spam.` });
+        }
+
+        const modal = new ModalBuilder().setCustomId('market_agent_modal').setTitle('Anunciarse como Agente Libre');
+        const descriptionInput = new TextInputBuilder().setCustomId('descriptionInput').setLabel("Tu estilo de juego, qué buscas, etc.").setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(500);
+        const availabilityInput = new TextInputBuilder().setCustomId('availabilityInput').setLabel("Tu disponibilidad horaria").setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(200);
+        modal.addComponents(new ActionRowBuilder().addComponents(descriptionInput), new ActionRowBuilder().addComponents(availabilityInput));
+        await interaction.showModal(modal);
+    }
+    
+    else if (customId === 'market_post_offer') {
+        const team = await Team.findOne({ guildId, $or: [{ managerId: user.id }, { captains: user.id }] });
+        if (!team) return interaction.editReply({ content: '❌ Solo los Mánagers o Capitanes pueden publicar ofertas de equipo.' });
+
+        const existingOffer = await TeamOffer.findOne({ teamId: team._id });
+        if (existingOffer) return interaction.editReply({ content: `❌ Tu equipo ya tiene una oferta activa. Bórrala o edítala desde el panel de gestión de equipo.` });
+        
+        const modal = new ModalBuilder().setCustomId(`market_offer_modal_${team._id}`).setTitle(`Publicar Oferta para ${team.name}`);
+        const positionsInput = new TextInputBuilder().setCustomId('positionsInput').setLabel("Posiciones (separadas por coma, ej: DC,MCO)").setStyle(TextInputStyle.Short).setRequired(true);
+        const requirementsInput = new TextInputBuilder().setCustomId('requirementsInput').setLabel("Requisitos y descripción de la oferta").setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(500);
+        modal.addComponents(new ActionRowBuilder().addComponents(positionsInput), new ActionRowBuilder().addComponents(requirementsInput));
+        await interaction.showModal(modal);
+    }
+
+    else if (customId === 'market_search_teams') {
+        const positionOptions = POSITIONS.map(p => ({ label: p, value: p }));
+        const leagues = await League.find({ guildId }).lean();
+        const leagueOptions = leagues.map(l => ({ label: l.name, value: l.name }));
+        const positionMenu = new StringSelectMenuBuilder().setCustomId('search_team_pos_filter').setPlaceholder('Filtrar por posición que buscan').addOptions({ label: 'Cualquier Posición', value: 'ANY' }, ...positionOptions);
+        const leagueMenu = new StringSelectMenuBuilder().setCustomId('search_team_league_filter').setPlaceholder('Filtrar por liga').addOptions({ label: 'Cualquier Liga', value: 'ANY' }, ...leagueOptions);
+        await interaction.editReply({ content: 'Usa los menús para filtrar las ofertas de equipo.', components: [new ActionRowBuilder().addComponents(positionMenu), new ActionRowBuilder().addComponents(leagueMenu)], flags: 64 });
+    }
+    
+    else if (customId === 'market_search_players') {
+        const positionOptions = POSITIONS.map(p => ({ label: p, value: p }));
+        const positionMenu = new StringSelectMenuBuilder().setCustomId('search_player_pos_filter').setPlaceholder('Selecciona las posiciones que buscas').addOptions(positionOptions).setMinValues(1).setMaxValues(5);
+        await interaction.editReply({ content: 'Usa el menú para filtrar jugadores por su posición principal o secundaria.', components: [new ActionRowBuilder().addComponents(positionMenu)], flags: 64 });
+    }
+    
+    return; // MUY IMPORTANTE: Detenemos la ejecución aquí
+}
     const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
     const esAprobador = isAdmin || member.roles.cache.has(process.env.APPROVER_ROLE_ID);
     
