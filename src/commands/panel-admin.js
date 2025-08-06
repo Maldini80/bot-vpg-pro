@@ -9,7 +9,7 @@ module.exports = {
 
     async execute(interaction) {
         // CORRECCIÓN CLAVE: Deferir la respuesta INMEDIATAMENTE.
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: 64 });
 
         const embed = new EmbedBuilder()
             .setTitle('Panel de Control de Administrador VPG')
