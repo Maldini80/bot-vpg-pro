@@ -209,23 +209,32 @@ module.exports = async (client, interaction) => {
         }
     }
 // NUEVO: Bloque para manejar el modal de edición de perfil
+        // NUEVO: Bloque para manejar el modal de edición de perfil
     if (customId === 'edit_profile_modal') {
-        await interaction.deferReply({ flags: 64 }); // Deferimos la respuesta
+        // CORRECCIÓN: Respondemos INMEDIATAMENTE y luego hacemos el trabajo de base de datos.
+        await interaction.reply({ content: '💾 Guardando tu perfil...', flags: 64 });
         
         const vpgUsername = fields.getTextInputValue('vpgUsernameInput');
         const twitterHandle = fields.getTextInputValue('twitterInput');
 
-        // findOneAndUpdate con 'upsert: true' crea el perfil si no existe, o lo actualiza si ya existe.
-        await VPGUser.findOneAndUpdate(
-            { discordId: user.id },
-            {
-                vpgUsername: vpgUsername,
-                twitterHandle: twitterHandle,
-                lastUpdated: Date.now()
-            },
-            { upsert: true, new: true }
-        );
+        try {
+            // Hacemos el trabajo "lento" de la base de datos
+            await VPGUser.findOneAndUpdate(
+                { discordId: user.id },
+                {
+                    vpgUsername: vpgUsername,
+                    twitterHandle: twitterHandle,
+                    lastUpdated: Date.now()
+                },
+                { upsert: true, new: true }
+            );
 
-        return interaction.editReply({ content: '✅ ¡Tu perfil ha sido actualizado con éxito!' });
+            // Una vez terminado, editamos la respuesta inicial con el mensaje de éxito.
+            return interaction.editReply({ content: '✅ ¡Tu perfil ha sido actualizado con éxito!' });
+        } catch (error) {
+            console.error("Error al guardar el perfil:", error);
+            // Si algo falla, se lo decimos al usuario.
+            return interaction.editReply({ content: '❌ Hubo un error al guardar tu perfil. Por favor, inténtalo de nuevo.' });
+        }
     }
 };
