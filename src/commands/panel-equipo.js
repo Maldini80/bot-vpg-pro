@@ -33,6 +33,7 @@ module.exports = {
 
         const row3 = new ActionRowBuilder().addComponents(
              new ButtonBuilder().setCustomId('team_edit_data_button').setLabel('✏️ Editar Datos (Solo MG)').setStyle(ButtonStyle.Secondary)
+             new ButtonBuilder().setCustomId('team_manage_offer_button').setLabel('📄 Gestionar Oferta de Fichajes').setStyle(ButtonStyle.Primary)
         );
 
         await interaction.channel.send({ embeds: [embed], components: [row1, row2, row3] });
