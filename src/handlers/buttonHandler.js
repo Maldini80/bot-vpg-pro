@@ -430,50 +430,86 @@ const handler = async (client, interaction) => {
         return interaction.editReply({ embeds: [embed] });
     }
         // NUEVO: Bloque para manejar el clic en el botón de editar perfil
-                if (customId === 'edit_profile_button') {
-        // Definimos las opciones para los menús desplegables
+                    if (customId === 'edit_profile_button') {
+        // La respuesta inicial (deferReply) ya se ha hecho en index.js.
+        // Ahora solo editamos esa respuesta para mostrar los menús.
+
         const positionOptions = [
-            { label: 'Portero (POR)', value: 'POR' },
-            { label: 'Defensa Central (DFC)', value: 'DFC' },
-            { label: 'Lateral Derecho (LTD)', value: 'LTD' },
-            { label: 'Lateral Izquierdo (LTI)', value: 'LTI' },
-            { label: 'Mediocentro Defensivo (MCD)', value: 'MCD' },
-            { label: 'Mediocentro (MC)', value: 'MC' },
-            { label: 'Mediocentro Ofensivo (MCO)', value: 'MCO' },
-            { label: 'Extremo Derecho (ED)', value: 'ED' },
-            { label: 'Extremo Izquierdo (EI)', value: 'EI' },
-            { label: 'Delantero Centro (DC)', value: 'DC' },
+            { label: 'GK', value: 'POR' },
+            { label: 'DFC', value: 'DFC' },
+            { label: 'CARR', value: 'LTD' },
+            { label: 'MCD', value: 'MCD' },
+            { label: 'MV', value: 'MC' },
+            { label: 'MCO', value: 'MCO' },
+            { label: 'DC', value: 'DC' },
         ];
 
-        // Creamos el menú para la Posición Principal
         const primaryPositionMenu = new StringSelectMenuBuilder()
             .setCustomId('select_primary_position')
-            .setPlaceholder('Selecciona tu posición principal')
-            .addOptions(positionOptions);
+            .setPlaceholder('Selecciona tu posición principal');
 
-        // Creamos el menú para la Posición Secundaria (con la opción "Ninguna")
         const secondaryPositionMenu = new StringSelectMenuBuilder()
             .setCustomId('select_secondary_position')
-            .setPlaceholder('Selecciona tu posición secundaria (opcional)')
-            .addOptions(
-                { label: 'Ninguna', value: 'NINGUNA' }, // Opción especial
-                ...positionOptions
-            );
+            .setPlaceholder('Selecciona tu posición secundaria (opcional)');
 
-        // Enviamos el mensaje privado con los menús
-        await interaction.reply({
-            content: 'Selecciona tus posiciones en los menús de abajo. Una vez elegidas, pulsa el botón para continuar.',
+        // Buscamos el perfil para rellenar los menús con los valores actuales
+        const profile = await VPGUser.findOne({ discordId: interaction.user.id });
+        if (profile && profile.primaryPosition) {
+            primaryPositionMenu.addOptions(positionOptions.map(opt => ({ ...opt, default: opt.value === profile.primaryPosition })));
+        } else {
+            primaryPositionMenu.addOptions(positionOptions);
+        }
+        
+        const secondaryOptions = [{ label: 'Ninguna', value: 'NINGUNA' }, ...positionOptions];
+        if (profile && profile.secondaryPosition) {
+            secondaryPositionMenu.addOptions(secondaryOptions.map(opt => ({ ...opt, default: opt.value === profile.secondaryPosition })));
+        } else {
+             secondaryPositionMenu.addOptions(secondaryOptions);
+        }
+
+        // AÑADIMOS EL BOTÓN "CONTINUAR" QUE ABRE EL FORMULARIO
+        const continueButton = new ButtonBuilder()
+            .setCustomId('continue_to_profile_modal')
+            .setLabel('Continuar con Nombre y Twitter')
+            .setStyle(ButtonStyle.Success);
+
+        await interaction.editReply({
+            content: 'Selecciona tus posiciones. Cuando termines, pulsa el botón de abajo para editar el resto de tu perfil.',
             components: [
                 new ActionRowBuilder().addComponents(primaryPositionMenu),
-                new ActionRowBuilder().addComponents(secondaryPositionMenu)
+                new ActionRowBuilder().addComponents(secondaryPositionMenu),
+                new ActionRowBuilder().addComponents(continueButton) // BOTÓN AÑADIDO
             ],
-            flags: 64 // Esto hace que el mensaje sea privado (solo lo ves tú)
         });
-
-        // IMPORTANTE: Como la siguiente parte del flujo depende de los menús,
-        // no necesitamos hacer nada más aquí. El código para manejar la selección
-        // de los menús lo añadiremos en el archivo `selectMenuHandler.js`.
         return;
+    }
+
+    // AÑADIMOS LA LÓGICA PARA EL NUEVO BOTÓN "CONTINUAR"
+    if (customId === 'continue_to_profile_modal') {
+        const profile = await VPGUser.findOne({ discordId: interaction.user.id });
+        const modal = new ModalBuilder()
+            .setCustomId('edit_profile_modal')
+            .setTitle('Editar Nombre y Twitter');
+
+        const vpgUsernameInput = new TextInputBuilder()
+            .setCustomId('vpgUsernameInput')
+            .setLabel("Tu nombre de usuario en VPG")
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setValue(profile?.vpgUsername || '');
+
+        const twitterInput = new TextInputBuilder()
+            .setCustomId('twitterInput')
+            .setLabel("Tu usuario de Twitter (sin @)")
+            .setStyle(TextInputStyle.Short)
+            .setRequired(false)
+            .setValue(profile?.twitterHandle || '');
+        
+        modal.addComponents(
+            new ActionRowBuilder().addComponents(vpgUsernameInput),
+            new ActionRowBuilder().addComponents(twitterInput)
+        );
+        return interaction.showModal(modal);
     }
 
     if (customId === 'admin_create_league_button' || customId.startsWith('admin_dissolve_team_') || customId.startsWith('approve_request_') || customId.startsWith('admin_change_data_') || customId === 'team_edit_data_button' || customId === 'team_invite_player_button') {
