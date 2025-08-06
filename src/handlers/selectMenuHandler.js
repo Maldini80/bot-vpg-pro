@@ -9,6 +9,36 @@ module.exports = async (client, interaction) => {
     const { customId, values, guild, user } = interaction;
     const selectedValue = values[0];
 
+    // =======================================================
+    // == LÓGICA PARA LOS MENÚS DE POSICIÓN ==================
+    // =======================================================
+    if (customId === 'select_primary_position' || customId === 'select_secondary_position') {
+        const selectedPosition = values[0];
+        
+        // El deferReply/update debe hacerse aquí para confirmar la interacción del menú
+        await interaction.deferUpdate(); 
+
+        const userProfile = await VPGUser.findOneAndUpdate(
+            { discordId: user.id },
+            { $set: { discordId: user.id } },
+            { upsert: true, new: true }
+        );
+
+        if (customId === 'select_primary_position') {
+            userProfile.primaryPosition = selectedPosition;
+        } else {
+            // Aseguramos que 'NINGUNA' se guarde como null o un valor estandarizado
+            userProfile.secondaryPosition = selectedPosition === 'NINGUNA' ? null : selectedPosition;
+        }
+
+        await userProfile.save();
+        
+        // Simplemente confirmamos al log que se guardó. La interacción ya está confirmada.
+        console.log(`Posición ${customId} guardada para ${user.tag}: ${selectedPosition}`);
+        return; // Detenemos la ejecución aquí
+    }
+
+
     if (customId === 'apply_to_team_select') {
         const teamId = selectedValue;
         const modal = new ModalBuilder().setCustomId(`application_modal_${teamId}`).setTitle('Aplicar a Equipo');
@@ -90,6 +120,7 @@ module.exports = async (client, interaction) => {
         return;
     }
     
+    // El deferReply solo debe ocurrir UNA VEZ por interacción.
     await interaction.deferReply({ flags: 64 });
     
     if (customId.startsWith('select_available_times')) {
@@ -159,20 +190,16 @@ module.exports = async (client, interaction) => {
         const fetchMemberInfo = async (ids, roleName) => {
             if (!ids || ids.length === 0) return;
             rosterString += `\n**${roleName}**\n`;
-                    for (const memberId of ids) {
+            for (const memberId of ids) {
                 try {
                    const memberData = await guild.members.fetch(memberId);
                    const profile = memberMap.get(memberId);
-
-                   // Construimos el string de la posición
                    let positionString = profile?.primaryPosition ? ` - ${profile.primaryPosition}` : '';
-                   if (profile?.secondaryPosition && profile.secondaryPosition.toUpperCase() !== 'NINGUNA') {
+                   if (profile?.secondaryPosition) {
                        positionString += ` / ${profile.secondaryPosition}`;
                    }
-
                    const vpgUsername = profile?.vpgUsername || 'N/A';
                    const twitterInfo = profile?.twitterHandle ? ` (@${profile.twitterHandle})` : '';
-                   
                    rosterString += `> ${memberData.user.username} (${vpgUsername})${positionString}${twitterInfo}\n`;
                 } catch (error) { rosterString += `> *Usuario no encontrado (ID: ${memberId})*\n`; }
             }
@@ -188,33 +215,5 @@ module.exports = async (client, interaction) => {
         const leaguesToDelete = values;
         const result = await League.deleteMany({ guildId: guild.id, name: { $in: leaguesToDelete } });
         return interaction.editReply({ content: `✅ Se han eliminado ${result.deletedCount} ligas.` });
-    }
-    // =======================================================
-    // == LÓGICA PARA LOS MENÚS DE POSICIÓN ==================
-    // =======================================================
-    if (customId === 'select_primary_position' || customId === 'select_secondary_position') {
-        const selectedPosition = values[0];
-
-        // Buscamos el perfil del usuario o creamos uno nuevo si no existe
-        const userProfile = await VPGUser.findOneAndUpdate(
-            { discordId: user.id },
-            { $set: { discordId: user.id } }, // Esto asegura que se cree si no existe
-            { upsert: true, new: true }
-        );
-
-        // Actualizamos la posición correspondiente
-        if (customId === 'select_primary_position') {
-            userProfile.primaryPosition = selectedPosition;
-        } else {
-            userProfile.secondaryPosition = selectedPosition;
-        }
-
-        await userProfile.save();
-
-        // Le confirmamos al usuario que se ha guardado, actualizando el mensaje original
-        await interaction.update({
-            content: `✅ Posición guardada: **${selectedPosition}**. Puedes cambiarla de nuevo o cerrar este mensaje.`,
-            components: interaction.message.components // Mantenemos los menús para que pueda cambiar de opinión
-        });
     }
 };
