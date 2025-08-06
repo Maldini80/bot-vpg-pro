@@ -1,6 +1,4 @@
 // src/index.js
-
-// 1. DEPENDENCIAS
 require('dotenv').config();
 const fs = require('node:fs');
 const path = require('node:path');
@@ -10,14 +8,12 @@ const cron = require('node-cron');
 const axios = require('axios'); // Herramienta para el despertador
 const AvailabilityPanel = require('./models/availabilityPanel.js');
 const TeamChatChannel = require('./models/teamChatChannel.js');
-const Team = require('./models/team.js');
+const Team = require('./models.team.js');
 
-// 2. CONEXIÓN A BASE DE DATOS
 mongoose.connect(process.env.DATABASE_URL)
     .then(() => console.log('Conectado a MongoDB.'))
     .catch(err => console.error('Error de conexión con MongoDB:', err));
 
-// 3. CONFIGURACIÓN DEL CLIENTE DE DISCORD
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -27,7 +23,6 @@ const client = new Client({
     ]
 });
 
-// 4. CARGA DE COMANDOS
 client.commands = new Collection();
 const commandsPath = path.join(__dirname, 'commands');
 const commandFilesToExclude = ['panel-amistosos.js', 'admin-gestionar-equipo.js'];
@@ -40,7 +35,6 @@ for (const file of commandFiles) {
     }
 }
 
-// 5. CARGA DE HANDLERS
 client.handlers = new Map();
 const handlersPath = path.join(__dirname, 'handlers');
 if (fs.existsSync(handlersPath)) {
@@ -51,22 +45,66 @@ if (fs.existsSync(handlersPath)) {
     }
 }
 
-// 6. EVENTO CLIENT READY
 client.once(Events.ClientReady, () => {
     console.log(`¡Listo! ${client.user.tag} está online.`);
-    
-    // Tarea de limpieza diaria
+    // TAREA DE LIMPIEZA DIARIA (CÓDIGO ORIGINAL RESTAURADO)
     cron.schedule('0 6 * * *', async () => {
-        // ... (código de limpieza, no es necesario cambiarlo)
+        console.log('Ejecutando limpieza diaria de amistosos a las 6:00 AM (Madrid)...');
+        try {
+            await AvailabilityPanel.deleteMany({});
+            console.log(`Base de datos de paneles de disponibilidad limpiada.`);
+            const scheduledChannelId = process.env.SCHEDULED_FRIENDLY_CHANNEL_ID;
+            const instantChannelId = process.env.INSTANT_FRIENDLY_CHANNEL_ID;
+            const clearChannel = async (channelId, channelName) => {
+                if (!channelId) return;
+                try {
+                    const channel = await client.channels.fetch(channelId);
+                    if (!channel || !channel.isTextBased()) return;
+                    let fetched;
+                    do {
+                        fetched = await channel.messages.fetch({ limit: 100 });
+                        if (fetched.size > 0) await channel.bulkDelete(fetched, true);
+                    } while (fetched.size > 0);
+                    console.log(`Canal de ${channelName} limpiado con éxito.`);
+                } catch (e) { console.error(`Error limpiando el canal de ${channelName} (${channelId}):`, e.message); }
+            };
+            await clearChannel(scheduledChannelId, "Amistosos Programados");
+            await clearChannel(instantChannelId, "Amistosos Instantáneos");
+            console.log('Limpieza diaria completada.');
+        } catch (error) { console.error('Error fatal durante la limpieza diaria:', error); }
     }, { scheduled: true, timezone: "Europe/Madrid" });
 });
 
-// 7. EVENTO DE MENSAJES
+// CHAT DE EQUIPO (CÓDIGO ORIGINAL RESTAURADO)
 client.on(Events.MessageCreate, async message => {
-    // ... (código del chat de equipo, no es necesario cambiarlo)
+    if (message.author.bot || !message.inGuild()) return;
+    const activeChannel = await TeamChatChannel.findOne({ channelId: message.channel.id, guildId: message.guildId });
+    if (!activeChannel) return;
+    if (message.member.roles.cache.has(process.env.MUTED_ROLE_ID)) return;
+    const team = await Team.findOne({ guildId: message.guildId, $or: [{ managerId: message.member.id }, { captains: message.member.id }, { players: message.member.id }] });
+    if (!team) return;
+    try {
+        await message.delete();
+        const webhooks = await message.channel.fetchWebhooks();
+        const webhookName = 'VPG Team Chat';
+        let webhook = webhooks.find(wh => wh.name === webhookName);
+        if (!webhook) {
+            webhook = await message.channel.createWebhook({ name: webhookName, avatar: client.user.displayAvatarURL(), reason: 'Webhook para el chat de equipos' });
+        }
+        await webhook.send({
+            content: message.content,
+            username: message.member.displayName,
+            avatarURL: team.logoUrl,
+            allowedMentions: { parse: ['users', 'roles', 'everyone'] }
+        });
+    } catch (error) {
+        if (error.code !== 10008) {
+            console.error(`Error en la lógica del chat de equipo:`, error);
+        }
+    }
 });
 
-// 8. GESTOR DE INTERACCIONES (SIMPLIFICADO)
+// GESTOR DE INTERACCIONES
 client.on(Events.InteractionCreate, async interaction => {
     try {
         if (interaction.isChatInputCommand()) {
@@ -100,21 +138,19 @@ client.on(Events.InteractionCreate, async interaction => {
 // =======================================================
 // == DESPERTADOR INTERNO (LA SOLUCIÓN DEFINITIVA) =======
 // =======================================================
-const selfPingUrl = `https://bot-vpg-pro.onrender.com`; // Usamos la URL aunque dé error
+const selfPingUrl = `https://bot-vpg-pro.onrender.com`;
 setInterval(() => {
     if (selfPingUrl) {
         axios.get(selfPingUrl).catch(err => {
-            // Es normal que dé error 404, lo ignoramos.
-            // Solo nos interesa que la petición se haga para mantener el bot activo.
             if (err.response && err.response.status !== 404) {
                 console.error("Error en el self-ping:", err.message);
             } else {
-                console.log("Ping para mantener activo realizado.");
+                // Mensaje opcional para saber que está funcionando
+                // console.log("Ping para mantener activo realizado.");
             }
         });
     }
 }, 4 * 60 * 1000); // Cada 4 minutos
 // =======================================================
 
-// 9. LOGIN FINAL
 client.login(process.env.DISCORD_TOKEN);
