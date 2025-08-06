@@ -208,4 +208,24 @@ module.exports = async (client, interaction) => {
             return interaction.editReply({ content: `❌ No se pudo enviar el desafío. El mánager de ${panel.teamId.name} podría tener los MDs cerrados.` });
         }
     }
+// NUEVO: Bloque para manejar el modal de edición de perfil
+    if (customId === 'edit_profile_modal') {
+        await interaction.deferReply({ ephemeral: true }); // Deferimos la respuesta
+        
+        const vpgUsername = fields.getTextInputValue('vpgUsernameInput');
+        const twitterHandle = fields.getTextInputValue('twitterInput');
+
+        // findOneAndUpdate con 'upsert: true' crea el perfil si no existe, o lo actualiza si ya existe.
+        await VPGUser.findOneAndUpdate(
+            { discordId: user.id },
+            {
+                vpgUsername: vpgUsername,
+                twitterHandle: twitterHandle,
+                lastUpdated: Date.now()
+            },
+            { upsert: true, new: true }
+        );
+
+        return interaction.editReply({ content: '✅ ¡Tu perfil ha sido actualizado con éxito!' });
+    }
 };
