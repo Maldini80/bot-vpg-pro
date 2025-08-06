@@ -885,7 +885,7 @@ if (customId === 'market_post_agent') {
     const isPlayer = member.roles.cache.has(process.env.PLAYER_ROLE_ID);
     const isCaptain = member.roles.cache.has(process.env.CAPTAIN_ROLE_ID);
     if (!isPlayer && !isCaptain) {
-        return interaction.reply({ content: '❌ Solo los jugadores y capitanes pueden anunciarse como agentes libres.', flags: 64 });
+                return interaction.editReply({ content: '❌ Solo los jugadores y capitanes pueden anunciarse como agentes libres.' });
     }
 
     // CONTROL DE SPAM: Comprobamos si ya se ha anunciado recientemente
@@ -894,7 +894,7 @@ if (customId === 'market_post_agent') {
     const COOLDOWN_DAYS = 3; // Puede anunciarse cada 3 días
     if (existingAd && (new Date() - existingAd.updatedAt) < (COOLDOWN_DAYS * 24 * 60 * 60 * 1000)) {
         const timeLeft = new Date(existingAd.updatedAt.getTime() + (COOLDOWN_DAYS * 24 * 60 * 60 * 1000));
-        return interaction.reply({ content: `❌ Ya has actualizado tu anuncio recientemente. Podrás hacerlo de nuevo el ${timeLeft.toLocaleDateString('es-ES')} a las ${timeLeft.toLocaleTimeString('es-ES')}.`, flags: 64 });
+        return interaction.editReply({ content: `❌ Ya has actualizado tu anuncio recientemente. Podrás hacerlo de nuevo el ${timeLeft.toLocaleDateString('es-ES')} a las ${timeLeft.toLocaleTimeString('es-ES')}.` });
     }
     
     // Si todo está bien, mostramos el formulario
