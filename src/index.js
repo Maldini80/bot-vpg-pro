@@ -123,15 +123,26 @@ client.on(Events.MessageCreate, async message => {
 
 // 9. GESTOR DE INTERACCIONES
 client.on(Events.InteractionCreate, async interaction => {
-    // Respuesta instantánea para el modal de perfil para evitar timeouts
-    if (interaction.isModalSubmit() && interaction.customId === 'edit_profile_modal') {
+    // ==================================================================
+    // == ESTE ES EL "PORTERO" QUE RESPONDE AL INSTANTE ================
+    // ==================================================================
+    // Si se pulsa el botón de editar perfil O se envía el formulario,
+    // el portero responde "Un momento..." para evitar errores.
+    if (
+        (interaction.isButton() && interaction.customId === 'edit_profile_button') ||
+        (interaction.isModalSubmit() && interaction.customId === 'edit_profile_modal')
+    ) {
         try {
             await interaction.deferReply({ flags: 64 });
         } catch (e) {
-            console.error("Fallo al intentar aplazar la respuesta del modal:", e);
+            // Si algo falla, lo anotamos y no continuamos.
+            console.error("Fallo al intentar aplazar la respuesta:", e);
             return;
         }
     }
+    // ==================================================================
+    // == AQUÍ EMPIEZA EL TRABAJO NORMAL DEL BOT ========================
+    // ==================================================================
 
     try {
         if (interaction.isChatInputCommand()) {
@@ -161,6 +172,5 @@ client.on(Events.InteractionCreate, async interaction => {
         }
     }
 });
-
 // 10. LOGIN FINAL
 client.login(process.env.DISCORD_TOKEN);
