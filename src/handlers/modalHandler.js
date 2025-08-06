@@ -210,34 +210,29 @@ module.exports = async (client, interaction) => {
     }
 // NUEVO: Bloque para manejar el modal de edición de perfil
         // NUEVO: Bloque para manejar el modal de edición de perfil
-            if (customId === 'edit_profile_modal') {
+                if (customId === 'edit_profile_modal') {
         // La respuesta inicial (deferReply) ya se ha hecho en index.js.
-        // Ahora solo nos enfocamos en el trabajo y en editar esa respuesta.
+        // Este modal SOLO se encarga del VPG Username y Twitter.
         
         const vpgUsername = fields.getTextInputValue('vpgUsernameInput');
         const twitterHandle = fields.getTextInputValue('twitterInput');
-        // OBTENEMOS LAS NUEVAS POSICIONES Y LAS PONEMOS EN MAYÚSCULAS
-        const primaryPosition = fields.getTextInputValue('primaryPositionInput').toUpperCase();
-        const secondaryPosition = fields.getTextInputValue('secondaryPositionInput').toUpperCase();
 
         try {
+            // Buscamos el perfil del usuario y actualizamos SOLO estos dos campos.
+            // Las posiciones ya se guardaron con los menús desplegables.
             await VPGUser.findOneAndUpdate(
                 { discordId: user.id },
                 {
                     vpgUsername: vpgUsername,
                     twitterHandle: twitterHandle,
-                    // GUARDAMOS LAS NUEVAS POSICIONES
-                    primaryPosition: primaryPosition,
-                    secondaryPosition: secondaryPosition,
                     lastUpdated: Date.now()
                 },
-                { upsert: true, new: true }
+                { upsert: true, new: true } // Upsert por si el perfil no existía
             );
 
-            // Editamos la respuesta que ya estaba "pensando..."
             return interaction.editReply({ content: '✅ ¡Tu perfil ha sido actualizado con éxito!' });
         } catch (error) {
-            console.error("Error al guardar el perfil:", error);
+            console.error("Error al guardar el perfil (modal):", error);
             return interaction.editReply({ content: '❌ Hubo un error al guardar tu perfil. Por favor, inténtalo de nuevo.' });
         }
     }
