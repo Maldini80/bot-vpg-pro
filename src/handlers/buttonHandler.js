@@ -223,6 +223,8 @@ const handler = async (client, interaction) => {
     }
 
     const { customId, member, guild, user } = interaction;
+
+    
     // --- LÓGICA DE SUB-MENÚS PARA EL PANEL DE EQUIPO ---
 
 if (customId.startsWith('team_submenu_')) {
@@ -889,10 +891,7 @@ if (customId.startsWith('team_submenu_')) {
         return interaction.editReply({ embeds: [embed] });
     }
     
-    const userTeamMg = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
-    if (!userTeamMg && (customId.startsWith('team_') || customId.startsWith('post_') || customId.startsWith('delete_'))) {
-        return interaction.reply({content: 'Debes ser mánager o capitán para usar este botón.', flags: 64 });
-    }
+   
     
     if (customId === 'team_toggle_recruitment_button') {
         await interaction.deferReply({ flags: 64 });
