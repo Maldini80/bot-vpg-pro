@@ -4,10 +4,47 @@ const Team = require('../models/team.js');
 const League = require('../models/league.js');
 const PlayerApplication = require('../models/playerApplication.js');
 const VPGUser = require('../models/user.js');
+const FreeAgent = require('../models/freeAgent.js');
 
 module.exports = async (client, interaction) => {
-   
+    // Todos los envíos de modales son potencialmente lentos, así que hacemos defer.
+    await interaction.deferReply({ flags: 64 });
+
     const { customId, fields, guild, user, member, message } = interaction;
+    
+    // =======================================================
+    // == LÓGICA DEL PERFIL Y MERCADO ========================
+    // =======================================================
+
+    if (customId === 'edit_profile_modal') {
+        const vpgUsername = fields.getTextInputValue('vpgUsernameInput');
+        const twitterHandle = fields.getTextInputValue('twitterInput');
+        await VPGUser.findOneAndUpdate(
+            { discordId: user.id },
+            { vpgUsername: vpgUsername, twitterHandle: twitterHandle, lastUpdated: Date.now() },
+            { upsert: true, new: true }
+        );
+        return interaction.editReply({ content: '✅ ¡Perfil actualizado con éxito!' });
+    }
+
+    if (customId === 'market_agent_modal') {
+        const userProfile = await VPGUser.findOne({ discordId: user.id });
+        if (!userProfile || !userProfile.primaryPosition) {
+            return interaction.editReply({ content: '❌ Antes de anunciarte, debes configurar tu perfil y tu posición principal usando el botón "✏️ Editar Perfil".' });
+        }
+        const description = fields.getTextInputValue('descriptionInput');
+        const availability = fields.getTextInputValue('availabilityInput');
+        await FreeAgent.findOneAndUpdate(
+            { userId: user.id },
+            { guildId: guild.id, description: description, availability: availability, status: 'ACTIVE' },
+            { upsert: true, new: true }
+        );
+        return interaction.editReply({ content: '✅ ¡Tu anuncio como agente libre ha sido publicado/actualizado! Los mánagers ahora podrán encontrarte usando el buscador.' });
+    }
+
+    // =======================================================
+    // == COMIENZO DEL CÓDIGO ORIGINAL (RESTO DE MODALES) ====
+    // =======================================================
     
     if (customId.startsWith('manager_request_modal_')) {
         const leagueName = customId.split('_')[3];
@@ -207,65 +244,5 @@ module.exports = async (client, interaction) => {
         } catch (error) {
             return interaction.editReply({ content: `❌ No se pudo enviar el desafío. El mánager de ${panel.teamId.name} podría tener los MDs cerrados.` });
         }
-    }
-// NUEVO: Bloque para manejar el modal de edición de perfil
-        // NUEVO: Bloque para manejar el modal de edición de perfil
-                if (customId === 'edit_profile_modal') {
-        // La respuesta inicial (deferReply) ya se ha hecho en index.js.
-        // Este modal SOLO se encarga del VPG Username y Twitter.
-        
-        const vpgUsername = fields.getTextInputValue('vpgUsernameInput');
-        const twitterHandle = fields.getTextInputValue('twitterInput');
-
-        try {
-            // Buscamos el perfil del usuario y actualizamos SOLO estos dos campos.
-            // Las posiciones ya se guardaron con los menús desplegables.
-            await VPGUser.findOneAndUpdate(
-                { discordId: user.id },
-                {
-                    vpgUsername: vpgUsername,
-                    twitterHandle: twitterHandle,
-                    lastUpdated: Date.now()
-                },
-                { upsert: true, new: true } // Upsert por si el perfil no existía
-            );
-
-            return interaction.editReply({ content: '✅ ¡Tu perfil ha sido actualizado con éxito!' });
-        } catch (error) {
-            console.error("Error al guardar el perfil (modal):", error);
-            return interaction.editReply({ content: '❌ Hubo un error al guardar tu perfil. Por favor, inténtalo de nuevo.' });
-        }
-    }
-    // =======================================================
-    // == GUARDAR ANUNCIO DE AGENTE LIBRE ====================
-    // =======================================================
-
-    if (customId === 'market_agent_modal') {
-        // El deferReply ya se hizo en index.js, así que solo editamos
-        
-        // Primero, comprobamos que el jugador haya configurado su perfil (posiciones)
-        const userProfile = await VPGUser.findOne({ discordId: user.id });
-        if (!userProfile || !userProfile.primaryPosition) {
-            return interaction.editReply({ content: '❌ Antes de anunciarte, debes configurar tu perfil y tu posición principal usando el botón "✏️ Editar Perfil".' });
-        }
-
-        // Obtenemos los datos del formulario
-        const description = fields.getTextInputValue('descriptionInput');
-        const availability = fields.getTextInputValue('availabilityInput');
-
-        // Guardamos o actualizamos el anuncio en la base de datos
-        const FreeAgent = require('../models/freeAgent.js');
-        await FreeAgent.findOneAndUpdate(
-            { userId: user.id },
-            {
-                guildId: guild.id,
-                description: description,
-                availability: availability,
-                status: 'ACTIVE'
-            },
-            { upsert: true, new: true } // Upsert: si no existe, lo crea; si existe, lo actualiza
-        );
-
-        return interaction.editReply({ content: '✅ ¡Tu anuncio como agente libre ha sido publicado/actualizado! Los mánagers ahora podrán encontrarte usando el buscador.' });
     }
 };
