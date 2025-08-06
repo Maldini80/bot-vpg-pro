@@ -5,10 +5,12 @@ const path = require('node:path');
 const { Client, Collection, GatewayIntentBits, Events } = require('discord.js');
 const mongoose = require('mongoose');
 const cron = require('node-cron');
+const express = require('express');
 
 const AvailabilityPanel = require('./models/availabilityPanel.js');
 const TeamChatChannel = require('./models/teamChatChannel.js');
 const Team = require('./models/team.js');
+
 
 mongoose.connect(process.env.DATABASE_URL)
     .then(() => console.log('Conectado a MongoDB.'))
@@ -152,5 +154,18 @@ client.on(Events.InteractionCreate, async interaction => {
         }
     }
 });
+// =======================================================
+// == SERVIDOR WEB PARA MANTENER EL BOT DESPIERTO =======
+// =======================================================
+const app = express();
+const port = process.env.PORT || 3000;
 
+app.get('/', (req, res) => {
+  res.send('VPG Order Bot está online y funcionando.');
+});
+
+app.listen(port, () => {
+  console.log(`Servidor web escuchando en el puerto ${port} para las comprobaciones de Uptime Robot.`);
+});
+// =======================================================
 client.login(process.env.DISCORD_TOKEN);
