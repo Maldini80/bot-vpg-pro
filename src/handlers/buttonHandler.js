@@ -223,7 +223,7 @@ const handler = async (client, interaction) => {
     const esAprobador = isAdmin || member.roles.cache.has(process.env.APPROVER_ROLE_ID);
     
     if (customId.startsWith('challenge_slot_')) {
-     // Se ha eliminado el deferReply genérico para evitar conflictos.
+        await interaction.deferReply({ flags: 64 });
         
         const challengerTeam = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
         if (!challengerTeam) return interaction.editReply({ content: 'Debes ser Mánager o Capitán de un equipo para desafiar.' });
@@ -408,37 +408,6 @@ const handler = async (client, interaction) => {
                 }
             }
         }
-     // NUEVO: Bloque para manejar el clic en el botón de editar perfil
-    if (customId === 'edit_profile_button') {
-        // Buscamos el perfil existente para rellenar los campos del formulario
-        const existingProfile = await VPGUser.findOne({ discordId: user.id });
-
-        const modal = new ModalBuilder()
-            .setCustomId('edit_profile_modal')
-            .setTitle('Editar tu Perfil VPG');
-
-        const vpgUsernameInput = new TextInputBuilder()
-            .setCustomId('vpgUsernameInput')
-            .setLabel("Tu nombre de usuario en VPG")
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true)
-            .setValue(existingProfile?.vpgUsername || '');
-
-        const twitterInput = new TextInputBuilder()
-            .setCustomId('twitterInput')
-            .setLabel("Tu usuario de Twitter (sin @)")
-            .setStyle(TextInputStyle.Short)
-            .setRequired(false)
-            .setValue(existingProfile?.twitterHandle || '');
-
-        modal.addComponents(
-            new ActionRowBuilder().addComponents(vpgUsernameInput),
-            new ActionRowBuilder().addComponents(twitterInput)
-        );
-
-        // Mostrar el modal es la respuesta a la interacción
-        return interaction.showModal(modal);
-    }
 
         const uniqueMatches = [...new Map(allConfirmedSlots.map(item => [item.time, item])).values()];
         uniqueMatches.sort((a,b) => a.time.localeCompare(b.time));
@@ -597,16 +566,12 @@ const handler = async (client, interaction) => {
              const fetchMemberInfo = async (ids, roleName) => {
                  if (!ids || ids.length === 0) return;
                  rosterString += `\n**${roleName}**\n`;
-               for (const memberId of ids) {
+                 for (const memberId of ids) {
                      try {
-                         const memberData = await guild.members.fetch(memberId);
-                         const profile = memberMap.get(memberId);
-                         const vpgUsername = profile?.vpgUsername || 'N/A';
-                         const twitterInfo = profile?.twitterHandle ? ` - @${profile.twitterHandle}` : '';
-                         rosterString += `> ${memberData.user.username} (${vpgUsername})${twitterInfo}\n`;
-                     } catch (error) {
-                         rosterString += `> *Usuario no encontrado (ID: ${memberId})*\n`;
-                     }
+                        const memberData = await guild.members.fetch(memberId);
+                        const vpgUser = memberMap.get(memberId)?.vpgUsername || 'N/A';
+                        rosterString += `> ${memberData.user.username} (${vpgUser})\n`;
+                     } catch (error) { rosterString += `> *Usuario no encontrado (ID: ${memberId})*\n`; }
                  }
              };
              await fetchMemberInfo([teamToView.managerId].filter(Boolean), '👑 Mánager');
