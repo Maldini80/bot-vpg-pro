@@ -11,14 +11,15 @@ module.exports = {
         await interaction.reply({ content: 'Creando el nuevo panel de fichajes profesional...', flags: 64 });
 
         const embed = new EmbedBuilder()
-            .setColor(0x0099FF) // Un color azul más vibrante
+            .setColor(0x0099FF)
             .setTitle('CENTRAL DEL MERCADO DE FICHAJES')
             .setDescription('Bienvenido al centro neurálgico del mercado. Utiliza los botones de abajo según tu rol para navegar por las distintas opciones.')
             .addFields(
                 { name: '👤 PARA JUGADORES', value: 'Anúnciate como agente libre para que te encuentren los equipos o busca activamente ofertas que se ajusten a tu perfil.' },
                 { name: '👔 PARA MÁNAGERS Y CAPITANES', value: 'Publica las necesidades de tu plantilla para atraer talento o busca en la base de datos de agentes libres para encontrar a tu próxima estrella.' }
             )
-            .setImage('https://i.imgur.com/your-awesome-banner-image.png') // Opcional: crea y sube una imagen a imgur.com para darle un toque único
+            // <<--- ESTA ES LA LÍNEA QUE HEMOS CAMBIADO ---<<
+            .setImage('https://img.freepik.com/fotos-premium/imagen-manos-hombre-firmando-contrato_380164-35331.jpg')
             .setFooter({ text: 'Todas las interacciones se gestionan por mensajes privados para mantener el canal limpio.' });
 
         // Fila de botones para JUGADORES
@@ -51,7 +52,7 @@ module.exports = {
                 .setCustomId('market_search_players')
                 .setLabel('Buscar Agentes Libres')
                 .setStyle(ButtonStyle.Primary)
-                .setEmoji('🔍') // <-- ESTA ES LA LÍNEA CORREGIDA
+                .setEmoji('🔍')
         );
 
         await interaction.channel.send({ embeds: [embed], components: [playerRow, managerRow] });
