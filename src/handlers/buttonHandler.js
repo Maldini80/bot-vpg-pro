@@ -227,7 +227,7 @@ const handler = async (client, interaction) => {
     // == LÓGICA DEL PERFIL Y MERCADO ========================
     // =======================================================
 
-    if (customId === 'edit_profile_button') {
+        if (customId === 'edit_profile_button') {
         const positionOptions = [
             { label: 'GK', value: 'POR' },
             { label: 'DFC', value: 'DFC' },
@@ -238,17 +238,27 @@ const handler = async (client, interaction) => {
             { label: 'DC', value: 'DC' },
         ];
 
-        const primaryPositionMenu = new StringSelectMenuBuilder().setCustomId('select_primary_position').setPlaceholder('Selecciona tu posición principal');
-        const secondaryPositionMenu = new StringSelectMenuBuilder().setCustomId('select_secondary_position').setPlaceholder('Selecciona tu posición secundaria (opcional)');
+        const primaryPositionMenu = new StringSelectMenuBuilder()
+            .setCustomId('select_primary_position')
+            .setPlaceholder('Selecciona tu posición principal');
+
+        const secondaryPositionMenu = new StringSelectMenuBuilder()
+            .setCustomId('select_secondary_position')
+            .setPlaceholder('Selecciona tu posición secundaria (opcional)');
 
         const profile = await VPGUser.findOne({ discordId: user.id });
         
-                primaryPositionMenu.addOptions(positionOptions.map(opt => ({ ...opt, default: !!(profile && opt.value === profile.primaryPosition) })));
+        // CORRECCIÓN: Usamos !! para asegurar que el valor sea siempre true/false
+        primaryPositionMenu.addOptions(positionOptions.map(opt => ({ ...opt, default: !!(profile && opt.value === profile.primaryPosition) })));
         
         const secondaryOptions = [{ label: 'Ninguna', value: 'NINGUNA' }, ...positionOptions];
-         secondaryPositionMenu.addOptions(secondaryOptions.map(opt => ({ ...opt, default: !!(profile && opt.value === profile.secondaryPosition) })));
+        // CORRECCIÓN: Usamos !! para asegurar que el valor sea siempre true/false
+        secondaryPositionMenu.addOptions(secondaryOptions.map(opt => ({ ...opt, default: !!(profile && opt.value === profile.secondaryPosition) })));
 
-        const continueButton = new ButtonBuilder().setCustomId('continue_to_profile_modal').setLabel('Continuar con Nombre y Twitter').setStyle(ButtonStyle.Success);
+        const continueButton = new ButtonBuilder()
+            .setCustomId('continue_to_profile_modal')
+            .setLabel('Continuar con Nombre y Twitter')
+            .setStyle(ButtonStyle.Success);
 
         return interaction.editReply({
             content: 'Selecciona tus posiciones. Cuando termines, pulsa el botón para editar el resto de tu perfil.',
