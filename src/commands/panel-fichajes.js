@@ -5,20 +5,18 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName('panel-fichajes')
         .setDescription('Crea el panel de control del mercado de fichajes.')
-        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator), // Solo los admins pueden usarlo
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
     async execute(interaction) {
-        // Respondemos al admin para que sepa que el comando ha funcionado
-        await interaction.reply({ content: 'Creando el panel de fichajes...', flags: 64 });
+        await interaction.deferReply({ flags: 64 });
 
-        // Creamos el mensaje visual (el "embed")
         const embed = new EmbedBuilder()
-            .setTitle('CENTRO DE FICHAJES VPG')
-            .setDescription('Usa los botones de abajo para buscar jugadores, encontrar equipo o publicar ofertas.')
-            .setColor('Gold') // Un color dorado/amarillo
-            .setFooter({ text: 'Las búsquedas y publicaciones se gestionan mediante mensajes privados.' });
+            .setTitle('CENTRO DE OPERACIONES: MERCADO DE FICHAJES')
+            .setDescription('Interactúa con los botones de abajo para navegar por el mercado. La mayoría de acciones se realizarán por mensajes privados para mantener este canal limpio.')
+            .setColor('Gold')
+            .setImage('https://i.imgur.com/your-header-image.png') // Opcional: puedes poner una imagen de cabecera
+            .setFooter({ text: 'VPG Transfer Market' });
 
-        // Creamos la fila de botones
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
                 .setCustomId('market_search_players')
@@ -42,10 +40,7 @@ module.exports = {
                 .setEmoji('📄')
         );
 
-        // Enviamos el panel al canal donde se usó el comando
         await interaction.channel.send({ embeds: [embed], components: [row] });
-        
-        // Editamos la respuesta inicial para confirmar que todo ha ido bien
         await interaction.editReply({ content: '✅ ¡Panel de fichajes creado con éxito!' });
     },
 };
