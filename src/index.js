@@ -8,7 +8,7 @@ const cron = require('node-cron');
 const axios = require('axios'); // Herramienta para el despertador
 const AvailabilityPanel = require('./models/availabilityPanel.js');
 const TeamChatChannel = require('./models/teamChatChannel.js');
-const Team = require('./models.team.js');
+const Team = require('./models/team.js');
 
 mongoose.connect(process.env.DATABASE_URL)
     .then(() => console.log('Conectado a MongoDB.'))
