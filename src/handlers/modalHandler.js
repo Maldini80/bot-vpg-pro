@@ -210,7 +210,7 @@ module.exports = async (client, interaction) => {
     }
 // NUEVO: Bloque para manejar el modal de edición de perfil
     if (customId === 'edit_profile_modal') {
-        await interaction.deferReply({ ephemeral: true }); // Deferimos la respuesta
+        await interaction.deferReply({ flags: 64 }); // Deferimos la respuesta
         
         const vpgUsername = fields.getTextInputValue('vpgUsernameInput');
         const twitterHandle = fields.getTextInputValue('twitterInput');
