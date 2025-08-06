@@ -6,7 +6,7 @@ const PlayerApplication = require('../models/playerApplication.js');
 const VPGUser = require('../models/user.js');
 
 module.exports = async (client, interaction) => {
-    await interaction.deferReply({ flags: 64 });
+   
     const { customId, fields, guild, user, member, message } = interaction;
     
     if (customId.startsWith('manager_request_modal_')) {
