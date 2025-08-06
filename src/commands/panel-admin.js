@@ -8,8 +8,7 @@ module.exports = {
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
     async execute(interaction) {
-        // CORRECCIÓN CLAVE: Deferir la respuesta INMEDIATAMENTE.
-        await interaction.deferReply({ flags: 64 });
+        // La línea deferReply ha sido ELIMINADA de aquí para evitar conflictos.
 
         const embed = new EmbedBuilder()
             .setTitle('Panel de Control de Administrador VPG')
@@ -26,7 +25,7 @@ module.exports = {
         // Enviamos el panel al canal
         await interaction.channel.send({ embeds: [embed], components: [row] });
         
-        // Editamos la respuesta deferida para confirmar al admin
-        await interaction.editReply({ content: '✅ Panel de administrador creado con éxito.' });
+        // Usamos editReply porque el "portero" en index.js ya hizo defer.
+        return interaction.editReply({ content: '✅ Panel de administrador creado con éxito.' });
     },
 };
