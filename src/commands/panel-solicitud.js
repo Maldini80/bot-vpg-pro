@@ -16,9 +16,11 @@ module.exports = {
             .setDescription('Aquí puedes interactuar con el sistema de equipos.')
             .setColor('#3498db');
 
-        const row = new ActionRowBuilder().addComponents(
+               const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId('request_manager_role_button').setLabel('📝 Registrar Equipo').setStyle(ButtonStyle.Success),
             new ButtonBuilder().setCustomId('view_teams_button').setLabel('👥 Ver Equipos').setStyle(ButtonStyle.Primary),
+            // NUEVO BOTÓN
+            new ButtonBuilder().setCustomId('edit_profile_button').setLabel('✏️ Editar Perfil').setStyle(ButtonStyle.Secondary),
             new ButtonBuilder().setCustomId('leave_team_button').setLabel('🚪 Abandonar Equipo').setStyle(ButtonStyle.Danger),
             new ButtonBuilder().setCustomId('apply_to_team_button').setLabel('✉️ Aplicar a un Equipo').setStyle(ButtonStyle.Secondary)
         );
