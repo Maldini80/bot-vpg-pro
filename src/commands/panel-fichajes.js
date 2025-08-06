@@ -19,7 +19,7 @@ module.exports = {
                 { name: '👔 PARA MÁNAGERS Y CAPITANES', value: 'Publica las necesidades de tu plantilla para atraer talento o busca en la base de datos de agentes libres para encontrar a tu próxima estrella.' }
             )
             // <<--- ESTA ES LA LÍNEA QUE HEMOS CAMBIADO ---<<
-            .setImage('https://img.freepik.com/fotos-premium/imagen-manos-hombre-firmando-contrato_380164-35331.jpg')
+            .setImage('https://i.imgur.com/7sB0gaa.jpeg')
             .setFooter({ text: 'Todas las interacciones se gestionan por mensajes privados para mantener el canal limpio.' });
 
         // Fila de botones para JUGADORES
