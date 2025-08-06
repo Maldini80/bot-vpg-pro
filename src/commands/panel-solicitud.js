@@ -19,8 +19,13 @@ module.exports = {
                const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId('request_manager_role_button').setLabel('📝 Registrar Equipo').setStyle(ButtonStyle.Success),
             new ButtonBuilder().setCustomId('view_teams_button').setLabel('👥 Ver Equipos').setStyle(ButtonStyle.Primary),
-            // NUEVO BOTÓN
             new ButtonBuilder().setCustomId('edit_profile_button').setLabel('✏️ Editar Perfil').setStyle(ButtonStyle.Secondary),
+            // NUEVO BOTÓN
+            new ButtonBuilder().setCustomId('register_as_player_button').setLabel('✅ Registrarse como Jugador').setStyle(ButtonStyle.Success)
+        );
+        
+        // Creamos una segunda fila para los botones menos comunes
+        const row2 = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId('leave_team_button').setLabel('🚪 Abandonar Equipo').setStyle(ButtonStyle.Danger),
             new ButtonBuilder().setCustomId('apply_to_team_button').setLabel('✉️ Aplicar a un Equipo').setStyle(ButtonStyle.Secondary)
         );
