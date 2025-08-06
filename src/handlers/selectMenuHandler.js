@@ -159,11 +159,13 @@ module.exports = async (client, interaction) => {
         const fetchMemberInfo = async (ids, roleName) => {
             if (!ids || ids.length === 0) return;
             rosterString += `\n**${roleName}**\n`;
-            for (const memberId of ids) {
+        for (const memberId of ids) {
                 try {
                    const memberData = await guild.members.fetch(memberId);
-                   const vpgUser = memberMap.get(memberId)?.vpgUsername || 'N/A';
-                   rosterString += `> ${memberData.user.username} (${vpgUser})\n`;
+                   const profile = memberMap.get(memberId);
+                   const vpgUsername = profile?.vpgUsername || 'N/A';
+                   const twitterInfo = profile?.twitterHandle ? ` - @${profile.twitterHandle}` : '';
+                   rosterString += `> ${memberData.user.username} (${vpgUsername})${twitterInfo}\n`;
                 } catch (error) { rosterString += `> *Usuario no encontrado (ID: ${memberId})*\n`; }
             }
         };
