@@ -223,7 +223,7 @@ const handler = async (client, interaction) => {
     const esAprobador = isAdmin || member.roles.cache.has(process.env.APPROVER_ROLE_ID);
     
     if (customId.startsWith('challenge_slot_')) {
-        await interaction.deferReply({ flags: 64 });
+     // Se ha eliminado el deferReply genérico para evitar conflictos.
         
         const challengerTeam = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
         if (!challengerTeam) return interaction.editReply({ content: 'Debes ser Mánager o Capitán de un equipo para desafiar.' });
