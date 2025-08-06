@@ -5,10 +5,10 @@ const path = require('node:path');
 const { Client, Collection, GatewayIntentBits, Events } = require('discord.js');
 const mongoose = require('mongoose');
 const cron = require('node-cron');
-const axios = require('axios'); // Herramienta para el despertador
+const axios = require('axios');
 const AvailabilityPanel = require('./models/availabilityPanel.js');
 const TeamChatChannel = require('./models/teamChatChannel.js');
-const Team = require('./models/team.js'); // VERIFICADO: Ruta correcta
+const Team = require('./models/team.js');
 
 mongoose.connect(process.env.DATABASE_URL)
     .then(() => console.log('Conectado a MongoDB.'))
@@ -23,7 +23,6 @@ const client = new Client({
     ]
 });
 
-// Carga de comandos (sin cambios)
 client.commands = new Collection();
 const commandsPath = path.join(__dirname, 'commands');
 const commandFilesToExclude = ['panel-amistosos.js', 'admin-gestionar-equipo.js'];
@@ -36,7 +35,6 @@ for (const file of commandFiles) {
     }
 }
 
-// Carga de handlers (sin cambios)
 client.handlers = new Map();
 const handlersPath = path.join(__dirname, 'handlers');
 if (fs.existsSync(handlersPath)) {
@@ -47,7 +45,6 @@ if (fs.existsSync(handlersPath)) {
     }
 }
 
-// Evento ClientReady con limpieza diaria (sin cambios)
 client.once(Events.ClientReady, () => {
     console.log(`¡Listo! ${client.user.tag} está online.`);
     cron.schedule('0 6 * * *', async () => {
@@ -77,7 +74,6 @@ client.once(Events.ClientReady, () => {
     }, { scheduled: true, timezone: "Europe/Madrid" });
 });
 
-// Evento de creación de mensaje para chat de equipo (sin cambios)
 client.on(Events.MessageCreate, async message => {
     if (message.author.bot || !message.inGuild()) return;
     const activeChannel = await TeamChatChannel.findOne({ channelId: message.channel.id, guildId: message.guildId });
@@ -106,8 +102,27 @@ client.on(Events.MessageCreate, async message => {
     }
 });
 
-// Gestor de interacciones (sin cambios)
+// GESTOR DE INTERACCIONES CON "PORTERO"
 client.on(Events.InteractionCreate, async interaction => {
+    // EL "PORTERO" QUE RESPONDE AL INSTANTE
+    if (
+        (interaction.isButton() && (interaction.customId === 'edit_profile_button' || interaction.customId === 'continue_to_profile_modal')) ||
+        (interaction.isModalSubmit() && interaction.customId === 'edit_profile_modal')
+    ) {
+        try {
+            // Para los modales, no podemos solo "defer", tenemos que mostrarlo.
+            // Para los botones, sí podemos hacer "defer".
+            if (interaction.isButton() && interaction.customId === 'continue_to_profile_modal') {
+                // No hacemos defer aquí, el handler lo mostrará directamente.
+            } else {
+                 await interaction.deferReply({ flags: 64 });
+            }
+        } catch (e) {
+            console.error("Fallo al intentar aplazar la respuesta:", e);
+            return;
+        }
+    }
+
     try {
         if (interaction.isChatInputCommand()) {
             const command = client.commands.get(interaction.commandName);
@@ -127,30 +142,22 @@ client.on(Events.InteractionCreate, async interaction => {
         }
     } catch (error) {
         console.error("Fallo crítico durante el procesamiento de una interacción:", error);
-        if (interaction.replied || interaction.deferred) {
-            await interaction.followUp({ content: 'Ha ocurrido un error al procesar esta solicitud.', flags: 64 }).catch(() => {});
-        } else {
-            if (error.code !== 'InteractionAlreadyReplied' && error.code !== 10062) {
-                await interaction.reply({ content: 'Ha ocurrido un error al procesar esta solicitud.', flags: 64 }).catch(() => {});
+        if (!interaction.replied && !interaction.deferred) {
+            try {
+                await interaction.reply({ content: 'Ha ocurrido un error al procesar esta solicitud.', flags: 64 });
+            } catch (e) {
+                await interaction.followUp({ content: 'Ha ocurrido un error al procesar esta solicitud.', flags: 64 }).catch(() => {});
             }
+        } else {
+            await interaction.followUp({ content: 'Ha ocurrido un error al procesar esta solicitud.', flags: 64 }).catch(() => {});
         }
     }
 });
 
-// =======================================================
-// == DESPERTADOR INTERNO (LA SOLUCIÓN DEFINITIVA) =======
-// =======================================================
+// DESPERTADOR INTERNO
 const selfPingUrl = `https://bot-vpg-pro.onrender.com`;
 setInterval(() => {
-    if (selfPingUrl) {
-        axios.get(selfPingUrl).catch(err => {
-            if (err.response && err.response.status !== 404) {
-                console.error("Error en el self-ping:", err.message);
-            }
-            // No es necesario mostrar un log cada 4 minutos, lo dejamos silencioso
-        });
-    }
+    axios.get(selfPingUrl).catch(() => {}); // Simplemente hacemos la petición, ignoramos el error 404
 }, 4 * 60 * 1000); // Cada 4 minutos
-// =======================================================
 
 client.login(process.env.DISCORD_TOKEN);
