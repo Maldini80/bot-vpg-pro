@@ -51,7 +51,7 @@ module.exports = {
                 .setCustomId('market_search_players')
                 .setLabel('Buscar Agentes Libres')
                 .setStyle(ButtonStyle.Primary)
-                .setEmoji(' scouting') // Puedes usar emojis personalizados si tu servidor los tiene
+                .setEmoji('🔍') // <-- ESTA ES LA LÍNEA CORREGIDA
         );
 
         await interaction.channel.send({ embeds: [embed], components: [playerRow, managerRow] });
