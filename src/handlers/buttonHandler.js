@@ -913,6 +913,35 @@ const handler = async (client, interaction) => {
 
         return interaction.showModal(modal);
     }
+        // =======================================================
+    // == LÓGICA DE REGISTRO DE NUEVO JUGADOR ===============
+    // =======================================================
+
+    if (customId === 'register_as_player_button') {
+        // 1. Comprobar que no pertenece ya a un equipo
+        const existingTeam = await Team.findOne({
+            guildId: guild.id,
+            $or: [{ managerId: user.id }, { captains: user.id }, { players: user.id }]
+        });
+        
+        if (existingTeam) {
+            return interaction.editReply({ content: `❌ Ya perteneces al equipo **${existingTeam.name}**. No necesitas registrarte.` });
+        }
+
+        // 2. Comprobar que no tenga ya el rol
+        if (member.roles.cache.has(process.env.PLAYER_ROLE_ID)) {
+            return interaction.editReply({ content: '✅ ¡Ya estás registrado como jugador!' });
+        }
+
+        // 3. Asignar el rol
+        try {
+            await member.roles.add(process.env.PLAYER_ROLE_ID);
+            return interaction.editReply({ content: '✅ ¡Bienvenido! Has sido registrado como Jugador. Ahora puedes usar el botón "✏️ Editar Perfil" para configurar tu posición y anunciarte en el mercado.' });
+        } catch (error) {
+            console.error("Error al asignar el rol de jugador:", error);
+            return interaction.editReply({ content: '❌ Hubo un error al intentar asignarte el rol. Por favor, contacta a un administrador.' });
+        }
+    }
 };
 
 handler.updatePanelMessage = updatePanelMessage;
