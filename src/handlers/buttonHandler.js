@@ -880,4 +880,55 @@ const handler = async (client, interaction) => {
 
 handler.updatePanelMessage = updatePanelMessage;
 handler.getOrCreateWebhook = getOrCreateWebhook;
+
+// =======================================================
+// == LÓGICA DEL MERCADO DE FICHAJES =====================
+// =======================================================
+
+if (customId === 'market_post_agent') {
+    // PERMISOS: Comprobamos que sea jugador o capitán
+    const isPlayer = member.roles.cache.has(process.env.PLAYER_ROLE_ID);
+    const isCaptain = member.roles.cache.has(process.env.CAPTAIN_ROLE_ID);
+    if (!isPlayer && !isCaptain) {
+        return interaction.reply({ content: '❌ Solo los jugadores y capitanes pueden anunciarse como agentes libres.', flags: 64 });
+    }
+
+    // CONTROL DE SPAM: Comprobamos si ya se ha anunciado recientemente
+    const FreeAgent = require('../models/freeAgent.js');
+    const existingAd = await FreeAgent.findOne({ userId: user.id });
+    const COOLDOWN_DAYS = 3; // Puede anunciarse cada 3 días
+    if (existingAd && (new Date() - existingAd.updatedAt) < (COOLDOWN_DAYS * 24 * 60 * 60 * 1000)) {
+        const timeLeft = new Date(existingAd.updatedAt.getTime() + (COOLDOWN_DAYS * 24 * 60 * 60 * 1000));
+        return interaction.reply({ content: `❌ Ya has actualizado tu anuncio recientemente. Podrás hacerlo de nuevo el ${timeLeft.toLocaleDateString('es-ES')} a las ${timeLeft.toLocaleTimeString('es-ES')}.`, flags: 64 });
+    }
+    
+    // Si todo está bien, mostramos el formulario
+    const modal = new ModalBuilder()
+        .setCustomId('market_agent_modal')
+        .setTitle('Anunciarse como Agente Libre');
+
+    const descriptionInput = new TextInputBuilder()
+        .setCustomId('descriptionInput')
+        .setLabel("Descríbete como jugador (estilo, puntos fuertes)")
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(true)
+        .setMaxLength(500)
+        .setValue(existingAd?.description || ''); // Rellena con la descripción anterior si existe
+
+    const availabilityInput = new TextInputBuilder()
+        .setCustomId('availabilityInput')
+        .setLabel("¿Cuál es tu disponibilidad horaria?")
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true)
+        .setMaxLength(200)
+        .setValue(existingAd?.availability || ''); // Rellena con la disponibilidad anterior
+
+    modal.addComponents(
+        new ActionRowBuilder().addComponents(descriptionInput),
+        new ActionRowBuilder().addComponents(availabilityInput)
+    );
+
+    return interaction.showModal(modal);
+}
+
 module.exports = handler;
