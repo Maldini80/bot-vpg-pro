@@ -210,12 +210,15 @@ module.exports = async (client, interaction) => {
     }
 // NUEVO: Bloque para manejar el modal de edición de perfil
         // NUEVO: Bloque para manejar el modal de edición de perfil
-        if (customId === 'edit_profile_modal') {
+            if (customId === 'edit_profile_modal') {
         // La respuesta inicial (deferReply) ya se ha hecho en index.js.
         // Ahora solo nos enfocamos en el trabajo y en editar esa respuesta.
         
         const vpgUsername = fields.getTextInputValue('vpgUsernameInput');
         const twitterHandle = fields.getTextInputValue('twitterInput');
+        // OBTENEMOS LAS NUEVAS POSICIONES Y LAS PONEMOS EN MAYÚSCULAS
+        const primaryPosition = fields.getTextInputValue('primaryPositionInput').toUpperCase();
+        const secondaryPosition = fields.getTextInputValue('secondaryPositionInput').toUpperCase();
 
         try {
             await VPGUser.findOneAndUpdate(
@@ -223,6 +226,9 @@ module.exports = async (client, interaction) => {
                 {
                     vpgUsername: vpgUsername,
                     twitterHandle: twitterHandle,
+                    // GUARDAMOS LAS NUEVAS POSICIONES
+                    primaryPosition: primaryPosition,
+                    secondaryPosition: secondaryPosition,
                     lastUpdated: Date.now()
                 },
                 { upsert: true, new: true }
