@@ -21,6 +21,7 @@ module.exports = {
             new ButtonBuilder().setCustomId('market_search_teams').setLabel('Buscar Equipos').setStyle(ButtonStyle.Primary).setEmoji('🔎'),
             new ButtonBuilder().setCustomId('market_post_agent').setLabel('Anunciarse como Agente Libre').setStyle(ButtonStyle.Success).setEmoji('📣'),
             new ButtonBuilder().setCustomId('market_post_offer').setLabel('Publicar Oferta de Equipo').setStyle(ButtonStyle.Secondary).setEmoji('📄')
+            new ButtonBuilder().setCustomId('market_manage_ad').setLabel('Mi Anuncio').setStyle(ButtonStyle.Danger).setEmoji('⚙️')
         );
 
         await interaction.channel.send({ embeds: [embed], components: [row] });
