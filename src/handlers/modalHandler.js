@@ -1,4 +1,5 @@
 // src/handlers/modalHandler.js
+const TeamOffer = require('../models/teamOffer.js');
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits } = require('discord.js');
 const Team = require('../models/team.js');
 const League = require('../models/league.js');
@@ -12,6 +13,31 @@ module.exports = async (client, interaction) => {
     await interaction.deferReply({ flags: 64 });
 
     const { customId, fields, guild, user, member, message } = interaction;
+    // --- Lógica para los Modales del Mercado de Fichajes ---
+if (customId.startsWith('market_')) {
+    if (customId === 'market_agent_modal') {
+        const description = fields.getTextInputValue('descriptionInput');
+        const availability = fields.getTextInputValue('availabilityInput');
+        await FreeAgent.findOneAndUpdate(
+            { userId: user.id },
+            { guildId: guild.id, description, availability, status: 'ACTIVE' },
+            { upsert: true, new: true }
+        );
+        await interaction.editReply({ content: '✅ ¡Tu anuncio como agente libre ha sido publicado/actualizado!' });
+    }
+    else if (customId.startsWith('market_offer_modal_')) {
+        const teamId = customId.split('_')[3];
+        const positionsRaw = fields.getTextInputValue('positionsInput');
+        const requirements = fields.getTextInputValue('requirementsInput');
+        const positions = positionsRaw.split(',').map(p => p.trim().toUpperCase()).filter(p => p);
+        if (positions.length === 0) {
+            return interaction.editReply({ content: '❌ Debes especificar al menos una posición.' });
+        }
+        await TeamOffer.create({ teamId, guildId: guild.id, postedById: user.id, positions, requirements });
+        await interaction.editReply({ content: '✅ ¡La oferta de tu equipo ha sido publicada!' });
+    }
+    return; // Detenemos la ejecución
+}
     
     if (customId === 'edit_profile_modal') {
         const vpgUsername = fields.getTextInputValue('vpgUsernameInput');
