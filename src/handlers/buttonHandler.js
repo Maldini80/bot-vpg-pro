@@ -398,15 +398,50 @@ const handler = async (client, interaction) => {
         return;
     }
 
-    if (customId === 'continue_profile_modal') {
+     if (customId === 'continue_profile_modal') {
         const userProfile = await VPGUser.findOne({ discordId: user.id }).lean();
         if (!userProfile || !userProfile.primaryPosition) {
-            return interaction.reply({ content: '❌ Debes seleccionar tu posición principal antes de continuar.', flags: 64 });
+            return interaction.reply({ content: '❌ Debes seleccionar tu posición principal antes de continuar.', flags: MessageFlags.Ephemeral });
         }
-        const modal = new ModalBuilder().setCustomId('edit_profile_modal').setTitle('Completar Perfil');
-        const vpgUsernameInput = new TextInputBuilder().setCustomId('vpgUsernameInput').setLabel("Tu nombre de usuario en VPG").setStyle(TextInputStyle.Short).setRequired(false).setValue(userProfile.vpgUsername || '');
-        const twitterInput = new TextInputBuilder().setCustomId('twitterInput').setLabel("Tu Twitter (sin @)").setStyle(TextInputStyle.Short).setRequired(false).setValue(userProfile.twitterHandle || '');
-        modal.addComponents(new ActionRowBuilder().addComponents(vpgUsernameInput), new ActionRowBuilder().addComponents(twitterInput));
+
+        const modal = new ModalBuilder().setCustomId('edit_profile_modal').setTitle('Actualizar Perfil');
+
+        const vpgUsernameInput = new TextInputBuilder()
+            .setCustomId('vpgUsernameInput')
+            .setLabel("Tu nombre de usuario en VPG")
+            .setStyle(TextInputStyle.Short)
+            .setRequired(false)
+            .setValue(userProfile.vpgUsername || '');
+
+        const twitterInput = new TextInputBuilder()
+            .setCustomId('twitterInput')
+            .setLabel("Tu Twitter (sin @)")
+            .setStyle(TextInputStyle.Short)
+            .setRequired(false)
+            .setValue(userProfile.twitterHandle || '');
+
+        // --- CAMPOS AÑADIDOS ---
+        const psnIdInput = new TextInputBuilder()
+            .setCustomId('psnIdInput')
+            .setLabel("Tu ID de PlayStation Network (PSN)")
+            .setStyle(TextInputStyle.Short)
+            .setRequired(false)
+            .setValue(userProfile.psnId || '');
+            
+        const eaIdInput = new TextInputBuilder()
+            .setCustomId('eaIdInput')
+            .setLabel("Tu ID de EA Sports FC")
+            .setStyle(TextInputStyle.Short)
+            .setRequired(false)
+            .setValue(userProfile.eaId || '');
+
+        modal.addComponents(
+            new ActionRowBuilder().addComponents(vpgUsernameInput),
+            new ActionRowRowBuilder().addComponents(twitterInput),
+            new ActionRowBuilder().addComponents(psnIdInput),
+            new ActionRowBuilder().addComponents(eaIdInput)
+        );
+        
         await interaction.showModal(modal);
         return;
     }
