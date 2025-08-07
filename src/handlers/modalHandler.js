@@ -7,7 +7,7 @@ const VPGUser = require('../models/user.js');
 const FreeAgent = require('../models/freeAgent.js');
 const TeamOffer = require('../models/teamOffer.js');
 
-const POSITIONS = ['POR', 'DFC', 'LD', 'LI', 'MCD', 'MC', 'MCO', 'MD', 'MI', 'ED', 'EI', 'DC'];
+const POSITIONS = ['POR', 'DFC', 'CARR', 'MCD', 'MV', 'MCO', 'DC'];
 
 module.exports = async (client, interaction) => {
     // IMPORTANTE: Se elimina el deferReply global de aquí.
