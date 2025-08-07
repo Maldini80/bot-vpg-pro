@@ -1,5 +1,5 @@
 // src/handlers/modalHandler.js
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits, StringSelectMenuBuilder } = require('discord.js');
 const Team = require('../models/team.js');
 const League = require('../models/league.js');
 const PlayerApplication = require('../models/playerApplication.js');
@@ -7,17 +7,61 @@ const VPGUser = require('../models/user.js');
 const FreeAgent = require('../models/freeAgent.js');
 const TeamOffer = require('../models/teamOffer.js');
 
+const POSITIONS = ['POR', 'DFC', 'LD', 'LI', 'MCD', 'MC', 'MCO', 'MD', 'MI', 'ED', 'EI', 'DC'];
+
 module.exports = async (client, interaction) => {
-    await interaction.deferReply({ flags: 64 });
+    // IMPORTANTE: Se elimina el deferReply global de aquí.
     const { customId, fields, guild, user, member, message } = interaction;
 
-    // --- LÓGICA DE PERFIL Y PUBLICACIÓN DE ANUNCIOS (CORREGIDA Y COMPLETA) ---
+    // --- LÓGICA NUEVA PARA EL REGISTRO DE JUGADOR ---
+    if (customId === 'player_registration_modal') {
+        // Aplazamos la respuesta aquí, solo para esta interacción
+        await interaction.deferReply({ ephemeral: true }); 
 
+        const vpgUsername = fields.getTextInputValue('vpgUsernameInput');
+        const twitterHandle = fields.getTextInputValue('twitterInput');
+        const psnId = fields.getTextInputValue('psnIdInput');
+        const eaId = fields.getTextInputValue('eaIdInput');
+
+        await VPGUser.findOneAndUpdate(
+            { discordId: user.id },
+            { vpgUsername, twitterHandle, psnId, eaId },
+            { upsert: true, new: true }
+        );
+
+        const positionOptions = POSITIONS.map(p => ({ label: p, value: p }));
+        
+        const primaryMenu = new StringSelectMenuBuilder()
+            .setCustomId('register_select_primary_position')
+            .setPlaceholder('Selecciona tu Posición Principal (Obligatorio)')
+            .addOptions(positionOptions);
+
+        const secondaryMenu = new StringSelectMenuBuilder()
+            .setCustomId('register_select_secondary_position')
+            .setPlaceholder('Selecciona tu Posición Secundaria (Opcional)')
+            .addOptions({ label: 'Ninguna', value: 'NINGUNA' }, ...positionOptions);
+
+        return interaction.editReply({
+            content: '**Paso 2 de 2:** ¡Casi hemos terminado! Ahora selecciona tus posiciones en el campo.',
+            components: [
+                new ActionRowBuilder().addComponents(primaryMenu),
+                new ActionRowBuilder().addComponents(secondaryMenu)
+            ],
+            ephemeral: true
+        });
+    }
+
+    // --- LÓGICA EXISTENTE, AHORA CON SU PROPIO DEFER ---
+    
+    // Cada bloque 'if' ahora gestiona su propia respuesta.
+    await interaction.deferReply({ flags: 64 });
+    
     if (customId === 'edit_profile_modal') {
         const vpgUsername = fields.getTextInputValue('vpgUsernameInput');
         const twitterHandle = fields.getTextInputValue('twitterInput');
-        const psnId = fields.getTextInputValue('psnInput');
-        const eaId = fields.getTextInputValue('eaInput');
+        // Asumiendo que psnInput y eaInput podrían estar en este modal en el futuro
+        const psnId = fields.getTextInputValue('psnInput') || null;
+        const eaId = fields.getTextInputValue('eaInput') || null;
         await VPGUser.findOneAndUpdate({ discordId: user.id }, { vpgUsername, twitterHandle, psnId, eaId }, { upsert: true });
         return interaction.editReply({ content: '✅ ¡Tu perfil ha sido actualizado con éxito!' });
     }
@@ -95,8 +139,6 @@ module.exports = async (client, interaction) => {
 
         return interaction.editReply({ content: `✅ ¡La oferta de tu equipo ha sido publicada/actualizada con éxito en el canal ${channel}!` });
     }
-
-    // --- LÓGICA ORIGINAL RESTANTE (Mantenida y Funcional) ---
 
     if (customId.startsWith('manager_request_modal_')) {
         const leagueName = customId.split('_')[3];
