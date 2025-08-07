@@ -437,7 +437,7 @@ const handler = async (client, interaction) => {
 
         modal.addComponents(
             new ActionRowBuilder().addComponents(vpgUsernameInput),
-            new ActionRowRowBuilder().addComponents(twitterInput),
+            new ActionRowBuilder().addComponents(twitterInput),
             new ActionRowBuilder().addComponents(psnIdInput),
             new ActionRowBuilder().addComponents(eaIdInput)
         );
