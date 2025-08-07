@@ -495,56 +495,69 @@ if (customId === 'edit_profile_button') {
             await interaction.editReply({ embeds: [embed], components: [managementRow] });
         }
         else if (customId === 'market_delete_ad_button') {
-            await interaction.deferUpdate(); 
-            
-            await FreeAgent.deleteOne({ userId: user.id });
-            
-            await interaction.editReply({ 
-                content: '✅ Tu anuncio de agente libre ha sido borrado con éxito.',
-                embeds: [], 
-                components: [] 
-            });
+    await interaction.deferUpdate(); 
+    
+    // CORRECCIÓN: Buscamos el anuncio para obtener el messageId.
+    const adToDelete = await FreeAgent.findOne({ userId: user.id });
+
+    if (adToDelete && adToDelete.messageId) {
+        try {
+            const channel = await client.channels.fetch(process.env.PLAYERS_AD_CHANNEL_ID);
+            await channel.messages.delete(adToDelete.messageId);
+        } catch (error) {
+            console.log(`No se pudo borrar el mensaje del anuncio ${adToDelete.messageId}. Puede que ya no existiera.`);
         }
+    }
+    
+    await FreeAgent.deleteOne({ userId: user.id });
+    
+    await interaction.editReply({ 
+        content: '✅ Tu anuncio de agente libre ha sido borrado con éxito.',
+        embeds: [], 
+        components: [] 
+    });
+}
         else if (customId === 'market_edit_ad_button') {
-            const existingAd = await FreeAgent.findOne({ userId: user.id });
+    const existingAd = await FreeAgent.findOne({ userId: user.id });
 
-            if (!existingAd) {
-                return interaction.reply({ content: '❌ No se pudo encontrar tu anuncio para editarlo.', flags: MessageFlags.Ephemeral });
-            }
+    if (!existingAd) {
+        return interaction.reply({ content: '❌ No se pudo encontrar tu anuncio para editarlo.', flags: MessageFlags.Ephemeral });
+    }
+    
+    // CORRECCIÓN: Pasamos el ID del anuncio al customId del modal.
+    const modal = new ModalBuilder().setCustomId(`market_agent_modal_edit:${existingAd._id}`).setTitle('Editar Anuncio de Agente Libre');
 
-            const modal = new ModalBuilder().setCustomId('market_agent_modal_edit').setTitle('Editar Anuncio de Agente Libre');
+    const experienceInput = new TextInputBuilder()
+        .setCustomId('experienceInput')
+        .setLabel("Tu experiencia (clubes, logros, etc.)")
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(true)
+        .setMaxLength(500)
+        .setValue(existingAd.experience || '');
 
-            const experienceInput = new TextInputBuilder()
-                .setCustomId('experienceInput')
-                .setLabel("Tu experiencia (clubes, logros, etc.)")
-                .setStyle(TextInputStyle.Paragraph)
-                .setRequired(true)
-                .setMaxLength(500)
-                .setValue(existingAd.experience || '');
+    const seekingInput = new TextInputBuilder()
+        .setCustomId('seekingInput')
+        .setLabel("¿Qué tipo de equipo buscas?")
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(true)
+        .setMaxLength(500)
+        .setValue(existingAd.seeking || '');
 
-            const seekingInput = new TextInputBuilder()
-                .setCustomId('seekingInput')
-                .setLabel("¿Qué tipo de equipo buscas?")
-                .setStyle(TextInputStyle.Paragraph)
-                .setRequired(true)
-                .setMaxLength(500)
-                .setValue(existingAd.seeking || '');
+    const availabilityInput = new TextInputBuilder()
+        .setCustomId('availabilityInput')
+        .setLabel("Tu disponibilidad horaria")
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true)
+        .setMaxLength(200)
+        .setValue(existingAd.availability || '');
 
-            const availabilityInput = new TextInputBuilder()
-                .setCustomId('availabilityInput')
-                .setLabel("Tu disponibilidad horaria")
-                .setStyle(TextInputStyle.Short)
-                .setRequired(true)
-                .setMaxLength(200)
-                .setValue(existingAd.availability || '');
-
-            modal.addComponents(
-                new ActionRowBuilder().addComponents(experienceInput),
-                new ActionRowBuilder().addComponents(seekingInput),
-                new ActionRowBuilder().addComponents(availabilityInput)
-            );
-            await interaction.showModal(modal);
-        }
+    modal.addComponents(
+        new ActionRowBuilder().addComponents(experienceInput),
+        new ActionRowBuilder().addComponents(seekingInput),
+        new ActionRowBuilder().addComponents(availabilityInput)
+    );
+    await interaction.showModal(modal);
+}
         return;
     }
 
