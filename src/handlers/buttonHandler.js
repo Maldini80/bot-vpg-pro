@@ -297,7 +297,7 @@ if (customId === 'team_manage_offer_button') {
 
     const managementRow = new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId(`edit_team_offer_button_${existingOffer._id}`).setLabel('Editar Oferta').setStyle(ButtonStyle.Primary),
-        new ButtonBuilder().setCustomId(`delete_team_offer_button_${existingOffer.teamId}`).setLabel('Borrar Oferta').setStyle(ButtonStyle.Danger) // Usamos teamId para borrar
+        new ButtonBuilder().setCustomId(`delete_team_offer_button_${existingOffer._id}`).setLabel('Borrar Oferta').setStyle(ButtonStyle.Danger) // Usamos teamId para borrar
     );
     
     await interaction.editReply({ embeds: [embed], components: [managementRow] });
@@ -306,10 +306,9 @@ if (customId === 'team_manage_offer_button') {
 
 if (customId.startsWith('delete_team_offer_button_')) {
     await interaction.deferUpdate();
-    const teamId = customId.split('_')[4];
+    const offerId = customId.split('_')[4];
 
-    // 1. Buscamos la oferta para obtener el ID del mensaje
-    const offerToDelete = await TeamOffer.findOne({ teamId: teamId });
+    const offerToDelete = await TeamOffer.findById(offerId);
     
     if (offerToDelete && offerToDelete.messageId) {
         try {
@@ -317,15 +316,14 @@ if (customId.startsWith('delete_team_offer_button_')) {
             const channel = await client.channels.fetch(channelId);
             await channel.messages.delete(offerToDelete.messageId);
         } catch (error) {
-            console.log(`No se pudo borrar el mensaje de la oferta (ID: ${offerToDelete.messageId}). Probablemente ya no existía.`);
+            console.log(`No se pudo borrar el mensaje público de la oferta (ID: ${offerToDelete.messageId}).`);
         }
     }
 
-    // 2. Borramos la oferta de la base de datos
-    await TeamOffer.deleteOne({ teamId: teamId });
+    await TeamOffer.findByIdAndDelete(offerId);
     
     await interaction.editReply({
-        content: '✅ La oferta de fichajes de tu equipo ha sido borrada con éxito.',
+        content: '✅ La oferta de fichajes ha sido borrada.',
         embeds: [],
         components: []
     });
