@@ -68,85 +68,80 @@ module.exports = async (client, interaction) => {
     }
 
     if (customId === 'market_agent_modal' || customId.startsWith('market_agent_modal_edit')) {
-    await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ ephemeral: true });
 
-    const isEditing = customId.startsWith('market_agent_modal_edit');
-    const adId = isEditing ? customId.split(':')[1] : null;
+        const isEditing = customId.startsWith('market_agent_modal_edit');
+        
+        // --- Lógica de Cooldown ---
+        const existingAd = await FreeAgent.findOne({ userId: user.id });
+        const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+        if (existingAd && existingAd.updatedAt > threeDaysAgo && !isEditing) { // Solo se aplica al crear.
+            return interaction.editReply({ content: `❌ Ya has actualizado tu anuncio en los últimos 3 días.` });
+        }
+        
+        const experience = fields.getTextInputValue('experienceInput');
+        const seeking = fields.getTextInputValue('seekingInput');
+        const availability = fields.getTextInputValue('availabilityInput');
 
-    const experience = fields.getTextInputValue('experienceInput');
-    const seeking = fields.getTextInputValue('seekingInput');
-    const availability = fields.getTextInputValue('availabilityInput');
-    
-    // --- Lógica de Cooldown ---
-    const existingAd = await FreeAgent.findOne({ userId: user.id });
-    const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
-    if (existingAd && existingAd.updatedAt > threeDaysAgo && !isEditing) { // Solo aplica al crear, no al editar.
-        return interaction.editReply({ content: `❌ Ya has actualizado tu anuncio en los últimos 3 días.` });
-    }
+        const channelId = process.env.PLAYERS_AD_CHANNEL_ID;
+        if (!channelId) return interaction.editReply({ content: '❌ Error de configuración: El canal de anuncios para jugadores no está definido.' });
+        
+        const channel = await client.channels.fetch(channelId).catch(() => null);
+        if (!channel) return interaction.editReply({ content: '❌ Error: No se pudo encontrar el canal de anuncios para jugadores.' });
 
-    const channelId = process.env.PLAYERS_AD_CHANNEL_ID;
-    if (!channelId) return interaction.editReply({ content: '❌ Error de configuración: El canal de anuncios para jugadores no está definido.' });
-    
-    const channel = await client.channels.fetch(channelId).catch(() => null);
-    if (!channel) return interaction.editReply({ content: '❌ Error: No se pudo encontrar el canal de anuncios para jugadores.' });
+        const profile = await VPGUser.findOne({ discordId: user.id }).lean();
+        if (!profile || !profile.primaryPosition) {
+            return interaction.editReply({ content: '❌ Debes completar tu perfil de jugador (con al menos la posición principal) antes de poder anunciarte.' });
+        }
+        
+        const playerAdEmbed = new EmbedBuilder()
+            .setAuthor({ name: member.displayName, iconURL: user.displayAvatarURL() })
+            .setThumbnail(user.displayAvatarURL())
+            .setTitle(`Jugador en busca de equipo: ${member.displayName}`)
+            .setColor('Blue')
+            .addFields(
+                { name: 'Posiciones', value: `**${profile.primaryPosition}** / ${profile.secondaryPosition || 'N/A'}`, inline: true },
+                { name: 'Contacto', value: `<@${user.id}>`, inline: true },
+                { name: 'IDs de Juego', value: `PSN: ${profile.psnId || 'N/A'}\nEA ID: ${profile.eaId || 'N/A'}`, inline: false },
+                { name: 'Experiencia', value: experience, inline: false },
+                { name: 'Busco un equipo que...', value: seeking, inline: false },
+                { name: 'Disponibilidad', value: availability, inline: false }
+            )
+            .setTimestamp();
+        
+        let messageId;
+        let responseMessage;
 
-    const profile = await VPGUser.findOne({ discordId: user.id }).lean();
-    if (!profile || !profile.primaryPosition) {
-        return interaction.editReply({ content: '❌ Debes completar tu perfil de jugador (con al menos la posición principal) antes de poder anunciarte.' });
-    }
-    
-    const playerAdEmbed = new EmbedBuilder()
-        .setAuthor({ name: member.displayName, iconURL: user.displayAvatarURL() })
-        .setThumbnail(user.displayAvatarURL())
-        .setTitle(`Jugador en busca de equipo: ${member.displayName}`)
-        .setColor('Blue')
-        .addFields(
-            { name: 'Posiciones', value: `**${profile.primaryPosition}** / ${profile.secondaryPosition || 'N/A'}`, inline: true },
-            { name: 'Contacto', value: `<@${user.id}>`, inline: true },
-            { name: 'IDs de Juego', value: `PSN: ${profile.psnId || 'N/A'}\nEA ID: ${profile.eaId || 'N/A'}`, inline: false },
-            { name: 'Experiencia', value: experience, inline: false },
-            { name: 'Busco un equipo que...', value: seeking, inline: false },
-            { name: 'Disponibilidad', value: availability, inline: false }
-        )
-        .setTimestamp();
-    
-    let messageId;
-    let responseMessage;
-
-    if (isEditing && existingAd && existingAd.messageId) {
-        // --- LÓGICA DE EDICIÓN ---
-        try {
-            const adMessage = await channel.messages.fetch(existingAd.messageId);
-            await adMessage.edit({ embeds: [playerAdEmbed] });
-            messageId = existingAd.messageId;
-            responseMessage = '✅ ¡Tu anuncio ha sido actualizado con éxito!';
-        } catch (error) {
-            // Si el mensaje fue borrado, publicamos uno nuevo.
+        if (isEditing && existingAd && existingAd.messageId) {
+            // --- LÓGICA DE EDICIÓN ---
+            try {
+                const adMessage = await channel.messages.fetch(existingAd.messageId);
+                await adMessage.edit({ embeds: [playerAdEmbed] });
+                messageId = existingAd.messageId;
+                responseMessage = '✅ ¡Tu anuncio ha sido actualizado con éxito!';
+            } catch (error) {
+                const newMessage = await channel.send({ embeds: [playerAdEmbed] });
+                messageId = newMessage.id;
+                responseMessage = '✅ Tu anuncio anterior no se encontró, así que se ha publicado uno nuevo.';
+            }
+        } else {
+            // --- LÓGICA DE CREACIÓN ---
+            if (existingAd && existingAd.messageId) {
+                try { await channel.messages.delete(existingAd.messageId); } catch(e) {}
+            }
             const newMessage = await channel.send({ embeds: [playerAdEmbed] });
             messageId = newMessage.id;
-            responseMessage = '✅ Tu anuncio anterior no se encontró, así que se ha publicado uno nuevo.';
+            responseMessage = '✅ ¡Tu anuncio ha sido publicado con éxito!';
         }
-    } else {
-        // --- LÓGICA DE CREACIÓN ---
-        // Si por alguna razón había un anuncio antiguo sin messageId, lo borramos para no duplicar.
-        if (existingAd && existingAd.messageId) {
-            try { await channel.messages.delete(existingAd.messageId); } catch(e) {}
-        }
-        const newMessage = await channel.send({ embeds: [playerAdEmbed] });
-        messageId = newMessage.id;
-        responseMessage = '✅ ¡Tu anuncio ha sido publicado con éxito!';
+
+        await FreeAgent.findOneAndUpdate(
+            { userId: user.id }, 
+            { guildId: guild.id, experience, seeking, availability, status: 'ACTIVE', messageId }, 
+            { upsert: true, new: true }
+        );
+
+        return interaction.editReply({ content: `${responseMessage} en el canal ${channel}` });
     }
-
-    // Guardamos o actualizamos en la base de datos CON el messageId.
-    await FreeAgent.findOneAndUpdate(
-        { userId: user.id }, 
-        { guildId: guild.id, experience, seeking, availability, status: 'ACTIVE', messageId }, 
-        { upsert: true, new: true }
-    );
-
-    return interaction.editReply({ content: `${responseMessage} en el canal ${channel}` });
-}
-
     if (customId.startsWith('offer_add_requirements_')) {
     await interaction.deferReply({ ephemeral: true });
 
