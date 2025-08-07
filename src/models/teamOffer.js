@@ -1,15 +1,16 @@
 // src/models/teamOffer.js
-messageId: { type: String, default: null },
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
 const teamOfferSchema = new Schema({
-    teamId: { type: Schema.Types.ObjectId, ref: 'Team', required: true, unique: true }, // Un equipo solo puede tener una oferta activa
+    teamId: { type: Schema.Types.ObjectId, ref: 'Team', required: true, unique: true },
     guildId: { type: String, required: true },
-    postedById: { type: String, required: true }, // ID del mánager/capi que la publicó
-    positions: [{ type: String, required: true }], // Array con las posiciones buscadas, ej: ['DFC', 'MCD']
-    requirements: { type: String, maxLength: 500 }, // Descripción de lo que se busca
+    postedById: { type: String, required: true },
+    positions: [{ type: String, required: true }],
+    requirements: { type: String, maxLength: 500 },
     status: { type: String, default: 'ACTIVE', enum: ['ACTIVE', 'CLOSED'] },
-}, { timestamps: true }); // timestamps añade createdAt y updatedAt
+    // ESTA ES LA LÍNEA NUEVA, AHORA EN SU SITIO CORRECTO
+    messageId: { type: String, default: null }, 
+}, { timestamps: true });
 
 module.exports = mongoose.model('TeamOffer', teamOfferSchema);
