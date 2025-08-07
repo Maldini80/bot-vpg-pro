@@ -129,6 +129,7 @@ if (customId.startsWith('offer_select_positions_')) {
 
     modal.addComponents(new ActionRowBuilder().addComponents(requirementsInput));
     await interaction.showModal(modal);
+    return; // <-- LÍNEA AÑADIDA
 }
 
     if (customId === 'apply_to_team_select') {
