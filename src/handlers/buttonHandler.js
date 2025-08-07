@@ -122,6 +122,49 @@ async function getOrCreateWebhook(channel, client) {
 }
 
 const handler = async (client, interaction) => {
+    // AÑADE este bloque de código al principio de la función 'handler' en buttonHandler.js
+
+if (customId === 'manager_actions_button') {
+    const team = await Team.findOne({ guildId: interaction.guildId, managerId: interaction.user.id });
+    if (team) {
+        return interaction.reply({ content: '❌ Ya eres mánager de un equipo, no puedes registrar otro.', ephemeral: true });
+    }
+    const subMenuEmbed = new EmbedBuilder()
+        .setTitle('👑 Acciones de Mánager')
+        .setDescription('Aquí tienes las acciones disponibles para la gestión de equipos.')
+        .setColor('Green');
+    const subMenuRow = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+            .setCustomId('request_manager_role_button')
+            .setLabel('📝 Registrar mi Equipo')
+            .setStyle(ButtonStyle.Success)
+    );
+    return interaction.reply({ embeds: [subMenuEmbed], components: [subMenuRow], ephemeral: true });
+}
+
+if (customId === 'player_actions_button') {
+    const canLeaveTeam = interaction.member.roles.cache.has(process.env.PLAYER_ROLE_ID) || interaction.member.roles.cache.has(process.env.CAPTAIN_ROLE_ID);
+    const subMenuEmbed = new EmbedBuilder()
+        .setTitle('👤 Acciones de Jugador')
+        .setDescription('Gestiona tu perfil y tu pertenencia a equipos.')
+        .setColor('Blue');
+    const subMenuRow = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+            .setCustomId('edit_profile_button')
+            .setLabel('✏️ Actualizar Perfil')
+            .setStyle(ButtonStyle.Primary),
+        new ButtonBuilder()
+            .setCustomId('apply_to_team_button')
+            .setLabel('✉️ Unirme a un Equipo')
+            .setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder()
+            .setCustomId('leave_team_button')
+            .setLabel('🚪 Abandonar Equipo')
+            .setStyle(ButtonStyle.Danger)
+            .setDisabled(!canLeaveTeam)
+    );
+    return interaction.reply({ embeds: [subMenuEmbed], components: [subMenuRow], ephemeral: true });
+}
     if (!interaction.inGuild()) {
         await interaction.deferUpdate();
         const { customId, message } = interaction;
