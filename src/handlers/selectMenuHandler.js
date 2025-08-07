@@ -12,13 +12,19 @@ module.exports = async (client, interaction) => {
     const selectedValue = values[0];
 
     if (customId === 'select_primary_position' || customId === 'select_secondary_position') {
+    try {
         await interaction.deferUpdate();
-        const updateData = customId === 'select_primary_position'
-            ? { primaryPosition: selectedValue }
-            : { secondaryPosition: selectedValue === 'NINGUNA' ? null : selectedValue };
-        await VPGUser.findOneAndUpdate({ discordId: user.id }, updateData, { upsert: true });
-
-    } else if (customId === 'search_team_pos_filter' || customId === 'search_team_league_filter') {
+    } catch (e) {
+        // Si falla (porque la interacción ya expiró), simplemente lo ignoramos y continuamos
+        // ya que la única acción es guardar en la BD.
+        console.log("DeferUpdate falló en selectMenuHandler (perfil), continuando...");
+    }
+    const updateData = customId === 'select_primary_position'
+        ? { primaryPosition: selectedValue }
+        : { secondaryPosition: selectedValue === 'NINGUNA' ? null : selectedValue };
+    await VPGUser.findOneAndUpdate({ discordId: user.id }, updateData, { upsert: true });
+    // No hay 'return' para que la estructura else if funcione
+} else if (customId === 'search_team_pos_filter' || customId === 'search_team_league_filter') {
         await interaction.deferReply({ flags: 64 });
         const filter = { guildId: guild.id, status: 'ACTIVE' };
         if (selectedValue !== 'ANY') {
