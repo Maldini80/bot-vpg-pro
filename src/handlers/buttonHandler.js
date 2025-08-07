@@ -381,7 +381,6 @@ const handler = async (client, interaction) => {
 if (customId === 'edit_profile_button') {
     const positionOptions = POSITIONS.map(p => ({ label: p, value: p }));
     
-    // El customId es ahora más específico para evitar conflictos
     const primaryMenu = new StringSelectMenuBuilder()
         .setCustomId('update_select_primary_position') 
         .setPlaceholder('Paso 1: Selecciona tu posición principal')
