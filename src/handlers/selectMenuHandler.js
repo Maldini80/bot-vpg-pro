@@ -11,18 +11,59 @@ module.exports = async (client, interaction) => {
     const { customId, values, guild, user } = interaction;
     const selectedValue = values[0];
 
-    if (customId === 'select_primary_position' || customId === 'select_secondary_position') {
-        try {
-            await interaction.deferUpdate();
-        } catch (e) {
-            console.log("DeferUpdate falló en selectMenuHandler (perfil), continuando...");
-        }
-        const updateData = customId === 'select_primary_position'
-            ? { primaryPosition: selectedValue }
-            : { secondaryPosition: selectedValue === 'NINGUNA' ? null : selectedValue };
-        await VPGUser.findOneAndUpdate({ discordId: user.id }, updateData, { upsert: true });
+    // REEMPLAZAR DESDE AQUÍ
+if (customId === 'update_select_primary_position') {
+    const selectedPosition = values[0];
+    // Guardamos la posición principal en la base de datos
+    await VPGUser.findOneAndUpdate(
+        { discordId: user.id }, 
+        { primaryPosition: selectedPosition }, 
+        { upsert: true }
+    );
 
-    } else if (customId === 'search_team_pos_filter' || customId === 'search_team_league_filter') {
+    const positionOptions = POSITIONS.map(p => ({ label: p, value: p }));
+    // Creamos el menú para el segundo paso
+    const secondaryMenu = new StringSelectMenuBuilder()
+        .setCustomId('update_select_secondary_position')
+        .setPlaceholder('Paso 2: Selecciona tu posición secundaria')
+        .addOptions({ label: 'Ninguna', value: 'NINGUNA' }, ...positionOptions);
+
+    // Actualizamos el mensaje original para pedir el siguiente dato
+    await interaction.update({
+        content: '✅ Posición principal guardada. Ahora, selecciona tu posición secundaria.',
+        components: [new ActionRowBuilder().addComponents(secondaryMenu)]
+    });
+
+} else if (customId === 'update_select_secondary_position') {
+    const selectedPosition = values[0];
+    // Guardamos la posición secundaria
+    await VPGUser.findOneAndUpdate(
+        { discordId: user.id }, 
+        { secondaryPosition: selectedPosition === 'NINGUNA' ? null : selectedPosition }, 
+        { upsert: true }
+    );
+
+    // Ahora que tenemos las posiciones, mostramos el modal para los datos de texto
+    const userProfile = await VPGUser.findOne({ discordId: user.id }).lean();
+    const modal = new ModalBuilder().setCustomId('edit_profile_modal').setTitle('Actualizar Perfil (Paso final)');
+
+    const vpgUsernameInput = new TextInputBuilder().setCustomId('vpgUsernameInput').setLabel("Tu nombre de usuario en VPG").setStyle(TextInputStyle.Short).setRequired(false).setValue(userProfile.vpgUsername || '');
+    const twitterInput = new TextInputBuilder().setCustomId('twitterInput').setLabel("Tu Twitter (sin @)").setStyle(TextInputStyle.Short).setRequired(false).setValue(userProfile.twitterHandle || '');
+    const psnIdInput = new TextInputBuilder().setCustomId('psnIdInput').setLabel("Tu ID de PlayStation Network (PSN)").setStyle(TextInputStyle.Short).setRequired(false).setValue(userProfile.psnId || '');
+    const eaIdInput = new TextInputBuilder().setCustomId('eaIdInput').setLabel("Tu ID de EA Sports FC").setStyle(TextInputStyle.Short).setRequired(false).setValue(userProfile.eaId || '');
+
+    modal.addComponents(
+        new ActionRowBuilder().addComponents(vpgUsernameInput),
+        new ActionRowBuilder().addComponents(twitterInput),
+        new ActionRowBuilder().addComponents(psnIdInput),
+        new ActionRowBuilder().addComponents(eaIdInput)
+    );
+    
+    // Mostramos el modal como respuesta a la interacción del menú
+    await interaction.showModal(modal);
+
+} 
+// HASTA AQUÍ (EL 'else if' que viene después debe quedar fuera de la selección) else if (customId === 'search_team_pos_filter' || customId === 'search_team_league_filter') {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const filter = { guildId: guild.id, status: 'ACTIVE' };
         if (selectedValue !== 'ANY') {
