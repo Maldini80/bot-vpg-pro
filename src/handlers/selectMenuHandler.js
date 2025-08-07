@@ -21,8 +21,37 @@ if (customId === 'select_primary_position' || customId === 'select_secondary_pos
 }
 
 if (customId === 'search_team_pos_filter' || customId === 'search_team_league_filter') {
-    // Esta lógica puede ser compleja, por ahora la dejamos como placeholder funcional
-    await interaction.reply({ content: '✅ Búsqueda de equipos en desarrollo. Filtro recibido.', flags: 64 });
+    await interaction.deferReply({ flags: 64 });
+    
+    const filter = { guildId: guild.id, status: 'ACTIVE' };
+    const selectedValue = values[0];
+    
+    if (selectedValue !== 'ANY') {
+        if (customId === 'search_team_pos_filter') {
+            filter.positions = selectedValue;
+        }
+    }
+
+    const offers = await TeamOffer.find(filter).populate('teamId').limit(10);
+    
+    if (offers.length === 0) {
+        return interaction.editReply({ content: '❌ No se encontraron ofertas de equipo con los filtros seleccionados.' });
+    }
+
+    await interaction.editReply({ content: `✅ Se encontraron ${offers.length} ofertas. Te las muestro a continuación:` });
+
+    for (const offer of offers) {
+        const offerEmbed = new EmbedBuilder()
+            .setAuthor({ name: offer.teamId.name, iconURL: offer.teamId.logoUrl })
+            .setThumbnail(offer.teamId.logoUrl)
+            .setColor('Green')
+            .addFields(
+                { name: 'Posiciones Buscadas', value: `\`${offer.positions.join(', ')}\`` },
+                { name: 'Requisitos', value: offer.requirements },
+                { name: 'Contacto', value: `<@${offer.postedById}>` }
+            );
+        await interaction.followUp({ embeds: [offerEmbed], ephemeral: true });
+    }
     return;
 }
 
