@@ -1,4 +1,5 @@
 // src/models/teamOffer.js
+messageId: { type: String, default: null },
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
