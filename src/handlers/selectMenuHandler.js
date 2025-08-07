@@ -11,15 +11,12 @@ module.exports = async (client, interaction) => {
     const { customId, values, guild, user } = interaction;
     const selectedValue = values[0];
 
-    // --- SE CAMBIA LA ESTRUCTURA A IF / ELSE IF ---
-
     if (customId === 'select_primary_position' || customId === 'select_secondary_position') {
         await interaction.deferUpdate();
         const updateData = customId === 'select_primary_position'
             ? { primaryPosition: selectedValue }
             : { secondaryPosition: selectedValue === 'NINGUNA' ? null : selectedValue };
         await VPGUser.findOneAndUpdate({ discordId: user.id }, updateData, { upsert: true });
-        // No es necesario un 'return' porque la estructura 'else if' lo maneja
 
     } else if (customId === 'search_team_pos_filter' || customId === 'search_team_league_filter') {
         await interaction.deferReply({ flags: 64 });
@@ -198,5 +195,46 @@ module.exports = async (client, interaction) => {
         const leaguesToDelete = values;
         const result = await League.deleteMany({ guildId: guild.id, name: { $in: leaguesToDelete } });
         return interaction.editReply({ content: `✅ Se han eliminado ${result.deletedCount} ligas.` });
+    
+    // --- LÓGICA AÑADIDA PARA FINALIZAR EL REGISTRO DE JUGADOR ---
+    } else if (customId === 'register_select_primary_position' || customId === 'register_select_secondary_position') {
+        await interaction.deferUpdate();
+        const isPrimary = customId === 'register_select_primary_position';
+        const position = values[0];
+
+        const update = isPrimary 
+            ? { primaryPosition: position } 
+            : { secondaryPosition: position === 'NINGUNA' ? null : position };
+        await VPGUser.findOneAndUpdate({ discordId: user.id }, update);
+
+        const userProfile = await VPGUser.findOne({ discordId: user.id });
+
+        if (userProfile && userProfile.primaryPosition) {
+            try {
+                // Buscamos el servidor (guild) desde el cliente porque esta interacción ocurre en un MD
+                const guild = await client.guilds.fetch(process.env.GUILD_ID);
+                if (!guild) throw new Error('No se pudo encontrar el servidor principal.');
+                
+                const member = await guild.members.fetch(user.id);
+                if (!member) throw new Error('No se pudo encontrar al miembro en el servidor.');
+
+                const playerRole = await guild.roles.fetch(process.env.PLAYER_ROLE_ID);
+                if (playerRole) {
+                    await member.roles.add(playerRole);
+                }
+                
+                await interaction.editReply({ 
+                    content: '✅ **¡Registro completado!** Has recibido el rol de Jugador en el servidor. ¡Bienvenido!',
+                    components: [] 
+                });
+
+            } catch (err) {
+                console.error("Error al finalizar registro y asignar rol:", err);
+                await interaction.editReply({ 
+                    content: 'Tu perfil se ha guardado, pero hubo un error al asignarte el rol en el servidor. Por favor, contacta a un administrador.',
+                    components: []
+                });
+            }
+        }
     }
 };
