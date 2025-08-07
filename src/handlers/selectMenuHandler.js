@@ -283,4 +283,47 @@ module.exports = async (client, interaction) => {
             }
         }
     }
+    else if (customId.startsWith('select_available_times_')) {
+        await interaction.deferReply({ flags: 64 });
+
+        const { updatePanelMessage, getOrCreateWebhook } = require('./buttonHandler.js'); // Importamos las funciones necesarias
+        const selectedTimes = values;
+        const leaguesString = customId.split('_').slice(3).join('_');
+        const leagues = leaguesString === 'all' ? [] : leaguesString.split(',');
+        
+        const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
+        if (!team) return interaction.editReply({ content: 'No se pudo encontrar tu equipo.' });
+
+        const channelId = process.env.SCHEDULED_FRIENDLY_CHANNEL_ID;
+        if (!channelId) return interaction.editReply({ content: 'Error: El ID del canal de amistosos programados no está configurado.' });
+
+        const channel = await client.channels.fetch(channelId).catch(() => null);
+        if (!channel) return interaction.editReply({ content: 'Error: No se encontró el canal de amistosos programados.' });
+
+        // Creamos un mensaje temporal para obtener un ID
+        const initialEmbed = new EmbedBuilder().setTitle(`Buscando Rival - ${team.name} (Disponible)`).setColor("Greyple");
+        const webhook = await getOrCreateWebhook(channel, client);
+        const message = await webhook.send({ embeds: [initialEmbed], username: team.name, avatarURL: team.logoUrl });
+
+        const timeSlots = selectedTimes.map(time => ({
+            time: time,
+            status: 'AVAILABLE'
+        }));
+
+        const panel = new AvailabilityPanel({
+            guildId: guild.id,
+            channelId,
+            messageId: message.id,
+            teamId: team._id,
+            postedById: user.id,
+            panelType: 'SCHEDULED',
+            leagues,
+            timeSlots
+        });
+
+        await panel.save();
+        await updatePanelMessage(client, panel._id); // Actualizamos el mensaje para que tenga los botones correctos
+
+        return interaction.editReply({ content: `✅ ¡Tu panel de búsqueda de amistosos ha sido publicado en ${channel}!` });
+    }
 };
