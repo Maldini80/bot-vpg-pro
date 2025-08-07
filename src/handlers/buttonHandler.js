@@ -461,7 +461,7 @@ if (customId === 'edit_profile_button') {
         .setPlaceholder('Selecciona las posiciones que buscas')
         .addOptions(positionOptions)
         .setMinValues(1)
-        .setMaxValues(10);
+        .setMaxValues(positionOptions.length);
 
     await interaction.editReply({
         content: '**Paso 1 de 2:** Selecciona del menú todas las posiciones que tu equipo necesita cubrir.',
