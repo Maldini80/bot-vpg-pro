@@ -12,20 +12,18 @@ module.exports = async (client, interaction) => {
     const selectedValue = values[0];
 
     if (customId === 'select_primary_position' || customId === 'select_secondary_position') {
-    try {
-        await interaction.deferUpdate();
-    } catch (e) {
-        // Si falla (porque la interacción ya expiró), simplemente lo ignoramos y continuamos
-        // ya que la única acción es guardar en la BD.
-        console.log("DeferUpdate falló en selectMenuHandler (perfil), continuando...");
-    }
-    const updateData = customId === 'select_primary_position'
-        ? { primaryPosition: selectedValue }
-        : { secondaryPosition: selectedValue === 'NINGUNA' ? null : selectedValue };
-    await VPGUser.findOneAndUpdate({ discordId: user.id }, updateData, { upsert: true });
-    // No hay 'return' para que la estructura else if funcione
-} else if (customId === 'search_team_pos_filter' || customId === 'search_team_league_filter') {
-        await interaction.deferReply({ flags: 64 });
+        try {
+            await interaction.deferUpdate();
+        } catch (e) {
+            console.log("DeferUpdate falló en selectMenuHandler (perfil), continuando...");
+        }
+        const updateData = customId === 'select_primary_position'
+            ? { primaryPosition: selectedValue }
+            : { secondaryPosition: selectedValue === 'NINGUNA' ? null : selectedValue };
+        await VPGUser.findOneAndUpdate({ discordId: user.id }, updateData, { upsert: true });
+
+    } else if (customId === 'search_team_pos_filter' || customId === 'search_team_league_filter') {
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const filter = { guildId: guild.id, status: 'ACTIVE' };
         if (selectedValue !== 'ANY') {
             if (customId === 'search_team_pos_filter') {
@@ -47,11 +45,11 @@ module.exports = async (client, interaction) => {
                     { name: 'Requisitos', value: offer.requirements },
                     { name: 'Contacto', value: `<@${offer.postedById}>` }
                 );
-            await interaction.followUp({ embeds: [offerEmbed], ephemeral: true });
+            await interaction.followUp({ embeds: [offerEmbed], flags: MessageFlags.Ephemeral });
         }
 
     } else if (customId === 'search_player_pos_filter') {
-        await interaction.deferReply({ flags: 64 });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const selectedPositions = values;
         const profiles = await VPGUser.find({ 'primaryPosition': { $in: selectedPositions } }).lean();
         if (profiles.length === 0) {
@@ -78,7 +76,7 @@ module.exports = async (client, interaction) => {
                     { name: 'Descripción del Jugador', value: agent.description || 'Sin descripción.' }
                 )
                 .setFooter({ text: `Puedes contactar directamente con este jugador.` });
-            await interaction.followUp({ embeds: [playerEmbed] });
+            await interaction.followUp({ embeds: [playerEmbed], flags: MessageFlags.Ephemeral });
         }
 
     } else if (customId.startsWith('offer_select_positions_')) {
@@ -160,10 +158,10 @@ module.exports = async (client, interaction) => {
             const leagueId = parts[4];
             const team = await Team.findById(teamId);
             const league = await League.findById(leagueId);
-            if (!team || !league) return interaction.followUp({ content: 'El equipo o la liga ya no existen.', ephemeral: true });
+            if (!team || !league) return interaction.followUp({ content: 'El equipo o la liga ya no existen.', flags: MessageFlags.Ephemeral });
             team.league = league.name;
             await team.save();
-            await interaction.followUp({ content: `✅ La liga del equipo **${team.name}** ha sido cambiada a **${league.name}**.`, ephemeral: true });
+            await interaction.followUp({ content: `✅ La liga del equipo **${team.name}** ha sido cambiada a **${league.name}**.`, flags: MessageFlags.Ephemeral });
         }
 
     } else if (customId === 'view_team_roster_select') {
@@ -202,7 +200,6 @@ module.exports = async (client, interaction) => {
         const result = await League.deleteMany({ guildId: guild.id, name: { $in: leaguesToDelete } });
         return interaction.editReply({ content: `✅ Se han eliminado ${result.deletedCount} ligas.` });
     
-    // --- LÓGICA AÑADIDA PARA FINALIZAR EL REGISTRO DE JUGADOR ---
     } else if (customId === 'register_select_primary_position' || customId === 'register_select_secondary_position') {
         await interaction.deferUpdate();
         const isPrimary = customId === 'register_select_primary_position';
@@ -217,7 +214,6 @@ module.exports = async (client, interaction) => {
 
         if (userProfile && userProfile.primaryPosition) {
             try {
-                // Buscamos el servidor (guild) desde el cliente porque esta interacción ocurre en un MD
                 const guild = await client.guilds.fetch(process.env.GUILD_ID);
                 if (!guild) throw new Error('No se pudo encontrar el servidor principal.');
                 
