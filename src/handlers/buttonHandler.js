@@ -498,9 +498,10 @@ const handler = async (client, interaction) => {
                 .setTitle('Gestión de tu Anuncio de Agente Libre')
                 .setDescription('Aquí está tu anuncio actual. Puedes editarlo o borrarlo.')
                 .addFields(
-                    { name: 'Descripción actual', value: existingAd.description },
-                    { name: 'Disponibilidad actual', value: existingAd.availability }
-                )
+    { name: 'Experiencia actual', value: existingAd.experience || 'No especificado' },
+    { name: 'Equipo que busco', value: existingAd.seeking || 'No especificado' },
+    { name: 'Disponibilidad actual', value: existingAd.availability || 'No especificado' }
+)
                 .setColor('Orange')
                 .setFooter({ text: 'Los mánagers ven esta información cuando te buscan.' });
 
