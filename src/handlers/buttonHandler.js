@@ -264,7 +264,7 @@ if (customId.startsWith('team_submenu_')) {
         case 'team_submenu_market':
             embed = new EmbedBuilder().setTitle('SUBMENÚ: GESTIÓN DE FICHAJES').setColor('Purple').setDescription('Publica o gestiona la oferta de fichajes de tu equipo.');
             row1 = new ActionRowBuilder().addComponents(
-                new ButtonBuilder().setCustomId('market_post_offer').setLabel('Publicar Nueva Oferta').setStyle(ButtonStyle.Success),
+                new ButtonBuilder().setCustomId('market_post_offer').setLabel('Crear / Editar Oferta').setStyle(ButtonStyle.Success),
                 new ButtonBuilder().setCustomId('team_manage_offer_button').setLabel('Gestionar Oferta Existente').setStyle(ButtonStyle.Primary)
             );
             await interaction.editReply({ embeds: [embed], components: [row1] });
