@@ -377,43 +377,25 @@ const handler = async (client, interaction) => {
     const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
     const esAprobador = isAdmin || member.roles.cache.has(process.env.APPROVER_ROLE_ID);
     
-    if (customId === 'edit_profile_button') {
-        const positionOptions = POSITIONS.map(p => ({ label: p, value: p }));
-        const primaryMenu = new StringSelectMenuBuilder().setCustomId('select_primary_position').setPlaceholder('Posición principal').addOptions(positionOptions);
-        const secondaryMenu = new StringSelectMenuBuilder().setCustomId('select_secondary_position').setPlaceholder('Posición secundaria').addOptions({ label: 'Ninguna', value: 'NINGUNA' }, ...positionOptions);
-        const continueButton = new ButtonBuilder().setCustomId('continue_profile_modal').setLabel('Continuar').setStyle(ButtonStyle.Success);
-        
-        await interaction.reply({ 
-            content: 'Define tus posiciones y pulsa Continuar para añadir el resto de tus datos.',
-            components: [new ActionRowBuilder().addComponents(primaryMenu), new ActionRowBuilder().addComponents(secondaryMenu), new ActionRowBuilder().addComponents(continueButton)],
-            flags: MessageFlags.Ephemeral
-        });
-        return;
-    }
+   // REEMPLAZA CON ESTE BLOQUE
+if (customId === 'edit_profile_button') {
+    const positionOptions = POSITIONS.map(p => ({ label: p, value: p }));
+    
+    // El customId es ahora más específico para evitar conflictos
+    const primaryMenu = new StringSelectMenuBuilder()
+        .setCustomId('update_select_primary_position') 
+        .setPlaceholder('Paso 1: Selecciona tu posición principal')
+        .addOptions(positionOptions);
+    
+    await interaction.reply({ 
+        content: 'Vamos a actualizar tu perfil. Por favor, empieza seleccionando tu posición principal.',
+        components: [new ActionRowBuilder().addComponents(primaryMenu)],
+        flags: MessageFlags.Ephemeral
+    });
+    return;
+}
 
-    if (customId === 'continue_profile_modal') {
-        const userProfile = await VPGUser.findOne({ discordId: user.id }).lean();
-        if (!userProfile || !userProfile.primaryPosition) {
-            return interaction.reply({ content: '❌ Debes seleccionar tu posición principal antes de continuar.', flags: MessageFlags.Ephemeral });
-        }
-
-        const modal = new ModalBuilder().setCustomId('edit_profile_modal').setTitle('Actualizar Perfil (2/2)');
-
-        const vpgUsernameInput = new TextInputBuilder().setCustomId('vpgUsernameInput').setLabel("Tu nombre de usuario en VPG").setStyle(TextInputStyle.Short).setRequired(false).setValue(userProfile.vpgUsername || '');
-        const twitterInput = new TextInputBuilder().setCustomId('twitterInput').setLabel("Tu Twitter (sin @)").setStyle(TextInputStyle.Short).setRequired(false).setValue(userProfile.twitterHandle || '');
-        const psnIdInput = new TextInputBuilder().setCustomId('psnIdInput').setLabel("Tu ID de PlayStation Network (PSN)").setStyle(TextInputStyle.Short).setRequired(false).setValue(userProfile.psnId || '');
-        const eaIdInput = new TextInputBuilder().setCustomId('eaIdInput').setLabel("Tu ID de EA Sports FC").setStyle(TextInputStyle.Short).setRequired(false).setValue(userProfile.eaId || '');
-
-        modal.addComponents(
-            new ActionRowBuilder().addComponents(vpgUsernameInput),
-            new ActionRowBuilder().addComponents(twitterInput),
-            new ActionRowBuilder().addComponents(psnIdInput),
-            new ActionRowBuilder().addComponents(eaIdInput)
-        );
-        
-        await interaction.showModal(modal);
-        return;
-    }
+    
     
     if (customId.startsWith('market_')) {
         
@@ -1056,24 +1038,36 @@ const handler = async (client, interaction) => {
     
    
     
-    if (customId === 'team_toggle_recruitment_button') {
-        await interaction.deferReply({ flags: 64 });
-        if (userTeamMg.managerId !== user.id) return interaction.editReply({ content: 'Solo los mánagers pueden hacer esto.' });
-        userTeamMg.recruitmentOpen = !userTeamMg.recruitmentOpen;
-        await userTeamMg.save();
-        return interaction.editReply({ content: `El reclutamiento está ahora **${userTeamMg.recruitmentOpen ? 'ABIERTO' : 'CERRADO'}**.` });
+    // REEMPLAZA CON ESTE BLOQUE
+if (customId === 'team_toggle_recruitment_button') {
+    await interaction.deferReply({ flags: 64 });
+    // Se busca el equipo del usuario que interactúa con el botón
+    const team = await Team.findOne({ guildId: interaction.guild.id, managerId: user.id });
+    
+    if (!team) {
+        return interaction.editReply({ content: 'Solo los mánagers de un equipo pueden hacer esto.' });
     }
+
+    team.recruitmentOpen = !team.recruitmentOpen;
+    await team.save();
+    return interaction.editReply({ content: `El reclutamiento está ahora **${team.recruitmentOpen ? 'ABIERTO' : 'CERRADO'}**.` });
+}
 
 // Lógica para el botón de BORRAR
 
 
 // Lógica para el botón de EDITAR (abre un formulario)
 
-    if (customId === 'post_scheduled_panel' || customId === 'post_instant_panel') {
-        await interaction.deferReply({ flags: 64 });
-        const panelType = customId === 'post_scheduled_panel' ? 'SCHEDULED' : 'INSTANT';
-        const existingPanel = await AvailabilityPanel.findOne({ teamId: userTeamMg._id, panelType });
-        if (existingPanel) return interaction.editReply({ content: `Tu equipo ya tiene un panel de amistosos de tipo ${panelType} activo. Bórralo primero.` });
+    // REEMPLAZA CON ESTE BLOQUE
+if (customId === 'post_scheduled_panel' || customId === 'post_instant_panel') {
+    await interaction.deferReply({ flags: 64 });
+
+    const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
+    if (!team) return interaction.editReply({ content: 'Debes ser mánager o capitán para crear un panel.' });
+
+    const panelType = customId === 'post_scheduled_panel' ? 'SCHEDULED' : 'INSTANT';
+    const existingPanel = await AvailabilityPanel.findOne({ teamId: team._id, panelType });
+    if (existingPanel) return interaction.editReply({ content: `Tu equipo ya tiene un panel de amistosos de tipo ${panelType} activo. Bórralo primero.` });
         const leagues = await League.find({ guildId: guild.id });
         const components = [];
         if (leagues.length > 0) {
