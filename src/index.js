@@ -2,7 +2,8 @@
 require('dotenv').config();
 const fs = require('node:fs');
 const path = require('node:path');
-const { Client, Collection, GatewayIntentBits, Events } = require('discord.js');
+// LÍNEA MODIFICADA: Se añaden los componentes necesarios
+const { Client, Collection, GatewayIntentBits, Events, EmbedBuilder, ActionRowBuilder, ButtonBuilder } = require('discord.js');
 const mongoose = require('mongoose');
 const cron = require('node-cron');
 const axios = require('axios');
@@ -74,6 +75,45 @@ client.once(Events.ClientReady, () => {
     }, { scheduled: true, timezone: "Europe/Madrid" });
 });
 
+// =================================================================
+// == INICIO DE BIENVENIDA POR MENSAJE DIRECTO (MD) - CÓDIGO NUEVO ==
+// =================================================================
+client.on(Events.GuildMemberAdd, async member => {
+    if (member.user.bot) return;
+
+    // Comprobamos si ya tiene un rol de equipo (por si salió y volvió a entrar)
+    const hasTeamRole = member.roles.cache.some(role => [
+        process.env.PLAYER_ROLE_ID,
+        process.env.CAPTAIN_ROLE_ID,
+        process.env.MANAGER_ROLE_ID
+    ].includes(role.id));
+    if (hasTeamRole) return;
+
+    // Preparamos el mensaje y el botón de bienvenida.
+    const welcomeEmbed = new EmbedBuilder()
+        .setTitle(`¡Bienvenido a la comunidad VPG, ${member.displayName}!`)
+        .setDescription('Para poder participar plenamente, primero debes completar tu perfil de jugador.\n\n**Haz clic en el botón de abajo para empezar el registro.**')
+        .setColor('Green')
+        .setImage('https://i.imgur.com/Ode1MEI.jpeg'); // La imagen para nuevos miembros
+
+    const registerButton = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+            .setCustomId('start_player_registration')
+            .setLabel('📝 Iniciar Registro de Jugador')
+            .setStyle(ButtonStyle.Success)
+    );
+
+    // Intentamos enviar el MD. Si falla, lo registramos en la consola.
+    try {
+        await member.send({ embeds: [welcomeEmbed], components: [registerButton] });
+    } catch (error) {
+        console.log(`AVISO: No se pudo enviar el MD de bienvenida a ${member.user.tag}. Posiblemente los tiene desactivados.`);
+    }
+});
+// =================================================================
+// == FIN DE BIENVENIDA POR MENSAJE DIRECTO (MD) ===================
+// =================================================================
+
 client.on(Events.MessageCreate, async message => {
     if (message.author.bot || !message.inGuild()) return;
     const activeChannel = await TeamChatChannel.findOne({ channelId: message.channel.id, guildId: message.guildId });
@@ -101,11 +141,6 @@ client.on(Events.MessageCreate, async message => {
         }
     }
 });
-
-
-// =================================================================
-// == INICIO DE LA CORRECCIÓN - GESTOR DE INTERACCIONES MEJORADO ====
-// =================================================================
 
 client.on(Events.InteractionCreate, async interaction => {
     let handler;
@@ -146,25 +181,17 @@ client.on(Events.InteractionCreate, async interaction => {
             ephemeral: true 
         };
         
-        // Esta comprobación es crucial. Solo intentamos responder si la interacción no ha sido ya respondida.
         if (interaction.replied || interaction.deferred) {
-            // Si ya se respondió (con deferReply, por ejemplo), usamos followUp para enviar un nuevo mensaje de error.
             await interaction.followUp(errorMessage).catch(err => {
                 console.error("Error al intentar enviar un followUp de error:", err);
             });
         } else {
-            // Si no se ha respondido en absoluto, usamos reply.
             await interaction.reply(errorMessage).catch(err => {
                 console.error("Error al intentar enviar un reply de error:", err);
             });
         }
     }
 });
-
-// =================================================================
-// == FIN DE LA CORRECCIÓN =========================================
-// =================================================================
-
 
 // DESPERTADOR INTERNO
 const selfPingUrl = `https://bot-vpg-pro.onrender.com`;
