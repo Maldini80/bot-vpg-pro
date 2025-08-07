@@ -11,7 +11,7 @@ module.exports = async (client, interaction) => {
     await interaction.deferReply({ flags: 64 });
     const { customId, fields, guild, user, member, message } = interaction;
 
-    // --- LÓGICA DE PERFIL Y PUBLICACIÓN DE ANUNCIOS (CON DEPURACIÓN) ---
+    // --- LÓGICA DE PERFIL Y PUBLICACIÓN DE ANUNCIOS (CORREGIDA Y COMPLETA) ---
 
     if (customId === 'edit_profile_modal') {
         const vpgUsername = fields.getTextInputValue('vpgUsernameInput');
@@ -30,22 +30,11 @@ module.exports = async (client, interaction) => {
         await FreeAgent.findOneAndUpdate({ userId: user.id }, { guildId: guild.id, experience, seeking, availability, status: 'ACTIVE' }, { upsert: true, new: true });
 
         const channelId = process.env.PLAYERS_AD_CHANNEL_ID;
-        console.log(`[DEBUG] Intentando publicar anuncio de jugador. ID de canal obtenido de .env: ${channelId}`);
-
-        if (!channelId) {
-            console.error('[ERROR] La variable de entorno PLAYERS_AD_CHANNEL_ID no está definida.');
-            return interaction.editReply({ content: '❌ Error de configuración: El canal de anuncios para jugadores no está definido.' });
-        }
+        if (!channelId) return interaction.editReply({ content: '❌ Error de configuración: El canal de anuncios para jugadores no está definido.' });
         
         const channel = await client.channels.fetch(channelId).catch(() => null);
-        
-        if (!channel) {
-            console.error(`[ERROR] No se pudo encontrar el canal con ID ${channelId}. Verifica que el ID sea correcto y que el bot esté en el servidor.`);
-            return interaction.editReply({ content: `❌ Error: No se pudo encontrar el canal de anuncios para jugadores. ID (${channelId}) incorrecto o el bot no tiene acceso.` });
-        }
+        if (!channel) return interaction.editReply({ content: '❌ Error: No se pudo encontrar el canal de anuncios para jugadores.' });
 
-        console.log(`[DEBUG] Canal "${channel.name}" encontrado. Preparando para enviar el embed.`);
-        
         const profile = await VPGUser.findOne({ discordId: user.id }).lean();
         const playerAdEmbed = new EmbedBuilder()
             .setAuthor({ name: member.displayName, iconURL: user.displayAvatarURL() })
@@ -63,50 +52,49 @@ module.exports = async (client, interaction) => {
             .setTimestamp();
         
         await channel.send({ embeds: [playerAdEmbed] });
-        console.log(`[DEBUG] Embed de anuncio de jugador enviado con éxito al canal ${channel.name}.`);
-        
-        return interaction.editReply({ content: `✅ ¡Tu anuncio ha sido publicado con éxito en el canal ${channel}!` });
+        return interaction.editReply({ content: `✅ ¡Tu anuncio ha sido publicado/actualizado con éxito en el canal ${channel}!` });
     }
 
     if (customId.startsWith('offer_add_requirements_')) {
-    const parts = customId.split('_');
-    const teamId = parts[3];
-    const positions = parts[4].split('-');
-    const requirements = fields.getTextInputValue('requirementsInput');
+        const parts = customId.split('_');
+        const teamId = parts[3];
+        const positions = parts[4].split('-');
+        const requirements = fields.getTextInputValue('requirementsInput');
 
-    await TeamOffer.findOneAndUpdate(
-        { teamId: teamId },
-        { guildId: guild.id, postedById: user.id, positions, requirements, status: 'ACTIVE' },
-        { upsert: true, new: true }
-    );
+        const channelId = process.env.TEAMS_AD_CHANNEL_ID;
+        if (!channelId) return interaction.editReply({ content: '❌ Error: El canal de ofertas de equipos no está configurado.' });
 
-    const channelId = process.env.TEAMS_AD_CHANNEL_ID;
-    if (!channelId) return interaction.editReply({ content: '❌ Error: El canal de ofertas de equipos no está configurado.' });
+        const channel = await client.channels.fetch(channelId).catch(() => null);
+        if (!channel) return interaction.editReply({ content: '❌ Error: No se pudo encontrar el canal de ofertas de equipos.' });
 
-    const channel = await client.channels.fetch(channelId).catch(() => null);
-    if (!channel) return interaction.editReply({ content: '❌ Error: No se pudo encontrar el canal de ofertas de equipos.' });
+        const team = await Team.findById(teamId).lean();
+        if (!team.logoUrl) {
+            return interaction.editReply({ content: '❌ Error: Tu equipo necesita tener una URL de logo configurada para poder publicar. Usa el panel de equipo para añadirla.' });
+        }
 
-    const team = await Team.findById(teamId).lean();
-    if (!team.logoUrl) {
-        return interaction.editReply({ content: '❌ Error: Tu equipo necesita tener una URL de logo configurada para poder publicar. Usa el panel de equipo para añadirla.' });
+        const teamOfferEmbed = new EmbedBuilder()
+            .setAuthor({ name: `${team.name} busca fichajes`, iconURL: team.logoUrl })
+            .setColor('#2ECC71')
+            .setThumbnail(team.logoUrl)
+            .addFields(
+                { name: '📄 Posiciones Vacantes', value: `\`\`\`${positions.join(' | ')}\`\`\`` },
+                { name: '📋 Requisitos', value: `> ${requirements.replace(/\n/g, '\n> ')}` },
+                { name: '🏆 Liga', value: team.league, inline: true },
+                { name: '📞 Contacto', value: `<@${team.managerId}>`, inline: true },
+                { name: '🐦 Twitter', value: team.twitterHandle ? `[@${team.twitterHandle}](https://twitter.com/${team.twitterHandle})` : 'No especificado', inline: true }
+            )
+            .setTimestamp();
+
+        const offerMessage = await channel.send({ embeds: [teamOfferEmbed] });
+        
+        await TeamOffer.findOneAndUpdate(
+            { teamId: teamId },
+            { guildId: guild.id, postedById: user.id, positions, requirements, messageId: offerMessage.id, status: 'ACTIVE' },
+            { upsert: true, new: true }
+        );
+
+        return interaction.editReply({ content: `✅ ¡La oferta de tu equipo ha sido publicada/actualizada con éxito en el canal ${channel}!` });
     }
-
-    const teamOfferEmbed = new EmbedBuilder()
-        .setAuthor({ name: `${team.name} busca fichajes`, iconURL: team.logoUrl })
-        .setColor('#2ECC71')
-        .setThumbnail(team.logoUrl)
-        .addFields(
-            { name: ' vacantPosiciones Vacantes', value: `\`\`\`${positions.join(' | ')}\`\`\`` },
-            { name: ' Requisitos', value: `> ${requirements.replace(/\n/g, '\n> ')}` },
-            { name: ' Liga', value: team.league, inline: true },
-            { name: ' Contacto', value: `<@${team.managerId}>`, inline: true },
-            { name: ' Twitter', value: team.twitterHandle ? `[@${team.twitterHandle}](https://twitter.com/${team.twitterHandle})` : 'No especificado', inline: true }
-        )
-        .setTimestamp();
-
-    await channel.send({ embeds: [teamOfferEmbed] });
-    return interaction.editReply({ content: `✅ ¡La oferta de tu equipo ha sido publicada/actualizada con éxito en el canal ${channel}!` });
-}
 
     // --- LÓGICA ORIGINAL RESTANTE (Mantenida y Funcional) ---
 
@@ -168,12 +156,11 @@ module.exports = async (client, interaction) => {
         const newAbbr = fields.getTextInputValue('newAbbr')?.toUpperCase() || team.abbreviation;
         const newLogo = fields.getTextInputValue('newLogo') || team.logoUrl;
         const newTwitter = fields.getTextInputValue('newTwitter') || team.twitterHandle;
-        
         if (isManager && !isAdmin) {
             const approvalChannelId = process.env.APPROVAL_CHANNEL_ID;
             if (!approvalChannelId) return interaction.editReply({ content: 'Error: Canal de aprobaciones no configurado.' });
             const approvalChannel = await client.channels.fetch(approvalChannelId);
-            const embed = new EmbedBuilder().setTitle('✏️ Solicitud de Cambio de Datos').setAuthor({ name: user.tag, iconURL: user.displayAvatarURL() }).addFields({ name: 'Equipo', value: team.name }, { name: 'Solicitante', value: `<@${user.id}>` }, { name: 'Nuevo Nombre', value: newName }, { name: 'Nueva Abreviatura', value: newAbbr }, { name: 'Nuevo Logo', value: newLogo }).setColor('Blue');
+            const embed = new EmbedBuilder().setTitle('✏️ Solicitud de Cambio de Datos').setAuthor({ name: user.tag, iconURL: user.displayAvatarURL() }).addFields({ name: 'Equipo', value: team.name }, { name: 'Solicitante', value: `<@${user.id}>` }, { name: 'Nuevo Nombre', value: newName }, { name: 'Nueva Abreviatura', value: newAbbr }, { name: 'Nuevo Logo', value: newLogo }, { name: 'Nuevo Twitter', value: newTwitter }).setColor('Blue');
             await approvalChannel.send({ embeds: [embed] });
             return interaction.editReply({ content: '✅ Tu solicitud de cambio ha sido enviada para aprobación.' });
         } else {
