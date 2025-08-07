@@ -113,27 +113,6 @@ if (customId === 'search_player_pos_filter') {
     return; // Terminamos la ejecución para este customId
 }
 
-    if (customId === 'select_primary_position' || customId === 'select_secondary_position') {
-        // CORRECCIÓN: Responder inmediatamente.
-        await interaction.deferUpdate(); 
-        const selectedPosition = values[0];
-        
-        const userProfile = await VPGUser.findOneAndUpdate(
-            { discordId: user.id },
-            { $set: { discordId: user.id } },
-            { upsert: true, new: true }
-        );
-
-        if (customId === 'select_primary_position') {
-            userProfile.primaryPosition = selectedPosition;
-        } else {
-            userProfile.secondaryPosition = selectedPosition === 'NINGUNA' ? null : selectedPosition;
-        }
-
-        await userProfile.save();
-        console.log(`Posición ${customId} guardada para ${user.tag}: ${selectedPosition}`);
-        return;
-    }
 
     if (customId === 'apply_to_team_select') {
         // CORRECCIÓN: Un modal ya es una respuesta, así que no necesita defer. Esto está bien.
