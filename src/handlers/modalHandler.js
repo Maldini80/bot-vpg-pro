@@ -8,23 +8,17 @@ const FreeAgent = require('../models/freeAgent.js');
 const TeamOffer = require('../models/teamOffer.js');
 
 module.exports = async (client, interaction) => {
-    // Todos los modales se responden aquí una sola vez, de forma privada
     await interaction.deferReply({ flags: 64 });
-
     const { customId, fields, guild, user, member, message } = interaction;
 
-    // --- LÓGICA DE PERFIL Y PUBLICACIÓN DE ANUNCIOS (NUEVA Y CORREGIDA) ---
+    // --- LÓGICA DE PERFIL Y PUBLICACIÓN DE ANUNCIOS (CON DEPURACIÓN) ---
 
     if (customId === 'edit_profile_modal') {
         const vpgUsername = fields.getTextInputValue('vpgUsernameInput');
         const twitterHandle = fields.getTextInputValue('twitterInput');
         const psnId = fields.getTextInputValue('psnInput');
         const eaId = fields.getTextInputValue('eaInput');
-        await VPGUser.findOneAndUpdate(
-            { discordId: user.id }, 
-            { vpgUsername, twitterHandle, psnId, eaId }, 
-            { upsert: true }
-        );
+        await VPGUser.findOneAndUpdate({ discordId: user.id }, { vpgUsername, twitterHandle, psnId, eaId }, { upsert: true });
         return interaction.editReply({ content: '✅ ¡Tu perfil ha sido actualizado con éxito!' });
     }
 
@@ -33,20 +27,26 @@ module.exports = async (client, interaction) => {
         const seeking = fields.getTextInputValue('seekingInput');
         const availability = fields.getTextInputValue('availabilityInput');
         
-        await FreeAgent.findOneAndUpdate(
-            { userId: user.id }, 
-            { guildId: guild.id, experience, seeking, availability, status: 'ACTIVE' }, 
-            { upsert: true, new: true }
-        );
+        await FreeAgent.findOneAndUpdate({ userId: user.id }, { guildId: guild.id, experience, seeking, availability, status: 'ACTIVE' }, { upsert: true, new: true });
 
         const channelId = process.env.PLAYERS_AD_CHANNEL_ID;
-        if (!channelId) return interaction.editReply({ content: '❌ Error de configuración: El canal de anuncios para jugadores no está definido.' });
+        console.log(`[DEBUG] Intentando publicar anuncio de jugador. ID de canal obtenido de .env: ${channelId}`);
+
+        if (!channelId) {
+            console.error('[ERROR] La variable de entorno PLAYERS_AD_CHANNEL_ID no está definida.');
+            return interaction.editReply({ content: '❌ Error de configuración: El canal de anuncios para jugadores no está definido.' });
+        }
         
         const channel = await client.channels.fetch(channelId).catch(() => null);
-        if (!channel) return interaction.editReply({ content: '❌ Error: No se pudo encontrar el canal de anuncios para jugadores.' });
-
-        const profile = await VPGUser.findOne({ discordId: user.id }).lean();
         
+        if (!channel) {
+            console.error(`[ERROR] No se pudo encontrar el canal con ID ${channelId}. Verifica que el ID sea correcto y que el bot esté en el servidor.`);
+            return interaction.editReply({ content: `❌ Error: No se pudo encontrar el canal de anuncios para jugadores. ID (${channelId}) incorrecto o el bot no tiene acceso.` });
+        }
+
+        console.log(`[DEBUG] Canal "${channel.name}" encontrado. Preparando para enviar el embed.`);
+        
+        const profile = await VPGUser.findOne({ discordId: user.id }).lean();
         const playerAdEmbed = new EmbedBuilder()
             .setAuthor({ name: member.displayName, iconURL: user.displayAvatarURL() })
             .setThumbnail(user.displayAvatarURL())
@@ -63,31 +63,56 @@ module.exports = async (client, interaction) => {
             .setTimestamp();
         
         await channel.send({ embeds: [playerAdEmbed] });
-        return interaction.editReply({ content: `✅ ¡Tu anuncio ha sido publicado/actualizado con éxito en el canal ${channel}!` });
+        console.log(`[DEBUG] Embed de anuncio de jugador enviado con éxito al canal ${channel.name}.`);
+        
+        return interaction.editReply({ content: `✅ ¡Tu anuncio ha sido publicado con éxito en el canal ${channel}!` });
     }
 
-   if (customId.startsWith('market_offer_modal_')) {
-    const parts = customId.split('_');
-    const teamId = parts[3];
-    
-    const positions = fields.getTextInputValue('positionsInput').split(',').map(p => p.trim().toUpperCase()).filter(p => p);
-    const requirements = fields.getTextInputValue('requirementsInput');
-    
-    // Usamos findOneAndUpdate con upsert:true. Esto crea la oferta si no existe, o la actualiza si ya existe.
-    // Es una forma muy eficiente de manejar ambos casos (crear y editar).
-    await TeamOffer.findOneAndUpdate(
-        { teamId: teamId },
-        { guildId: guild.id, postedById: user.id, positions, requirements, status: 'ACTIVE' },
-        { upsert: true, new: true }
-    );
+    if (customId.startsWith('market_offer_modal_')) {
+        const teamId = customId.split('_')[3];
+        const positions = fields.getTextInputValue('positionsInput').split(',').map(p => p.trim().toUpperCase()).filter(p => p);
+        const requirements = fields.getTextInputValue('requirementsInput');
+        
+        await TeamOffer.findOneAndUpdate({ teamId }, { guildId: guild.id, postedById: user.id, positions, requirements, status: 'ACTIVE' }, { upsert: true });
 
-    // Opcional: Actualizar también el mensaje en el canal público.
-    
-    // Confirmamos al mánager
-    return interaction.editReply({ content: `✅ ¡La oferta de tu equipo ha sido publicada/actualizada con éxito!` });
-}
+        const channelId = process.env.TEAMS_AD_CHANNEL_ID;
+        console.log(`[DEBUG] Intentando publicar oferta de equipo. ID de canal obtenido de .env: ${channelId}`);
 
-    // --- LÓGICA ORIGINAL DE OTROS MODALES (Mantenida y Funcional) ---
+        if (!channelId) {
+            console.error('[ERROR] La variable de entorno TEAMS_AD_CHANNEL_ID no está definida.');
+            return interaction.editReply({ content: '❌ Error de configuración: El canal de ofertas de equipos no está definido.' });
+        }
+
+        const channel = await client.channels.fetch(channelId).catch(() => null);
+
+        if (!channel) {
+            console.error(`[ERROR] No se pudo encontrar el canal con ID ${channelId}.`);
+            return interaction.editReply({ content: `❌ Error: No se pudo encontrar el canal de ofertas de equipos. ID (${channelId}) incorrecto o el bot no tiene acceso.` });
+        }
+
+        console.log(`[DEBUG] Canal "${channel.name}" encontrado. Preparando para enviar el embed.`);
+
+        const team = await Team.findById(teamId).lean();
+        const teamOfferEmbed = new EmbedBuilder()
+            .setAuthor({ name: team.name, iconURL: team.logoUrl })
+            .setThumbnail(team.logoUrl)
+            .setTitle(`¡${team.name} está buscando jugadores!`)
+            .setColor('Green')
+            .addFields(
+                { name: 'Posiciones Buscadas', value: `\`\`\`${positions.join(', ')}\`\`\``, inline: false },
+                { name: 'Requisitos y Descripción', value: requirements, inline: false },
+                { name: 'Contacto Principal', value: `<@${team.managerId}>`, inline: true },
+                { name: 'Liga', value: team.league, inline: true }
+            )
+            .setTimestamp();
+
+        await channel.send({ embeds: [teamOfferEmbed] });
+        console.log(`[DEBUG] Embed de oferta de equipo enviado con éxito al canal ${channel.name}.`);
+
+        return interaction.editReply({ content: `✅ ¡La oferta de tu equipo ha sido publicada con éxito en el canal ${channel}!` });
+    }
+
+    // --- LÓGICA ORIGINAL RESTANTE (Mantenida y Funcional) ---
 
     if (customId.startsWith('manager_request_modal_')) {
         const leagueName = customId.split('_')[3];
