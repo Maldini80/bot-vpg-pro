@@ -307,12 +307,25 @@ if (customId === 'team_manage_offer_button') {
 if (customId.startsWith('delete_team_offer_button_')) {
     await interaction.deferUpdate();
     const teamId = customId.split('_')[4];
+
+    // 1. Buscamos la oferta para obtener el ID del mensaje
+    const offerToDelete = await TeamOffer.findOne({ teamId: teamId });
     
-    // Buscamos y borramos la oferta por el ID del equipo
+    if (offerToDelete && offerToDelete.messageId) {
+        try {
+            const channelId = process.env.TEAMS_AD_CHANNEL_ID;
+            const channel = await client.channels.fetch(channelId);
+            await channel.messages.delete(offerToDelete.messageId);
+        } catch (error) {
+            console.log(`No se pudo borrar el mensaje de la oferta (ID: ${offerToDelete.messageId}). Probablemente ya no existía.`);
+        }
+    }
+
+    // 2. Borramos la oferta de la base de datos
     await TeamOffer.deleteOne({ teamId: teamId });
     
     await interaction.editReply({
-        content: '✅ La oferta de fichajes de tu equipo ha sido borrada.',
+        content: '✅ La oferta de fichajes de tu equipo ha sido borrada con éxito.',
         embeds: [],
         components: []
     });
