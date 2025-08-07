@@ -54,7 +54,7 @@ module.exports = async (client, interaction) => {
     // --- LÓGICA EXISTENTE, AHORA CON SU PROPIO DEFER ---
     
     // Cada bloque 'if' ahora gestiona su propia respuesta.
-    await interaction.deferReply({ flags: 64 });
+   
     
     if (customId === 'edit_profile_modal') {
     // Aplazamos la respuesta aquí, para esta interacción específica.
