@@ -1,3 +1,4 @@
+// src/handlers/selectMenuHandler.js
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, StringSelectMenuBuilder, MessageFlags } = require('discord.js');
 const Team = require('../models/team.js');
 const VPGUser = require('../models/user.js');
@@ -6,7 +7,6 @@ const AvailabilityPanel = require('../models/availabilityPanel.js');
 const FreeAgent = require('../models/freeAgent.js');
 const TeamOffer = require('../models/teamOffer.js');
 
-// Añadimos la constante aquí para que esté disponible
 const POSITIONS = ['POR', 'DFC', 'CARR', 'MCD', 'MV', 'MCO', 'DC'];
 
 module.exports = async (client, interaction) => {
@@ -15,6 +15,9 @@ module.exports = async (client, interaction) => {
 
     // --- LÓGICA CORREGIDA PARA ACTUALIZAR PERFIL ---
     if (customId === 'update_select_primary_position') {
+        // CORRECCIÓN: Usar deferUpdate para asegurar la respuesta a tiempo.
+        await interaction.deferUpdate();
+
         const selectedPosition = values[0];
         await VPGUser.findOneAndUpdate({ discordId: user.id }, { primaryPosition: selectedPosition }, { upsert: true });
 
@@ -24,13 +27,14 @@ module.exports = async (client, interaction) => {
             .setPlaceholder('Paso 2: Selecciona tu posición secundaria')
             .addOptions({ label: 'Ninguna', value: 'NINGUNA' }, ...positionOptions);
 
-        await interaction.update({
+        await interaction.editReply({ // editReply funciona después de deferUpdate
             content: '✅ Posición principal guardada. Ahora, selecciona tu posición secundaria.',
             components: [new ActionRowBuilder().addComponents(secondaryMenu)]
         });
         return;
 
     } else if (customId === 'update_select_secondary_position') {
+        // showModal es una respuesta final, no necesita defer. NO REQUIERE CAMBIOS.
         const selectedPosition = values[0];
         await VPGUser.findOneAndUpdate({ discordId: user.id }, { secondaryPosition: selectedPosition === 'NINGUNA' ? null : selectedPosition }, { upsert: true });
 
@@ -53,7 +57,7 @@ module.exports = async (client, interaction) => {
         return;
     }
 
-    // --- RESTO DEL CÓDIGO ORIGINAL (SIN TOCAR) ---
+    // --- RESTO DEL CÓDIGO YA CORRECTO ---
     
     else if (customId === 'search_team_pos_filter' || customId === 'search_team_league_filter') {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
@@ -112,8 +116,8 @@ module.exports = async (client, interaction) => {
                     { name: 'Posiciones', value: `**${profile.primaryPosition}** / ${profile.secondaryPosition || 'N/A'}`, inline: true },
                     { name: 'VPG / Twitter', value: `${profile.vpgUsername || 'N/A'} / @${profile.twitterHandle || 'N/A'}`, inline: true },
                     { name: 'Disponibilidad', value: agent.availability || 'No especificada', inline: false },
-                    { name: 'Experiencia', value: agent.experience || 'Sin descripción.' }, // Corregido: usa los nuevos campos
-                    { name: 'Busco un equipo que...', value: agent.seeking || 'Sin descripción.' } // Corregido: usa los nuevos campos
+                    { name: 'Experiencia', value: agent.experience || 'Sin descripción.' },
+                    { name: 'Busco un equipo que...', value: agent.seeking || 'Sin descripción.' }
                 )
                 .setFooter({ text: `Puedes contactar directamente con este jugador.` });
             await interaction.followUp({ embeds: [playerEmbed], flags: MessageFlags.Ephemeral });
