@@ -7,6 +7,7 @@ const teamSchema = new mongoose.Schema({
     guildId: { type: String, required: true },
     league: { type: String, required: true },
     logoUrl: { type: String, required: true },
+    twitterHandle: { type: String, default: null },
     managerId: { type: String, unique: true, sparse: true },
     captains: [{ type: String }],
     players: [{ type: String }],
