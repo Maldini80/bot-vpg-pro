@@ -144,7 +144,6 @@ const handler = async (client, interaction) => {
     }
 
     if (customId === 'manager_actions_button') {
-        // CORRECCIÓN: Este sí necesita el defer/edit porque consulta la BD
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const team = await Team.findOne({ guildId: interaction.guildId, managerId: interaction.user.id });
         if (team) {
@@ -400,15 +399,12 @@ if (customId === 'edit_profile_button') {
     
     if (customId.startsWith('market_')) {
         
-        // CORRECCIÓN: Este bloque termina en showModal, por lo que NO debe tener deferReply.
         if (customId === 'market_post_agent') {
-            // Primero, la comprobación de rol que es muy rápida.
             const hasRequiredRole = member.roles.cache.has(process.env.PLAYER_ROLE_ID) || member.roles.cache.has(process.env.CAPTAIN_ROLE_ID);
             if (!hasRequiredRole) {
                 return interaction.reply({ content: '❌ Necesitas el rol de "Jugador" o "Capitán" para anunciarte.', flags: MessageFlags.Ephemeral });
             }
 
-            // CORRECCIÓN: Eliminamos la consulta a la BD. Abrimos el modal directamente.
             const modal = new ModalBuilder().setCustomId('market_agent_modal').setTitle('Anunciarse como Agente Libre');
 
             const experienceInput = new TextInputBuilder()
@@ -434,13 +430,12 @@ if (customId === 'edit_profile_button') {
 
             modal.addComponents(
                 new ActionRowBuilder().addComponents(experienceInput),
-                new ActionRowRowBuilder().addComponents(seekingInput),
+                new ActionRowBuilder().addComponents(seekingInput),
                 new ActionRowBuilder().addComponents(availabilityInput)
             );
             await interaction.showModal(modal);
         }
         else if (customId === 'market_post_offer') {
-            // CORRECCIÓN: Este sí necesita deferReply porque la respuesta final es un editReply.
             await interaction.deferReply({ flags: MessageFlags.Ephemeral });
             const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
             if (!team) return interaction.editReply({ content: '❌ Solo los Mánagers o Capitanes pueden publicar ofertas.' });
@@ -510,7 +505,6 @@ if (customId === 'edit_profile_button') {
                 components: [] 
             });
         }
-        // CORRECCIÓN: Este bloque termina en showModal, por lo que NO debe tener deferReply.
         else if (customId === 'market_edit_ad_button') {
             const existingAd = await FreeAgent.findOne({ userId: user.id });
 
@@ -553,9 +547,7 @@ if (customId === 'edit_profile_button') {
         }
         return;
     }
-    
-    // El resto del archivo ya sigue el patrón correcto y no necesita más cambios.
-    // ... (el resto de tu código desde `if (customId.startsWith('challenge_slot_'))` en adelante) ...
+
     if (customId.startsWith('challenge_slot_')) {
         await interaction.deferReply({ flags: 64 });
         
