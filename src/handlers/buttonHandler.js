@@ -925,6 +925,12 @@ const handler = async (client, interaction) => {
 
     if (customId === 'apply_to_team_button') {
         await interaction.deferReply({ flags: 64 });
+        // --- LÍNEA AÑADIDA ---
+        const isManager = await Team.findOne({ guildId: guild.id, managerId: user.id });
+        if (isManager) {
+            return interaction.editReply({ content: '❌ Como Mánager de un equipo, no puedes enviar solicitudes de unión a otros equipos.' });
+        }
+        // --- FIN DE LÍNEA AÑADIDA ---
         const existingApplication = await PlayerApplication.findOne({ userId: user.id, status: 'pending' });
         if (existingApplication) return interaction.editReply({ content: 'Ya tienes una solicitud de aplicación pendiente.' });
         const openTeams = await Team.find({ guildId: guild.id, recruitmentOpen: true }).sort({ name: 1 });
