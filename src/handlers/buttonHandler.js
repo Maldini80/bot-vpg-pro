@@ -368,47 +368,45 @@ const handler = async (client, interaction) => {
     }
 
     if (customId.startsWith('edit_team_offer_button_')) {
-    // CORRECCIÓN: Inicia el mismo flujo que "Crear Oferta" para una experiencia unificada.
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        // CORRECCIÓN: Inicia el mismo flujo que "Crear Oferta" para una experiencia unificada.
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-    const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
-    if (!team) return interaction.editReply({ content: '❌ No se pudo encontrar tu equipo.' });
-    
-    const positionOptions = POSITIONS.map(p => ({ label: p, value: p }));
-    const positionMenu = new StringSelectMenuBuilder()
-        .setCustomId(`offer_select_positions_${team._id}`)
-        .setPlaceholder('Selecciona las posiciones que buscas')
-        .addOptions(positionOptions)
-        .setMinValues(1)
-        .setMaxValues(10);
+        const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
+        if (!team) return interaction.editReply({ content: '❌ No se pudo encontrar tu equipo.' });
+        
+        const positionOptions = POSITIONS.map(p => ({ label: p, value: p }));
+        const positionMenu = new StringSelectMenuBuilder()
+            .setCustomId(`offer_select_positions_${team._id}`)
+            .setPlaceholder('Selecciona las posiciones que buscas')
+            .addOptions(positionOptions)
+            .setMinValues(1)
+            .setMaxValues(positionOptions.length);
 
-    await interaction.editReply({
-        content: '**Paso 1 de 2 (Editando):** Selecciona las posiciones que tu equipo necesita cubrir.',
-        components: [new ActionRowBuilder().addComponents(positionMenu)]
-    });
-    return;
-}
+        await interaction.editReply({
+            content: '**Paso 1 de 2 (Editando):** Selecciona las posiciones que tu equipo necesita cubrir.',
+            components: [new ActionRowBuilder().addComponents(positionMenu)]
+        });
+        return;
+    }
+
     const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
     const esAprobador = isAdmin || member.roles.cache.has(process.env.APPROVER_ROLE_ID);
     
-   // REEMPLAZA CON ESTE BLOQUE
-if (customId === 'edit_profile_button') {
-    const positionOptions = POSITIONS.map(p => ({ label: p, value: p }));
-    
-    const primaryMenu = new StringSelectMenuBuilder()
-        .setCustomId('update_select_primary_position') 
-        .setPlaceholder('Paso 1: Selecciona tu posición principal')
-        .addOptions(positionOptions);
-    
-    await interaction.reply({ 
-        content: 'Vamos a actualizar tu perfil. Por favor, empieza seleccionando tu posición principal.',
-        components: [new ActionRowBuilder().addComponents(primaryMenu)],
-        flags: MessageFlags.Ephemeral
-    });
-    return;
-}
-
-    
+    if (customId === 'edit_profile_button') {
+        const positionOptions = POSITIONS.map(p => ({ label: p, value: p }));
+        
+        const primaryMenu = new StringSelectMenuBuilder()
+            .setCustomId('update_select_primary_position') 
+            .setPlaceholder('Paso 1: Selecciona tu posición principal')
+            .addOptions(positionOptions);
+        
+        await interaction.reply({ 
+            content: 'Vamos a actualizar tu perfil. Por favor, empieza seleccionando tu posición principal.',
+            components: [new ActionRowBuilder().addComponents(primaryMenu)],
+            flags: MessageFlags.Ephemeral
+        });
+        return;
+    }
     
     if (customId.startsWith('market_')) {
         
@@ -419,54 +417,30 @@ if (customId === 'edit_profile_button') {
             }
 
             const modal = new ModalBuilder().setCustomId('market_agent_modal').setTitle('Anunciarse como Agente Libre');
-
-            const experienceInput = new TextInputBuilder()
-                .setCustomId('experienceInput')
-                .setLabel("Tu experiencia (clubes, logros, etc.)")
-                .setStyle(TextInputStyle.Paragraph)
-                .setRequired(true)
-                .setMaxLength(500);
-
-            const seekingInput = new TextInputBuilder()
-                .setCustomId('seekingInput')
-                .setLabel("¿Qué tipo de equipo buscas?")
-                .setStyle(TextInputStyle.Paragraph)
-                .setRequired(true)
-                .setMaxLength(500);
-
-            const availabilityInput = new TextInputBuilder()
-                .setCustomId('availabilityInput')
-                .setLabel("Tu disponibilidad horaria")
-                .setStyle(TextInputStyle.Short)
-                .setRequired(true)
-                .setMaxLength(200);
-
-            modal.addComponents(
-                new ActionRowBuilder().addComponents(experienceInput),
-                new ActionRowBuilder().addComponents(seekingInput),
-                new ActionRowBuilder().addComponents(availabilityInput)
-            );
+            const experienceInput = new TextInputBuilder().setCustomId('experienceInput').setLabel("Tu experiencia (clubes, logros, etc.)").setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(500);
+            const seekingInput = new TextInputBuilder().setCustomId('seekingInput').setLabel("¿Qué tipo de equipo buscas?").setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(500);
+            const availabilityInput = new TextInputBuilder().setCustomId('availabilityInput').setLabel("Tu disponibilidad horaria").setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(200);
+            modal.addComponents(new ActionRowBuilder().addComponents(experienceInput), new ActionRowBuilder().addComponents(seekingInput), new ActionRowBuilder().addComponents(availabilityInput));
             await interaction.showModal(modal);
         }
         else if (customId === 'market_post_offer') {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
-    if (!team) return interaction.editReply({ content: '❌ Solo los Mánagers o Capitanes pueden publicar ofertas.' });
-    
-    const positionOptions = POSITIONS.map(p => ({ label: p, value: p }));
-    const positionMenu = new StringSelectMenuBuilder()
-        .setCustomId(`offer_select_positions_${team._id}`)
-        .setPlaceholder('Selecciona las posiciones que buscas')
-        .addOptions(positionOptions)
-        .setMinValues(1)
-        // CORRECCIÓN: El máximo de selecciones no puede ser mayor que el número de opciones disponibles.
-        .setMaxValues(positionOptions.length); 
+            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+            const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
+            if (!team) return interaction.editReply({ content: '❌ Solo los Mánagers o Capitanes pueden publicar ofertas.' });
+            
+            const positionOptions = POSITIONS.map(p => ({ label: p, value: p }));
+            const positionMenu = new StringSelectMenuBuilder()
+                .setCustomId(`offer_select_positions_${team._id}`)
+                .setPlaceholder('Selecciona las posiciones que buscas')
+                .addOptions(positionOptions)
+                .setMinValues(1)
+                .setMaxValues(positionOptions.length);
 
-    await interaction.editReply({
-        content: '**Paso 1 de 2:** Selecciona del menú todas las posiciones que tu equipo necesita cubrir.',
-        components: [new ActionRowBuilder().addComponents(positionMenu)],
-    });
-}
+            await interaction.editReply({
+                content: '**Paso 1 de 2:** Selecciona del menú todas las posiciones que tu equipo necesita cubrir.',
+                components: [new ActionRowBuilder().addComponents(positionMenu)],
+            });
+        }
         else if (customId === 'market_search_teams') {
             await interaction.deferReply({ flags: 64 });
             const leagues = await League.find({ guildId: guild.id }).lean();
@@ -509,69 +483,47 @@ if (customId === 'edit_profile_button') {
             await interaction.editReply({ embeds: [embed], components: [managementRow] });
         }
         else if (customId === 'market_delete_ad_button') {
-    await interaction.deferUpdate(); 
-    
-    // CORRECCIÓN: Buscamos el anuncio para obtener el messageId.
-    const adToDelete = await FreeAgent.findOne({ userId: user.id });
+            await interaction.deferUpdate(); 
+            
+            const adToDelete = await FreeAgent.findOne({ userId: user.id });
 
-    if (adToDelete && adToDelete.messageId) {
-        try {
-            const channel = await client.channels.fetch(process.env.PLAYERS_AD_CHANNEL_ID);
-            await channel.messages.delete(adToDelete.messageId);
-        } catch (error) {
-            console.log(`No se pudo borrar el mensaje del anuncio ${adToDelete.messageId}. Puede que ya no existiera.`);
+            if (adToDelete && adToDelete.messageId) {
+                try {
+                    const channel = await client.channels.fetch(process.env.PLAYERS_AD_CHANNEL_ID);
+                    await channel.messages.delete(adToDelete.messageId);
+                } catch (error) {
+                    console.log(`No se pudo borrar el mensaje del anuncio ${adToDelete.messageId}. Puede que ya no existiera.`);
+                }
+            }
+            
+            await FreeAgent.deleteOne({ userId: user.id });
+            
+            await interaction.editReply({ 
+                content: '✅ Tu anuncio de agente libre ha sido borrado con éxito.',
+                embeds: [], 
+                components: [] 
+            });
         }
-    }
-    
-    await FreeAgent.deleteOne({ userId: user.id });
-    
-    await interaction.editReply({ 
-        content: '✅ Tu anuncio de agente libre ha sido borrado con éxito.',
-        embeds: [], 
-        components: [] 
-    });
-}
         else if (customId === 'market_edit_ad_button') {
-    const existingAd = await FreeAgent.findOne({ userId: user.id });
+            const existingAd = await FreeAgent.findOne({ userId: user.id });
 
-    if (!existingAd) {
-        return interaction.reply({ content: '❌ No se pudo encontrar tu anuncio para editarlo.', flags: MessageFlags.Ephemeral });
-    }
-    
-    // CORRECCIÓN: Pasamos el ID del anuncio al customId del modal.
-    const modal = new ModalBuilder().setCustomId(`market_agent_modal_edit:${existingAd._id}`).setTitle('Editar Anuncio de Agente Libre');
+            if (!existingAd) {
+                return interaction.reply({ content: '❌ No se pudo encontrar tu anuncio para editarlo.', flags: MessageFlags.Ephemeral });
+            }
 
-    const experienceInput = new TextInputBuilder()
-        .setCustomId('experienceInput')
-        .setLabel("Tu experiencia (clubes, logros, etc.)")
-        .setStyle(TextInputStyle.Paragraph)
-        .setRequired(true)
-        .setMaxLength(500)
-        .setValue(existingAd.experience || '');
+            const modal = new ModalBuilder().setCustomId(`market_agent_modal_edit:${existingAd._id}`).setTitle('Editar Anuncio de Agente Libre');
 
-    const seekingInput = new TextInputBuilder()
-        .setCustomId('seekingInput')
-        .setLabel("¿Qué tipo de equipo buscas?")
-        .setStyle(TextInputStyle.Paragraph)
-        .setRequired(true)
-        .setMaxLength(500)
-        .setValue(existingAd.seeking || '');
+            const experienceInput = new TextInputBuilder().setCustomId('experienceInput').setLabel("Tu experiencia (clubes, logros, etc.)").setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(500).setValue(existingAd.experience || '');
+            const seekingInput = new TextInputBuilder().setCustomId('seekingInput').setLabel("¿Qué tipo de equipo buscas?").setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(500).setValue(existingAd.seeking || '');
+            const availabilityInput = new TextInputBuilder().setCustomId('availabilityInput').setLabel("Tu disponibilidad horaria").setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(200).setValue(existingAd.availability || '');
 
-    const availabilityInput = new TextInputBuilder()
-        .setCustomId('availabilityInput')
-        .setLabel("Tu disponibilidad horaria")
-        .setStyle(TextInputStyle.Short)
-        .setRequired(true)
-        .setMaxLength(200)
-        .setValue(existingAd.availability || '');
-
-    modal.addComponents(
-        new ActionRowBuilder().addComponents(experienceInput),
-        new ActionRowBuilder().addComponents(seekingInput),
-        new ActionRowBuilder().addComponents(availabilityInput)
-    );
-    await interaction.showModal(modal);
-}
+            modal.addComponents(
+                new ActionRowBuilder().addComponents(experienceInput),
+                new ActionRowBuilder().addComponents(seekingInput),
+                new ActionRowBuilder().addComponents(availabilityInput)
+            );
+            await interaction.showModal(modal);
+        }
         return;
     }
 
