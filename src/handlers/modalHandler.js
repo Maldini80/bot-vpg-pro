@@ -171,6 +171,8 @@ module.exports = async (client, interaction) => {
         const newName = fields.getTextInputValue('newName') || team.name;
         const newAbbr = fields.getTextInputValue('newAbbr')?.toUpperCase() || team.abbreviation;
         const newLogo = fields.getTextInputValue('newLogo') || team.logoUrl;
+        const newTwitter = fields.getTextInputValue('newTwitter') || team.twitterHandle;
+        
         if (isManager && !isAdmin) {
             const approvalChannelId = process.env.APPROVAL_CHANNEL_ID;
             if (!approvalChannelId) return interaction.editReply({ content: 'Error: Canal de aprobaciones no configurado.' });
@@ -182,6 +184,7 @@ module.exports = async (client, interaction) => {
             team.name = newName;
             team.abbreviation = newAbbr;
             team.logoUrl = newLogo;
+            team.twitterHandle = newTwitter;
             await team.save();
             return interaction.editReply({ content: `✅ Los datos del equipo **${team.name}** han sido actualizados.` });
         }
