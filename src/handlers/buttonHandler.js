@@ -524,29 +524,49 @@ const handler = async (client, interaction) => {
             });
         }
         else if (customId === 'market_edit_ad_button') {
-            const existingAd = await FreeAgent.findOne({ userId: user.id });
+    const existingAd = await FreeAgent.findOne({ userId: user.id });
 
-            const modal = new ModalBuilder().setCustomId('market_agent_modal_edit').setTitle('Editar Anuncio de Agente Libre');
-            
-            const descriptionInput = new TextInputBuilder()
-                .setCustomId('descriptionInput')
-                .setLabel("Tu estilo de juego, qué buscas, etc.")
-                .setStyle(TextInputStyle.Paragraph)
-                .setRequired(true)
-                .setMaxLength(500)
-                .setValue(existingAd ? existingAd.description : '');
+    // Si por alguna razón no se encuentra el anuncio, no mostramos el modal.
+    if (!existingAd) {
+        return interaction.reply({ content: '❌ No se pudo encontrar tu anuncio para editarlo.', flags: MessageFlags.Ephemeral });
+    }
 
-            const availabilityInput = new TextInputBuilder()
-                .setCustomId('availabilityInput')
-                .setLabel("Tu disponibilidad horaria")
-                .setStyle(TextInputStyle.Short)
-                .setRequired(true)
-                .setMaxLength(200)
-                .setValue(existingAd ? existingAd.availability : '');
+    const modal = new ModalBuilder().setCustomId('market_agent_modal_edit').setTitle('Editar Anuncio de Agente Libre');
 
-            modal.addComponents(new ActionRowBuilder().addComponents(descriptionInput), new ActionRowBuilder().addComponents(availabilityInput));
-            await interaction.showModal(modal);
-        }
+    // Campo 1: Experiencia (Corregido de 'description' a 'experience')
+    const experienceInput = new TextInputBuilder()
+        .setCustomId('experienceInput')
+        .setLabel("Tu experiencia (clubes, logros, etc.)")
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(true)
+        .setMaxLength(500)
+        .setValue(existingAd.experience || ''); // Usamos los datos correctos
+
+    // Campo 2: Qué buscas (El campo que faltaba)
+    const seekingInput = new TextInputBuilder()
+        .setCustomId('seekingInput')
+        .setLabel("¿Qué tipo de equipo buscas?")
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(true)
+        .setMaxLength(500)
+        .setValue(existingAd.seeking || ''); // Usamos los datos correctos
+
+    // Campo 3: Disponibilidad (Ya estaba bien, pero lo aseguramos con || '')
+    const availabilityInput = new TextInputBuilder()
+        .setCustomId('availabilityInput')
+        .setLabel("Tu disponibilidad horaria")
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true)
+        .setMaxLength(200)
+        .setValue(existingAd.availability || ''); // Usamos los datos correctos
+
+    modal.addComponents(
+        new ActionRowBuilder().addComponents(experienceInput),
+        new ActionRowBuilder().addComponents(seekingInput),
+        new ActionRowBuilder().addComponents(availabilityInput)
+    );
+    await interaction.showModal(modal);
+}
         return;
     }
 
