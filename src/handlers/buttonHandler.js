@@ -342,10 +342,12 @@ const availabilityInput = new TextInputBuilder()
 
 // Añadimos los 3 nuevos campos al formulario
 modal.addComponents(
+    
     new ActionRowBuilder().addComponents(experienceInput),
     new ActionRowBuilder().addComponents(seekingInput),
     new ActionRowBuilder().addComponents(availabilityInput)
 );
+await interaction.showModal(modal);
         }
         else if (customId === 'market_post_offer') {
             const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
