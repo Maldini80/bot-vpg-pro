@@ -262,6 +262,51 @@ const handler = async (client, interaction) => {
             await application.teamId.save();
             await application.save();
         }
+        // CORRECCIÓN: AÑADE TODO ESTE BLOQUE DE CÓDIGO
+        else if (customId.startsWith('accept_invite_') || customId.startsWith('reject_invite_')) {
+            const parts = customId.split('_');
+            const action = parts[0];
+            const teamId = parts[2];
+            const playerId = parts[3];
+
+            // Comprobación de seguridad: solo el usuario invitado puede responder.
+            if (interaction.user.id !== playerId) {
+                return interaction.followUp({ content: 'Esta invitación no es para ti.', ephemeral: true });
+            }
+
+            const team = await Team.findById(teamId);
+            if (!team) {
+                return interaction.editReply({ content: 'Este equipo ya no existe.', components: [], embeds: [] });
+            }
+
+            const manager = await client.users.fetch(team.managerId).catch(() => null);
+
+            if (action === 'accept') {
+                const targetGuild = await client.guilds.fetch(team.guildId);
+                const member = await targetGuild.members.fetch(playerId).catch(() => null);
+                if (!member) {
+                    return interaction.editReply({ content: 'Parece que ya no estás en el servidor del equipo.', components: [], embeds: [] });
+                }
+
+                const existingTeam = await Team.findOne({ guildId: team.guildId, $or: [{ managerId: playerId }, { captains: playerId }, { players: playerId }] });
+                if (existingTeam) {
+                    return interaction.editReply({ content: `❌ No puedes unirte. Ya perteneces al equipo **${existingTeam.name}**.`, components: [], embeds: [] });
+                }
+                
+                team.players.push(playerId);
+                await team.save();
+
+                await member.roles.add(process.env.PLAYER_ROLE_ID);
+                await member.setNickname(`${team.abbreviation} ${member.user.username}`).catch(()=>{});
+                
+                if (manager) await manager.send(`✅ ¡El jugador **${member.user.tag}** ha aceptado tu invitación y se ha unido a **${team.name}**!`);
+                await interaction.editReply({ content: `¡Enhorabuena! Te has unido al equipo **${team.name}**.`, components: [], embeds: [] });
+
+            } else { // Rechazar
+                if (manager) await manager.send(`❌ El jugador **${interaction.user.tag}** ha rechazado tu invitación para unirse a **${team.name}**.`);
+                await interaction.editReply({ content: 'Has rechazado la invitación al equipo.', components: [], embeds: [] });
+            }
+        }
         return;
     }
 
@@ -423,24 +468,28 @@ const handler = async (client, interaction) => {
             modal.addComponents(new ActionRowBuilder().addComponents(experienceInput), new ActionRowBuilder().addComponents(seekingInput), new ActionRowBuilder().addComponents(availabilityInput));
             await interaction.showModal(modal);
         }
-        else if (customId === 'market_post_offer') {
-            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-            const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
-            if (!team) return interaction.editReply({ content: '❌ Solo los Mánagers o Capitanes pueden publicar ofertas.' });
-            
-            const positionOptions = POSITIONS.map(p => ({ label: p, value: p }));
-            const positionMenu = new StringSelectMenuBuilder()
-                .setCustomId(`offer_select_positions_${team._id}`)
-                .setPlaceholder('Selecciona las posiciones que buscas')
-                .addOptions(positionOptions)
-                .setMinValues(1)
-                .setMaxValues(positionOptions.length);
+        // ESTE ES EL NUEVO BLOQUE QUE DEBES PEGAR EN SU LUGAR
+else if (customId === 'market_post_offer') {
+    // CORRECCIÓN: Se aplaza la respuesta ANTES de la consulta a la base de datos.
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-            await interaction.editReply({
-                content: '**Paso 1 de 2:** Selecciona del menú todas las posiciones que tu equipo necesita cubrir.',
-                components: [new ActionRowBuilder().addComponents(positionMenu)],
-            });
-        }
+    const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
+    if (!team) return interaction.editReply({ content: '❌ Solo los Mánagers o Capitanes pueden publicar ofertas.' });
+    
+    const positionOptions = POSITIONS.map(p => ({ label: p, value: p }));
+    const positionMenu = new StringSelectMenuBuilder()
+        .setCustomId(`offer_select_positions_${team._id}`)
+        .setPlaceholder('Selecciona las posiciones que buscas')
+        .addOptions(positionOptions)
+        .setMinValues(1)
+        .setMaxValues(positionOptions.length); // Usamos la longitud real de las opciones
+
+    // CORRECCIÓN: Se usa editReply para enviar la respuesta final.
+    await interaction.editReply({
+        content: '**Paso 1 de 2:** Selecciona del menú todas las posiciones que tu equipo necesita cubrir.',
+        components: [new ActionRowBuilder().addComponents(positionMenu)],
+    });
+}
         else if (customId === 'market_search_teams') {
             await interaction.deferReply({ flags: 64 });
             const leagues = await League.find({ guildId: guild.id }).lean();
