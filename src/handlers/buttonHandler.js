@@ -402,16 +402,14 @@ if (customId === 'edit_profile_button') {
         
         // CORRECCIÓN: Este bloque termina en showModal, por lo que NO debe tener deferReply.
         if (customId === 'market_post_agent') {
+            // Primero, la comprobación de rol que es muy rápida.
             const hasRequiredRole = member.roles.cache.has(process.env.PLAYER_ROLE_ID) || member.roles.cache.has(process.env.CAPTAIN_ROLE_ID);
-            if (!hasRequiredRole) return interaction.reply({ content: '❌ Necesitas el rol de "Jugador" o "Capitán" para anunciarte.', flags: MessageFlags.Ephemeral });
-            
-            const existingAd = await FreeAgent.findOne({ userId: user.id });
-            const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
-            if (existingAd && existingAd.updatedAt > threeDaysAgo) {
-                return interaction.reply({ content: `❌ Ya has actualizado tu anuncio en los últimos 3 días.`, flags: MessageFlags.Ephemeral });
+            if (!hasRequiredRole) {
+                return interaction.reply({ content: '❌ Necesitas el rol de "Jugador" o "Capitán" para anunciarte.', flags: MessageFlags.Ephemeral });
             }
 
-           const modal = new ModalBuilder().setCustomId('market_agent_modal').setTitle('Anunciarse como Agente Libre');
+            // CORRECCIÓN: Eliminamos la consulta a la BD. Abrimos el modal directamente.
+            const modal = new ModalBuilder().setCustomId('market_agent_modal').setTitle('Anunciarse como Agente Libre');
 
             const experienceInput = new TextInputBuilder()
                 .setCustomId('experienceInput')
@@ -436,7 +434,7 @@ if (customId === 'edit_profile_button') {
 
             modal.addComponents(
                 new ActionRowBuilder().addComponents(experienceInput),
-                new ActionRowBuilder().addComponents(seekingInput),
+                new ActionRowRowBuilder().addComponents(seekingInput),
                 new ActionRowBuilder().addComponents(availabilityInput)
             );
             await interaction.showModal(modal);
