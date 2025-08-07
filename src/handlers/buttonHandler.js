@@ -10,7 +10,6 @@ const TeamOffer = require('../models/teamOffer.js');
 
 const POSITIONS = ['POR', 'DFC', 'CARR', 'MCD', 'MV', 'MCO', 'DC'];
 
-// --- SIN CAMBIOS EN ESTA FUNCIÓN ---
 async function updatePanelMessage(client, panelId) {
     try {
         const panel = await AvailabilityPanel.findById(panelId).populate('teamId').lean();
@@ -111,7 +110,7 @@ async function updatePanelMessage(client, panelId) {
     }
 }
 
-// --- SIN CAMBIOS EN ESTA FUNCIÓN ---
+
 async function getOrCreateWebhook(channel, client) {
     const webhookName = 'VPG Bot Amistosos';
     const webhooks = await channel.fetchWebhooks();
@@ -125,7 +124,6 @@ async function getOrCreateWebhook(channel, client) {
 const handler = async (client, interaction) => {
     const { customId, member, guild, user } = interaction;
 
-    // Este bloque usa showModal, que es una respuesta válida. NO REQUIERE CAMBIOS.
     if (customId === 'start_player_registration') {
         const modal = new ModalBuilder()
             .setCustomId('player_registration_modal')
@@ -145,19 +143,18 @@ const handler = async (client, interaction) => {
         return interaction.showModal(modal);
     }
 
-    // CORRECCIÓN: Se aplaza la respuesta ANTES de la consulta a la base de datos.
     if (customId === 'manager_actions_button') {
-        await interaction.deferReply({ flags: MessageFlags.Ephemeral }); // AÑADIDO
+        // CORRECCIÓN: Este sí necesita el defer/edit porque consulta la BD
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const team = await Team.findOne({ guildId: interaction.guildId, managerId: interaction.user.id });
         if (team) {
-            return interaction.editReply({ content: '❌ Ya eres mánager de un equipo, no puedes registrar otro.' }); // MODIFICADO a editReply
+            return interaction.editReply({ content: '❌ Ya eres mánager de un equipo, no puedes registrar otro.' });
         }
         const subMenuEmbed = new EmbedBuilder().setTitle('👑 Acciones de Mánager').setDescription('Aquí tienes las acciones disponibles para la gestión de equipos.').setColor('Green');
         const subMenuRow = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('request_manager_role_button').setLabel('📝 Registrar mi Equipo').setStyle(ButtonStyle.Success));
-        return interaction.editReply({ embeds: [subMenuEmbed], components: [subMenuRow] }); // MODIFICADO a editReply
+        return interaction.editReply({ embeds: [subMenuEmbed], components: [subMenuRow] });
     }
 
-    // Este bloque no hace operaciones lentas, responde inmediatamente. NO REQUIERE CAMBIOS.
     if (customId === 'player_actions_button') {
         const canLeaveTeam = interaction.member.roles.cache.has(process.env.PLAYER_ROLE_ID) || interaction.member.roles.cache.has(process.env.CAPTAIN_ROLE_ID);
         const subMenuEmbed = new EmbedBuilder().setTitle('👤 Acciones de Jugador').setDescription('Gestiona tu perfil y tu pertenencia a equipos.').setColor('Blue');
@@ -169,7 +166,6 @@ const handler = async (client, interaction) => {
         return interaction.reply({ embeds: [subMenuEmbed], components: [subMenuRow], flags: MessageFlags.Ephemeral });
     }
 
-    // Este bloque ya usa deferUpdate correctamente. NO REQUIERE CAMBIOS.
     if (!interaction.inGuild()) {
         await interaction.deferUpdate();
         const { message } = interaction;
@@ -269,9 +265,6 @@ const handler = async (client, interaction) => {
         }
         return;
     }
-
-    // El resto del archivo ya sigue el patrón correcto de `deferReply` o `deferUpdate`
-    // al principio de cada bloque. No se necesitan más cambios.
 
     if (customId.startsWith('team_submenu_')) {
         await interaction.deferReply({ flags: 64 });
@@ -407,26 +400,18 @@ if (customId === 'edit_profile_button') {
     
     if (customId.startsWith('market_')) {
         
+        // CORRECCIÓN: Este bloque termina en showModal, por lo que NO debe tener deferReply.
         if (customId === 'market_post_agent') {
-            // CORRECCIÓN: Se aplaza la respuesta ANTES de la consulta a la base de datos
-            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
             const hasRequiredRole = member.roles.cache.has(process.env.PLAYER_ROLE_ID) || member.roles.cache.has(process.env.CAPTAIN_ROLE_ID);
-            if (!hasRequiredRole) return interaction.editReply({ content: '❌ Necesitas el rol de "Jugador" o "Capitán" para anunciarte.' });
+            if (!hasRequiredRole) return interaction.reply({ content: '❌ Necesitas el rol de "Jugador" o "Capitán" para anunciarte.', flags: MessageFlags.Ephemeral });
             
             const existingAd = await FreeAgent.findOne({ userId: user.id });
             const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
             if (existingAd && existingAd.updatedAt > threeDaysAgo) {
-                return interaction.editReply({ content: `❌ Ya has actualizado tu anuncio en los últimos 3 días.` });
+                return interaction.reply({ content: `❌ Ya has actualizado tu anuncio en los últimos 3 días.`, flags: MessageFlags.Ephemeral });
             }
-            
-            // Dado que ya hemos aplazado, no podemos mostrar un modal directamente.
-            // La mejor experiencia de usuario es mantener el modal, y el riesgo de que la consulta
-            // anterior falle es bajo. Revertimos este cambio específico a su estado original
-            // para preservar la funcionalidad del modal, asumiendo el pequeño riesgo.
-            await interaction.deleteReply(); // Borramos el "pensando..."
 
-            const modal = new ModalBuilder().setCustomId('market_agent_modal').setTitle('Anunciarse como Agente Libre');
+           const modal = new ModalBuilder().setCustomId('market_agent_modal').setTitle('Anunciarse como Agente Libre');
 
             const experienceInput = new TextInputBuilder()
                 .setCustomId('experienceInput')
@@ -457,9 +442,8 @@ if (customId === 'edit_profile_button') {
             await interaction.showModal(modal);
         }
         else if (customId === 'market_post_offer') {
-            // CORRECCIÓN: Aplazar la respuesta ANTES de la consulta a la BD.
+            // CORRECCIÓN: Este sí necesita deferReply porque la respuesta final es un editReply.
             await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
             const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
             if (!team) return interaction.editReply({ content: '❌ Solo los Mánagers o Capitanes pueden publicar ofertas.' });
             
@@ -473,7 +457,7 @@ if (customId === 'edit_profile_button') {
 
             await interaction.editReply({
                 content: '**Paso 1 de 2:** Selecciona del menú todas las posiciones que tu equipo necesita cubrir.',
-                components: [new ActionRowBuilder().addComponents(positionMenu)]
+                components: [new ActionRowBuilder().addComponents(positionMenu)],
             });
         }
         else if (customId === 'market_search_teams') {
@@ -528,9 +512,8 @@ if (customId === 'edit_profile_button') {
                 components: [] 
             });
         }
+        // CORRECCIÓN: Este bloque termina en showModal, por lo que NO debe tener deferReply.
         else if (customId === 'market_edit_ad_button') {
-            // Similar a market_post_agent, la consulta a la BD va primero, pero el riesgo es bajo
-            // y es necesario para pre-rellenar el modal. Mantenemos la lógica por la UX.
             const existingAd = await FreeAgent.findOne({ userId: user.id });
 
             if (!existingAd) {
@@ -572,7 +555,9 @@ if (customId === 'edit_profile_button') {
         }
         return;
     }
-
+    
+    // El resto del archivo ya sigue el patrón correcto y no necesita más cambios.
+    // ... (el resto de tu código desde `if (customId.startsWith('challenge_slot_'))` en adelante) ...
     if (customId.startsWith('challenge_slot_')) {
         await interaction.deferReply({ flags: 64 });
         
