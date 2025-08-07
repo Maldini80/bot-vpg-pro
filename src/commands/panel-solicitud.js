@@ -6,33 +6,35 @@ module.exports = {
         .setName('panel-solicitud')
         .setDescription('Crea el panel de control general para todos los usuarios.')
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
-    
+
     async execute(interaction) {
-        // CORRECCIÓN: Se añade esta línea.
-        // Esto le dice a Discord "Recibido, dame un segundo" y evita el error "Interacción fallida".
         await interaction.deferReply({ flags: 64 });
 
         const embed = new EmbedBuilder()
-            .setTitle('Centro de Control de Jugador VPG')
-            .setDescription('Aquí puedes interactuar con el sistema de equipos.')
-            .setColor('#3498db');
+            .setTitle('Centro de Control del Jugador VPG')
+            .setDescription('Utiliza los botones de abajo para gestionar tu carrera o tu equipo.')
+            .setColor('#3498db')
+            .setImage('https://i.imgur.com/T7hXuuA.jpeg'); // Imagen del panel
 
         const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('request_manager_role_button').setLabel('📝 Registrar Equipo').setStyle(ButtonStyle.Success),
-            new ButtonBuilder().setCustomId('view_teams_button').setLabel('👥 Ver Equipos').setStyle(ButtonStyle.Primary),
-            new ButtonBuilder().setCustomId('edit_profile_button').setLabel('✏️ Editar Perfil').setStyle(ButtonStyle.Secondary),
-            new ButtonBuilder().setCustomId('register_as_player_button').setLabel('✅ Registrarse como Jugador').setStyle(ButtonStyle.Success)
-        );
-        
-        const row2 = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('leave_team_button').setLabel('🚪 Abandonar Equipo').setStyle(ButtonStyle.Danger),
-            new ButtonBuilder().setCustomId('apply_to_team_button').setLabel('✉️ Aplicar a un Equipo').setStyle(ButtonStyle.Secondary)
+            new ButtonBuilder()
+                .setCustomId('manager_actions_button')
+                .setLabel('Acciones de Mánager')
+                .setStyle(ButtonStyle.Success)
+                .setEmoji('👑'),
+            new ButtonBuilder()
+                .setCustomId('view_teams_button')
+                .setLabel('Ver Equipos')
+                .setStyle(ButtonStyle.Primary)
+                .setEmoji('👥'),
+            new ButtonBuilder()
+                .setCustomId('player_actions_button')
+                .setLabel('Acciones de Jugador')
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('👤')
         );
 
-        // Esto envía el panel al canal, para que todos lo vean.
-        await interaction.channel.send({ embeds: [embed], components: [row, row2] });
-
-        // Esto le responde al administrador que ejecutó el comando, en un mensaje que solo él puede ver.
+        await interaction.channel.send({ embeds: [embed], components: [row] });
         return interaction.editReply({ content: '✅ Panel de solicitud creado con éxito.' });
     }
 };
