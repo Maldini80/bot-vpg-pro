@@ -272,6 +272,64 @@ if (customId.startsWith('team_submenu_')) {
     }
     return; // MUY IMPORTANTE: Detenemos la ejecución aquí
 }
+    // --- LÓGICA PARA LA GESTIÓN DE OFERTAS DE EQUIPO ---
+
+if (customId === 'team_manage_offer_button') {
+    await interaction.deferReply({ flags: 64 });
+    
+    const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
+    if (!team) return interaction.editReply({ content: 'No se pudo encontrar tu equipo.' });
+    
+    const existingOffer = await TeamOffer.findOne({ teamId: team._id });
+
+    if (!existingOffer) {
+        return interaction.editReply({ content: '❌ Tu equipo no tiene ninguna oferta de fichajes activa.' });
+    }
+
+    const embed = new EmbedBuilder()
+        .setTitle(`Gestión de Oferta de Fichajes de ${team.name}`)
+        .setDescription('Aquí está tu oferta actual. Puedes editarla o borrarla.')
+        .addFields(
+            { name: 'Posiciones Buscadas', value: `\`${existingOffer.positions.join(', ')}\`` },
+            { name: 'Requisitos Actuales', value: existingOffer.requirements }
+        )
+        .setColor('Purple');
+
+    const managementRow = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId(`edit_team_offer_button_${existingOffer._id}`).setLabel('Editar Oferta').setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId(`delete_team_offer_button_${existingOffer.teamId}`).setLabel('Borrar Oferta').setStyle(ButtonStyle.Danger) // Usamos teamId para borrar
+    );
+    
+    await interaction.editReply({ embeds: [embed], components: [managementRow] });
+    return;
+}
+
+if (customId.startsWith('delete_team_offer_button_')) {
+    await interaction.deferUpdate();
+    const teamId = customId.split('_')[4];
+    
+    // Buscamos y borramos la oferta por el ID del equipo
+    await TeamOffer.deleteOne({ teamId: teamId });
+    
+    await interaction.editReply({
+        content: '✅ La oferta de fichajes de tu equipo ha sido borrada.',
+        embeds: [],
+        components: []
+    });
+    return;
+}
+
+if (customId.startsWith('edit_team_offer_button_')) {
+    // La lógica de edición ya está cubierta por el nuevo flujo:
+    // El mánager simplemente debe usar "Publicar Nueva Oferta" de nuevo.
+    // El sistema (findOneAndUpdate con upsert:true) la sobrescribirá automáticamente.
+    // Para evitar confusión, podemos guiar al usuario.
+    await interaction.reply({
+        content: 'Para editar tu oferta, simplemente **publica una nueva** usando el botón "Publicar Nueva Oferta". El sistema reemplazará automáticamente la antigua con la nueva información.',
+        flags: 64
+    });
+    return;
+}
     const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
     const esAprobador = isAdmin || member.roles.cache.has(process.env.APPROVER_ROLE_ID);
     
