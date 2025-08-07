@@ -112,7 +112,24 @@ if (customId === 'search_player_pos_filter') {
     
     return; // Terminamos la ejecución para este customId
 }
+if (customId.startsWith('offer_select_positions_')) {
+    const teamId = customId.split('_')[3];
+    const selectedPositions = values; // values es un array
 
+    const modal = new ModalBuilder()
+        .setCustomId(`offer_add_requirements_${teamId}_${selectedPositions.join('-')}`)
+        .setTitle('Paso 2: Añadir Requisitos');
+
+    const requirementsInput = new TextInputBuilder()
+        .setCustomId('requirementsInput')
+        .setLabel("Requisitos y descripción de la oferta")
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(true)
+        .setPlaceholder('Ej: Buscamos jugadores comprometidos, con micro, disponibilidad L-J de 22 a 23h CET...');
+
+    modal.addComponents(new ActionRowBuilder().addComponents(requirementsInput));
+    await interaction.showModal(modal);
+}
 
     if (customId === 'apply_to_team_select') {
         // CORRECCIÓN: Un modal ya es una respuesta, así que no necesita defer. Esto está bien.
