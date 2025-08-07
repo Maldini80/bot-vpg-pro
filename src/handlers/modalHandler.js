@@ -57,14 +57,22 @@ module.exports = async (client, interaction) => {
     await interaction.deferReply({ flags: 64 });
     
     if (customId === 'edit_profile_modal') {
-        const vpgUsername = fields.getTextInputValue('vpgUsernameInput');
-        const twitterHandle = fields.getTextInputValue('twitterInput');
-        // Asumiendo que psnInput y eaInput podrían estar en este modal en el futuro
-        const psnId = fields.getTextInputValue('psnInput') || null;
-        const eaId = fields.getTextInputValue('eaInput') || null;
-        await VPGUser.findOneAndUpdate({ discordId: user.id }, { vpgUsername, twitterHandle, psnId, eaId }, { upsert: true });
-        return interaction.editReply({ content: '✅ ¡Tu perfil ha sido actualizado con éxito!' });
-    }
+    // Aplazamos la respuesta aquí, para esta interacción específica.
+    await interaction.deferReply({ ephemeral: true });
+
+    const vpgUsername = fields.getTextInputValue('vpgUsernameInput');
+    const twitterHandle = fields.getTextInputValue('twitterInput');
+    // CORRECCIÓN: Usar los IDs correctos que definiste al crear el modal
+    const psnId = fields.getTextInputValue('psnIdInput') || null;
+    const eaId = fields.getTextInputValue('eaIdInput') || null;
+
+    await VPGUser.findOneAndUpdate(
+        { discordId: user.id }, 
+        { vpgUsername, twitterHandle, psnId, eaId }, 
+        { upsert: true }
+    );
+    return interaction.editReply({ content: '✅ ¡Tu perfil ha sido actualizado con éxito!' });
+}
 
     if (customId === 'market_agent_modal' || customId === 'market_agent_modal_edit') {
         const experience = fields.getTextInputValue('experienceInput');
