@@ -368,13 +368,26 @@ const handler = async (client, interaction) => {
     }
 
     if (customId.startsWith('edit_team_offer_button_')) {
-        await interaction.reply({
-            content: 'Para editar tu oferta, simplemente **publica una nueva** usando el botón "Crear / Editar Oferta". El sistema reemplazará automáticamente la antigua con la nueva información.',
-            flags: MessageFlags.Ephemeral
-        });
-        return;
-    }
+    // CORRECCIÓN: Inicia el mismo flujo que "Crear Oferta" para una experiencia unificada.
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
+    const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
+    if (!team) return interaction.editReply({ content: '❌ No se pudo encontrar tu equipo.' });
+    
+    const positionOptions = POSITIONS.map(p => ({ label: p, value: p }));
+    const positionMenu = new StringSelectMenuBuilder()
+        .setCustomId(`offer_select_positions_${team._id}`)
+        .setPlaceholder('Selecciona las posiciones que buscas')
+        .addOptions(positionOptions)
+        .setMinValues(1)
+        .setMaxValues(10);
+
+    await interaction.editReply({
+        content: '**Paso 1 de 2 (Editando):** Selecciona las posiciones que tu equipo necesita cubrir.',
+        components: [new ActionRowBuilder().addComponents(positionMenu)]
+    });
+    return;
+}
     const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
     const esAprobador = isAdmin || member.roles.cache.has(process.env.APPROVER_ROLE_ID);
     
@@ -436,23 +449,25 @@ if (customId === 'edit_profile_button') {
             await interaction.showModal(modal);
         }
         else if (customId === 'market_post_offer') {
-            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-            const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
-            if (!team) return interaction.editReply({ content: '❌ Solo los Mánagers o Capitanes pueden publicar ofertas.' });
-            
-            const positionOptions = POSITIONS.map(p => ({ label: p, value: p }));
-            const positionMenu = new StringSelectMenuBuilder()
-                .setCustomId(`offer_select_positions_${team._id}`)
-                .setPlaceholder('Selecciona las posiciones que buscas')
-                .addOptions(positionOptions)
-                .setMinValues(1)
-                .setMaxValues(10);
+    // CORRECCIÓN: Aplazar la respuesta antes de la consulta a la BD.
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-            await interaction.editReply({
-                content: '**Paso 1 de 2:** Selecciona del menú todas las posiciones que tu equipo necesita cubrir.',
-                components: [new ActionRowBuilder().addComponents(positionMenu)],
-            });
-        }
+    const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
+    if (!team) return interaction.editReply({ content: '❌ Solo los Mánagers o Capitanes pueden publicar ofertas.' });
+    
+    const positionOptions = POSITIONS.map(p => ({ label: p, value: p }));
+    const positionMenu = new StringSelectMenuBuilder()
+        .setCustomId(`offer_select_positions_${team._id}`)
+        .setPlaceholder('Selecciona las posiciones que buscas')
+        .addOptions(positionOptions)
+        .setMinValues(1)
+        .setMaxValues(10);
+
+    await interaction.editReply({
+        content: '**Paso 1 de 2:** Selecciona del menú todas las posiciones que tu equipo necesita cubrir.',
+        components: [new ActionRowBuilder().addComponents(positionMenu)],
+    });
+}
         else if (customId === 'market_search_teams') {
             await interaction.deferReply({ flags: 64 });
             const leagues = await League.find({ guildId: guild.id }).lean();
