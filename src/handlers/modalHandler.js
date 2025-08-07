@@ -68,8 +68,16 @@ module.exports = async (client, interaction) => {
     }
 
     if (customId === 'market_agent_modal' || customId === 'market_agent_modal_edit') {
-        // CORRECCIÓN: Añadido deferReply al inicio.
         await interaction.deferReply({ ephemeral: true });
+
+        // CORRECCIÓN: Movemos la lógica de validación aquí DENTRO del manejador del modal.
+        if (customId === 'market_agent_modal') { // Solo comprobamos el cooldown al crear, no al editar.
+            const existingAd = await FreeAgent.findOne({ userId: user.id });
+            const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+            if (existingAd && existingAd.updatedAt > threeDaysAgo) {
+                return interaction.editReply({ content: `❌ No puedes publicar un nuevo anuncio. Ya has actualizado tu anuncio en los últimos 3 días.` });
+            }
+        }
 
         const experience = fields.getTextInputValue('experienceInput');
         const seeking = fields.getTextInputValue('seekingInput');
