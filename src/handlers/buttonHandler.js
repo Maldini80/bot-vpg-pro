@@ -693,7 +693,13 @@ await interaction.showModal(modal);
             const newNameInput = new TextInputBuilder().setCustomId('newName').setLabel("Nuevo Nombre (opcional)").setStyle(TextInputStyle.Short).setRequired(false).setValue(team.name);
             const newAbbrInput = new TextInputBuilder().setCustomId('newAbbr').setLabel("Nueva Abreviatura (opcional)").setStyle(TextInputStyle.Short).setRequired(false).setValue(team.abbreviation).setMinLength(3).setMaxLength(3);
             const newLogoInput = new TextInputBuilder().setCustomId('newLogo').setLabel("Nueva URL del Logo (opcional)").setStyle(TextInputStyle.Short).setRequired(false);
-            modal.addComponents(new ActionRowBuilder().addComponents(newNameInput), new ActionRowBuilder().addComponents(newAbbrInput), new ActionRowBuilder().addComponents(newLogoInput));
+            const newTwitterInput = new TextInputBuilder()
+    .setCustomId('newTwitter')
+    .setLabel("Twitter del equipo (sin @)")
+    .setStyle(TextInputStyle.Short)
+    .setRequired(false)
+    .setValue(team.twitterHandle || '');
+            modal.addComponents(new ActionRowBuilder().addComponents(newNameInput), new ActionRowBuilder().addComponents(newAbbrInput), new ActionRowBuilder().addComponents(newLogoInput), new ActionRowBuilder().addComponents(newTwitterInput));
             return interaction.showModal(modal);
         }
         if (customId === 'team_invite_player_button') {
