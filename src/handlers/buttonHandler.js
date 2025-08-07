@@ -350,18 +350,23 @@ modal.addComponents(
 await interaction.showModal(modal);
         }
         else if (customId === 'market_post_offer') {
-            const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
-            if (!team) return interaction.reply({ content: '❌ Solo los Mánagers o Capitanes pueden publicar ofertas de equipo.', flags: 64 });
+    const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
+    if (!team) return interaction.reply({ content: '❌ Solo los Mánagers o Capitanes pueden publicar ofertas.', flags: 64 });
+    
+    const positionOptions = POSITIONS.map(p => ({ label: p, value: p }));
+    const positionMenu = new StringSelectMenuBuilder()
+        .setCustomId(`offer_select_positions_${team._id}`)
+        .setPlaceholder('Selecciona las posiciones que buscas')
+        .addOptions(positionOptions)
+        .setMinValues(1)
+        .setMaxValues(10);
 
-            const existingOffer = await TeamOffer.findOne({ teamId: team._id });
-            if (existingOffer) return interaction.reply({ content: `❌ Tu equipo ya tiene una oferta activa.`, flags: 64 });
-            
-            const modal = new ModalBuilder().setCustomId(`market_offer_modal_${team._id}`).setTitle(`Publicar Oferta para ${team.name}`);
-            const positionsInput = new TextInputBuilder().setCustomId('positionsInput').setLabel("Posiciones (separadas por coma, ej: DC,MCO)").setStyle(TextInputStyle.Short).setRequired(true);
-            const requirementsInput = new TextInputBuilder().setCustomId('requirementsInput').setLabel("Requisitos y descripción de la oferta").setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(500);
-            modal.addComponents(new ActionRowBuilder().addComponents(positionsInput), new ActionRowBuilder().addComponents(requirementsInput));
-            await interaction.showModal(modal);
-        }
+    await interaction.reply({
+        content: '**Paso 1 de 2:** Selecciona del menú todas las posiciones que tu equipo necesita cubrir.',
+        components: [new ActionRowBuilder().addComponents(positionMenu)],
+        flags: 64
+    });
+}
         else if (customId === 'market_search_teams') {
             await interaction.deferReply({ flags: 64 });
             const leagues = await League.find({ guildId: guild.id }).lean();
