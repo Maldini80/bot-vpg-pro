@@ -148,48 +148,69 @@ module.exports = async (client, interaction) => {
 }
 
     if (customId.startsWith('offer_add_requirements_')) {
-        // CORRECCIÓN: Añadido deferReply al inicio.
-        await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ ephemeral: true });
 
-        const parts = customId.split('_');
-        const teamId = parts[3];
-        const positions = parts[4].split('-');
-        const requirements = fields.getTextInputValue('requirementsInput');
+    const parts = customId.split('_');
+    const teamId = parts[3];
+    const positions = parts[4].split('-');
+    const requirements = fields.getTextInputValue('requirementsInput');
 
-        const channelId = process.env.TEAMS_AD_CHANNEL_ID;
-        if (!channelId) return interaction.editReply({ content: '❌ Error: El canal de ofertas de equipos no está configurado.' });
+    const channelId = process.env.TEAMS_AD_CHANNEL_ID;
+    if (!channelId) return interaction.editReply({ content: '❌ Error: El canal de ofertas de equipos no está configurado.' });
 
-        const channel = await client.channels.fetch(channelId).catch(() => null);
-        if (!channel) return interaction.editReply({ content: '❌ Error: No se pudo encontrar el canal de ofertas de equipos.' });
+    const channel = await client.channels.fetch(channelId).catch(() => null);
+    if (!channel) return interaction.editReply({ content: '❌ Error: No se pudo encontrar el canal de ofertas de equipos.' });
 
-        const team = await Team.findById(teamId).lean();
-        if (!team.logoUrl) {
-            return interaction.editReply({ content: '❌ Error: Tu equipo necesita tener una URL de logo configurada para poder publicar. Usa el panel de equipo para añadirla.' });
-        }
-
-        const teamOfferEmbed = new EmbedBuilder()
-            .setAuthor({ name: `${team.name} busca fichajes`, iconURL: team.logoUrl })
-            .setColor('#2ECC71')
-            .setThumbnail(team.logoUrl)
-            .addFields(
-                { name: '📄 Posiciones Vacantes', value: `\`\`\`${positions.join(' | ')}\`\`\`` },
-                { name: '📋 Requisitos', value: `> ${requirements.replace(/\n/g, '\n> ')}` },
-                { name: '🏆 Liga', value: team.league, inline: true },
-                { name: '📞 Contacto', value: `<@${team.managerId}>`, inline: true },
-                { name: '🐦 Twitter', value: team.twitterHandle ? `[@${team.twitterHandle}](https://twitter.com/${team.twitterHandle})` : 'No especificado', inline: true }
-            )
-            .setTimestamp();
-
-        const offerMessage = await channel.send({ embeds: [teamOfferEmbed] });
-        
-        await TeamOffer.findOneAndUpdate(
-            { teamId: teamId },
-            { guildId: guild.id, postedById: user.id, positions, requirements, messageId: offerMessage.id, status: 'ACTIVE' },
-            { upsert: true, new: true }
-        );
-
-        return interaction.editReply({ content: `✅ ¡La oferta de tu equipo ha sido publicada/actualizada con éxito en el canal ${channel}!` });
+    const team = await Team.findById(teamId).lean();
+    if (!team.logoUrl) {
+        return interaction.editReply({ content: '❌ Error: Tu equipo necesita tener un logo configurado para poder publicar.' });
     }
+
+    const teamOfferEmbed = new EmbedBuilder()
+        .setAuthor({ name: `${team.name} busca fichajes`, iconURL: team.logoUrl })
+        .setColor('#2ECC71')
+        .setThumbnail(team.logoUrl)
+        .addFields(
+            { name: '📄 Posiciones Vacantes', value: `\`\`\`${positions.join(' | ')}\`\`\`` },
+            { name: '📋 Requisitos', value: `> ${requirements.replace(/\n/g, '\n> ')}` },
+            { name: '🏆 Liga', value: team.league, inline: true },
+            { name: '📞 Contacto', value: `<@${team.managerId}>`, inline: true },
+            { name: '🐦 Twitter', value: team.twitterHandle ? `[@${team.twitterHandle}](https://twitter.com/${team.twitterHandle})` : 'No especificado', inline: true }
+        )
+        .setTimestamp();
+
+    // --- INICIO DE LA NUEVA LÓGICA DE EDICIÓN/CREACIÓN ---
+    const existingOffer = await TeamOffer.findOne({ teamId: teamId });
+    let offerMessage;
+    let responseText;
+
+    if (existingOffer && existingOffer.messageId) {
+        try {
+            // Intenta editar el mensaje existente
+            const oldMessage = await channel.messages.fetch(existingOffer.messageId);
+            offerMessage = await oldMessage.edit({ embeds: [teamOfferEmbed] });
+            responseText = 'actualizada';
+        } catch (error) {
+            // Si el mensaje fue borrado, crea uno nuevo
+            offerMessage = await channel.send({ embeds: [teamOfferEmbed] });
+            responseText = 're-publicada (el mensaje anterior no se encontró)';
+        }
+    } else {
+        // Si no hay oferta o no tiene messageId, crea un mensaje nuevo
+        offerMessage = await channel.send({ embeds: [teamOfferEmbed] });
+        responseText = 'publicada';
+    }
+    
+    // Actualiza la base de datos con el ID del mensaje correcto
+    await TeamOffer.findOneAndUpdate(
+        { teamId: teamId },
+        { guildId: guild.id, postedById: user.id, positions, requirements, messageId: offerMessage.id, status: 'ACTIVE' },
+        { upsert: true, new: true }
+    );
+
+    return interaction.editReply({ content: `✅ ¡La oferta de tu equipo ha sido ${responseText} con éxito en el canal ${channel}!` });
+    // --- FIN DE LA NUEVA LÓGICA ---
+}
 
     if (customId.startsWith('manager_request_modal_')) {
         // CORRECCIÓN: Añadido deferReply al inicio.
