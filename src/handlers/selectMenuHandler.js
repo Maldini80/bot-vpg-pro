@@ -218,61 +218,7 @@ if (customId.startsWith('offer_select_positions_')) {
     // CORRECCIÓN: Usar flags en lugar de ephemeral.
     await interaction.deferReply({ flags: 64 });
     
-    if (customId.startsWith('select_available_times')) {
-        const parts = customId.split('_');
-        const leaguesString = parts.slice(3).join('_');
-        const leagues = leaguesString === 'all' || !leaguesString || leaguesString === 'none' ? [] : leaguesString.split(',');
-        const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
-        if (!team) return interaction.editReply({ content: 'No se encontró tu equipo.' });
-        
-        const channelId = process.env.SCHEDULED_FRIENDLY_CHANNEL_ID;
-        if (!channelId) return interaction.editReply({ content: 'Error: El ID del canal de amistosos programados no está configurado.' });
-        
-        const channel = await client.channels.fetch(channelId).catch(() => null);
-        if (!channel) return interaction.editReply({ content: 'Error: No se encontró el canal de amistosos programados.' });
 
-        const existingConfirmedMatches = await AvailabilityPanel.find({
-            "timeSlots.status": "CONFIRMED",
-            $or: [ { teamId: team._id }, { "timeSlots.challengerTeamId": team._id } ]
-        }).lean();
-
-        const confirmedSlotsMap = new Map();
-        for (const panel of existingConfirmedMatches) {
-            for (const slot of panel.timeSlots) {
-                if (slot.status === 'CONFIRMED' && (team._id.equals(panel.teamId) || (slot.challengerTeamId && team._id.equals(slot.challengerTeamId)))) {
-                    const opponentTeamId = team._id.equals(panel.teamId) ? slot.challengerTeamId : panel.teamId;
-                    confirmedSlotsMap.set(slot.time, opponentTeamId);
-                }
-            }
-        }
-        
-        const timeSlots = values.map(time => {
-            if (confirmedSlotsMap.has(time)) {
-                return { time, status: 'CONFIRMED', challengerTeamId: confirmedSlotsMap.get(time), pendingChallenges: [] };
-            } else {
-                return { time, status: 'AVAILABLE', pendingChallenges: [] };
-            }
-        });
-        
-        const buttonHandler = client.handlers.get('buttonHandler');
-        const webhook = await buttonHandler.getOrCreateWebhook(channel, client);
-
-        const initialEmbed = new EmbedBuilder().setTitle(`Panel de Amistosos de ${team.name}`).setColor("Greyple");
-        const message = await webhook.send({ embeds: [initialEmbed], username: team.name, avatarURL: team.logoUrl });
-
-        const panel = new AvailabilityPanel({ 
-            guildId: guild.id, channelId, messageId: message.id, teamId: team._id, postedById: user.id, panelType: 'SCHEDULED', 
-            leagues: leagues,
-            timeSlots 
-        });
-        await panel.save();
-
-        if (typeof buttonHandler.updatePanelMessage === 'function') {
-            await buttonHandler.updatePanelMessage(client, panel._id);
-        }
-        
-        return interaction.editReply({ content: '​' });
-    }
     
     if (customId === 'view_team_roster_select') {
         const team = await Team.findById(selectedValue).lean();
