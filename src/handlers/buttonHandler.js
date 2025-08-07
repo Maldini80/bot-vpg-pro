@@ -449,9 +449,7 @@ if (customId === 'edit_profile_button') {
             await interaction.showModal(modal);
         }
         else if (customId === 'market_post_offer') {
-    // CORRECCIÓN: Aplazar la respuesta antes de la consulta a la BD.
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
     const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
     if (!team) return interaction.editReply({ content: '❌ Solo los Mánagers o Capitanes pueden publicar ofertas.' });
     
@@ -461,7 +459,8 @@ if (customId === 'edit_profile_button') {
         .setPlaceholder('Selecciona las posiciones que buscas')
         .addOptions(positionOptions)
         .setMinValues(1)
-        .setMaxValues(positionOptions.length);
+        // CORRECCIÓN: El máximo de selecciones no puede ser mayor que el número de opciones disponibles.
+        .setMaxValues(positionOptions.length); 
 
     await interaction.editReply({
         content: '**Paso 1 de 2:** Selecciona del menú todas las posiciones que tu equipo necesita cubrir.',
