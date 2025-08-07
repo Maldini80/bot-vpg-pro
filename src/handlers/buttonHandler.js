@@ -316,11 +316,36 @@ if (customId.startsWith('team_submenu_')) {
                 return interaction.reply({ content: `❌ Ya has actualizado tu anuncio en los últimos 3 días.`, flags: 64 });
             }
 
-            const modal = new ModalBuilder().setCustomId('market_agent_modal').setTitle('Anunciarse como Agente Libre');
-            const descriptionInput = new TextInputBuilder().setCustomId('descriptionInput').setLabel("Tu estilo de juego, qué buscas, etc.").setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(500);
-            const availabilityInput = new TextInputBuilder().setCustomId('availabilityInput').setLabel("Tu disponibilidad horaria").setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(200);
-            modal.addComponents(new ActionRowBuilder().addComponents(descriptionInput), new ActionRowBuilder().addComponents(availabilityInput));
-            await interaction.showModal(modal);
+           const modal = new ModalBuilder().setCustomId('market_agent_modal').setTitle('Anunciarse como Agente Libre');
+
+// Estos son los nuevos campos de texto para el formulario
+const experienceInput = new TextInputBuilder()
+    .setCustomId('experienceInput')
+    .setLabel("Tu experiencia (clubes, logros, etc.)")
+    .setStyle(TextInputStyle.Paragraph)
+    .setRequired(true)
+    .setMaxLength(500);
+
+const seekingInput = new TextInputBuilder()
+    .setCustomId('seekingInput')
+    .setLabel("¿Qué tipo de equipo buscas?")
+    .setStyle(TextInputStyle.Paragraph)
+    .setRequired(true)
+    .setMaxLength(500);
+
+const availabilityInput = new TextInputBuilder()
+    .setCustomId('availabilityInput')
+    .setLabel("Tu disponibilidad horaria")
+    .setStyle(TextInputStyle.Short)
+    .setRequired(true)
+    .setMaxLength(200);
+
+// Añadimos los 3 nuevos campos al formulario
+modal.addComponents(
+    new ActionRowBuilder().addComponents(experienceInput),
+    new ActionRowBuilder().addComponents(seekingInput),
+    new ActionRowBuilder().addComponents(availabilityInput)
+);
         }
         else if (customId === 'market_post_offer') {
             const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
