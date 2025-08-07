@@ -377,23 +377,6 @@ const handler = async (client, interaction) => {
     const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
     const esAprobador = isAdmin || member.roles.cache.has(process.env.APPROVER_ROLE_ID);
     
-   if (customId === 'edit_profile_button') {
-    const positionOptions = POSITIONS.map(p => ({ label: p, value: p }));
-    
-    // El customId es ahora más específico para evitar conflictos
-    const primaryMenu = new StringSelectMenuBuilder()
-        .setCustomId('update_select_primary_position') 
-        .setPlaceholder('Paso 1: Selecciona tu posición principal')
-        .addOptions(positionOptions);
-    
-    await interaction.reply({ 
-        content: 'Vamos a actualizar tu perfil. Por favor, empieza seleccionando tu posición principal.',
-        components: [new ActionRowBuilder().addComponents(primaryMenu)],
-        flags: MessageFlags.Ephemeral
-    });
-    return;
-}
-
     
     
     if (customId.startsWith('market_')) {
