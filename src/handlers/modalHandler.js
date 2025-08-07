@@ -68,49 +68,45 @@ module.exports = async (client, interaction) => {
         return interaction.editReply({ content: `✅ ¡Tu anuncio ha sido publicado con éxito en el canal ${channel}!` });
     }
 
-    if (customId.startsWith('market_offer_modal_')) {
-        const teamId = customId.split('_')[3];
-        const positions = fields.getTextInputValue('positionsInput').split(',').map(p => p.trim().toUpperCase()).filter(p => p);
-        const requirements = fields.getTextInputValue('requirementsInput');
-        
-        await TeamOffer.findOneAndUpdate({ teamId }, { guildId: guild.id, postedById: user.id, positions, requirements, status: 'ACTIVE' }, { upsert: true });
+    if (customId.startsWith('offer_add_requirements_')) {
+    const parts = customId.split('_');
+    const teamId = parts[3];
+    const positions = parts[4].split('-');
+    const requirements = fields.getTextInputValue('requirementsInput');
 
-        const channelId = process.env.TEAMS_AD_CHANNEL_ID;
-        console.log(`[DEBUG] Intentando publicar oferta de equipo. ID de canal obtenido de .env: ${channelId}`);
+    await TeamOffer.findOneAndUpdate(
+        { teamId: teamId },
+        { guildId: guild.id, postedById: user.id, positions, requirements, status: 'ACTIVE' },
+        { upsert: true, new: true }
+    );
 
-        if (!channelId) {
-            console.error('[ERROR] La variable de entorno TEAMS_AD_CHANNEL_ID no está definida.');
-            return interaction.editReply({ content: '❌ Error de configuración: El canal de ofertas de equipos no está definido.' });
-        }
+    const channelId = process.env.TEAMS_AD_CHANNEL_ID;
+    if (!channelId) return interaction.editReply({ content: '❌ Error: El canal de ofertas de equipos no está configurado.' });
 
-        const channel = await client.channels.fetch(channelId).catch(() => null);
+    const channel = await client.channels.fetch(channelId).catch(() => null);
+    if (!channel) return interaction.editReply({ content: '❌ Error: No se pudo encontrar el canal de ofertas de equipos.' });
 
-        if (!channel) {
-            console.error(`[ERROR] No se pudo encontrar el canal con ID ${channelId}.`);
-            return interaction.editReply({ content: `❌ Error: No se pudo encontrar el canal de ofertas de equipos. ID (${channelId}) incorrecto o el bot no tiene acceso.` });
-        }
-
-        console.log(`[DEBUG] Canal "${channel.name}" encontrado. Preparando para enviar el embed.`);
-
-        const team = await Team.findById(teamId).lean();
-        const teamOfferEmbed = new EmbedBuilder()
-            .setAuthor({ name: team.name, iconURL: team.logoUrl })
-            .setThumbnail(team.logoUrl)
-            .setTitle(`¡${team.name} está buscando jugadores!`)
-            .setColor('Green')
-            .addFields(
-                { name: 'Posiciones Buscadas', value: `\`\`\`${positions.join(', ')}\`\`\``, inline: false },
-                { name: 'Requisitos y Descripción', value: requirements, inline: false },
-                { name: 'Contacto Principal', value: `<@${team.managerId}>`, inline: true },
-                { name: 'Liga', value: team.league, inline: true }
-            )
-            .setTimestamp();
-
-        await channel.send({ embeds: [teamOfferEmbed] });
-        console.log(`[DEBUG] Embed de oferta de equipo enviado con éxito al canal ${channel.name}.`);
-
-        return interaction.editReply({ content: `✅ ¡La oferta de tu equipo ha sido publicada con éxito en el canal ${channel}!` });
+    const team = await Team.findById(teamId).lean();
+    if (!team.logoUrl) {
+        return interaction.editReply({ content: '❌ Error: Tu equipo necesita tener una URL de logo configurada para poder publicar. Usa el panel de equipo para añadirla.' });
     }
+
+    const teamOfferEmbed = new EmbedBuilder()
+        .setAuthor({ name: `${team.name} busca fichajes`, iconURL: team.logoUrl })
+        .setColor('#2ECC71')
+        .setThumbnail(team.logoUrl)
+        .addFields(
+            { name: ' vacantPosiciones Vacantes', value: `\`\`\`${positions.join(' | ')}\`\`\`` },
+            { name: ' Requisitos', value: `> ${requirements.replace(/\n/g, '\n> ')}` },
+            { name: ' Liga', value: team.league, inline: true },
+            { name: ' Contacto', value: `<@${team.managerId}>`, inline: true },
+            { name: ' Twitter', value: team.twitterHandle ? `[@${team.twitterHandle}](https://twitter.com/${team.twitterHandle})` : 'No especificado', inline: true }
+        )
+        .setTimestamp();
+
+    await channel.send({ embeds: [teamOfferEmbed] });
+    return interaction.editReply({ content: `✅ ¡La oferta de tu equipo ha sido publicada/actualizada con éxito en el canal ${channel}!` });
+}
 
     // --- LÓGICA ORIGINAL RESTANTE (Mantenida y Funcional) ---
 
