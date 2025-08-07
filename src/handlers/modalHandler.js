@@ -10,12 +10,11 @@ const TeamOffer = require('../models/teamOffer.js');
 const POSITIONS = ['POR', 'DFC', 'CARR', 'MCD', 'MV', 'MCO', 'DC'];
 
 module.exports = async (client, interaction) => {
-    // IMPORTANTE: Se elimina el deferReply global de aquí.
     const { customId, fields, guild, user, member, message } = interaction;
 
     // --- LÓGICA NUEVA PARA EL REGISTRO DE JUGADOR ---
     if (customId === 'player_registration_modal') {
-        // Aplazamos la respuesta aquí, solo para esta interacción
+        // CORRECCIÓN: deferReply() ya estaba aquí, lo cual es correcto.
         await interaction.deferReply({ ephemeral: true }); 
 
         const vpgUsername = fields.getTextInputValue('vpgUsernameInput');
@@ -51,30 +50,27 @@ module.exports = async (client, interaction) => {
         });
     }
 
-    // --- LÓGICA EXISTENTE, AHORA CON SU PROPIO DEFER ---
-    
-    // Cada bloque 'if' ahora gestiona su propia respuesta.
-   
-    
     if (customId === 'edit_profile_modal') {
-    // Aplazamos la respuesta aquí, para esta interacción específica.
-    await interaction.deferReply({ ephemeral: true });
+        // CORRECCIÓN: deferReply() ya estaba aquí, lo cual es correcto.
+        await interaction.deferReply({ ephemeral: true });
 
-    const vpgUsername = fields.getTextInputValue('vpgUsernameInput');
-    const twitterHandle = fields.getTextInputValue('twitterInput');
-    // CORRECCIÓN: Usar los IDs correctos que definiste al crear el modal
-    const psnId = fields.getTextInputValue('psnIdInput') || null;
-    const eaId = fields.getTextInputValue('eaIdInput') || null;
+        const vpgUsername = fields.getTextInputValue('vpgUsernameInput');
+        const twitterHandle = fields.getTextInputValue('twitterInput');
+        const psnId = fields.getTextInputValue('psnIdInput') || null;
+        const eaId = fields.getTextInputValue('eaIdInput') || null;
 
-    await VPGUser.findOneAndUpdate(
-        { discordId: user.id }, 
-        { vpgUsername, twitterHandle, psnId, eaId }, 
-        { upsert: true }
-    );
-    return interaction.editReply({ content: '✅ ¡Tu perfil ha sido actualizado con éxito!' });
-}
+        await VPGUser.findOneAndUpdate(
+            { discordId: user.id }, 
+            { vpgUsername, twitterHandle, psnId, eaId }, 
+            { upsert: true }
+        );
+        return interaction.editReply({ content: '✅ ¡Tu perfil ha sido actualizado con éxito!' });
+    }
 
     if (customId === 'market_agent_modal' || customId === 'market_agent_modal_edit') {
+        // CORRECCIÓN: Añadido deferReply al inicio.
+        await interaction.deferReply({ ephemeral: true });
+
         const experience = fields.getTextInputValue('experienceInput');
         const seeking = fields.getTextInputValue('seekingInput');
         const availability = fields.getTextInputValue('availabilityInput');
@@ -108,6 +104,9 @@ module.exports = async (client, interaction) => {
     }
 
     if (customId.startsWith('offer_add_requirements_')) {
+        // CORRECCIÓN: Añadido deferReply al inicio.
+        await interaction.deferReply({ ephemeral: true });
+
         const parts = customId.split('_');
         const teamId = parts[3];
         const positions = parts[4].split('-');
@@ -149,6 +148,9 @@ module.exports = async (client, interaction) => {
     }
 
     if (customId.startsWith('manager_request_modal_')) {
+        // CORRECCIÓN: Añadido deferReply al inicio.
+        await interaction.deferReply({ ephemeral: true });
+        
         const leagueName = customId.split('_')[3];
         const vpgUsername = fields.getTextInputValue('vpgUsername');
         const teamName = fields.getTextInputValue('teamName');
@@ -164,6 +166,9 @@ module.exports = async (client, interaction) => {
     }
     
     if (customId.startsWith('approve_modal_')) {
+        // CORRECCIÓN: Añadido deferReply al inicio.
+        await interaction.deferReply({ ephemeral: true });
+
         const esAprobador = member.permissions.has(PermissionFlagsBits.Administrator) || member.roles.cache.has(process.env.APPROVER_ROLE_ID);
         if (!esAprobador) return interaction.editReply({ content: 'No tienes permiso.' });
         try {
@@ -196,6 +201,9 @@ module.exports = async (client, interaction) => {
     }
     
     if (customId.startsWith('edit_data_modal_')) {
+        // CORRECCIÓN: Añadido deferReply al inicio.
+        await interaction.deferReply({ ephemeral: true });
+
         const teamId = customId.split('_')[3];
         const team = await Team.findById(teamId);
         if (!team) return interaction.editReply({ content: 'El equipo ya no existe.' });
@@ -224,6 +232,9 @@ module.exports = async (client, interaction) => {
     }
 
     if (customId.startsWith('invite_player_modal_')) {
+        // CORRECCIÓN: Añadido deferReply al inicio.
+        await interaction.deferReply({ ephemeral: true });
+
         const teamId = customId.split('_')[3];
         const team = await Team.findById(teamId);
         if (!team) return interaction.editReply({ content: 'Tu equipo ya no existe.' });
@@ -266,6 +277,9 @@ module.exports = async (client, interaction) => {
     }
 
     if (customId === 'create_league_modal') {
+        // CORRECCIÓN: Añadido deferReply al inicio.
+        await interaction.deferReply({ ephemeral: true });
+
         const leagueName = fields.getTextInputValue('leagueNameInput');
         const existingLeague = await League.findOne({ name: leagueName, guildId: guild.id });
         if (existingLeague) return interaction.editReply({ content: `La liga **${leagueName}** ya existe.` });
@@ -274,6 +288,9 @@ module.exports = async (client, interaction) => {
     }
 
     if (customId.startsWith('confirm_dissolve_modal_')) {
+        // CORRECCIÓN: Añadido deferReply al inicio.
+        await interaction.deferReply({ ephemeral: true });
+
         const teamId = customId.split('_')[3];
         const team = await Team.findById(teamId);
         if (!team) return interaction.editReply({ content: 'El equipo ya no existe.' });
@@ -297,6 +314,9 @@ module.exports = async (client, interaction) => {
     }
     
     if (customId.startsWith('application_modal_')) {
+        // CORRECCIÓN: Añadido deferReply al inicio.
+        await interaction.deferReply({ ephemeral: true });
+
         const teamId = customId.split('_')[2];
         const team = await Team.findById(teamId);
         if(!team || !team.recruitmentOpen) return interaction.editReply({ content: 'Este equipo ya no existe o ha cerrado su reclutamiento.' });
