@@ -12,6 +12,56 @@ const AGENT_AD_COOLDOWN = 5 * 60 * 1000; // 5 minutos en milisegundos
 
 const POSITIONS = ['POR', 'DFC', 'CARR', 'MCD', 'MV', 'MCO', 'DC'];
 
+// ======================= PEGA LA NUEVA FUNCIÓN AQUÍ =======================
+async function sendPaginatedTeamMenu(interaction, teams, baseCustomId, paginationId, page, contentMessage) {
+    const ITEMS_PER_PAGE = 25;
+    const totalPages = Math.ceil(teams.length / ITEMS_PER_PAGE);
+    const startIndex = page * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    const currentTeams = teams.slice(startIndex, endIndex);
+
+    if (currentTeams.length === 0) {
+        return interaction.editReply({ content: 'No se encontraron equipos en esta página.', components: [] });
+    }
+
+    const teamOptions = currentTeams.map(t => ({
+        label: `${t.name} (${t.abbreviation})`.substring(0, 100),
+        value: t._id.toString(),
+    }));
+
+    const selectMenu = new StringSelectMenuBuilder()
+        .setCustomId(baseCustomId)
+        .setPlaceholder(`Página ${page + 1} de ${totalPages} - Selecciona un equipo`)
+        .addOptions(teamOptions);
+
+    const navigationRow = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+            .setCustomId(`paginate_${paginationId}_${page - 1}`)
+            .setLabel('◀️ Anterior')
+            .setStyle(ButtonStyle.Secondary)
+            .setDisabled(page === 0),
+        new ButtonBuilder()
+            .setCustomId(`paginate_${paginationId}_${page + 1}`)
+            .setLabel('Siguiente ▶️')
+            .setStyle(ButtonStyle.Secondary)
+            .setDisabled(page >= totalPages - 1)
+    );
+
+    const components = [new ActionRowBuilder().addComponents(selectMenu)];
+    if (totalPages > 1) {
+        components.push(navigationRow);
+    }
+    
+    // Si la interacción es una respuesta a un botón (ya diferida), usamos editReply.
+    // Si es una interacción de paginación (ya actualizada), usamos editReply.
+    if (interaction.deferred || interaction.replied || customId.startsWith('paginate_')) {
+        await interaction.editReply({ content: contentMessage, components });
+    } else {
+        await interaction.reply({ content: contentMessage, components, ephemeral: true });
+    }
+}
+// ===========================================================================
+
 async function updatePanelMessage(client, panelId) {
     try {
         const panel = await AvailabilityPanel.findById(panelId).populate('teamId').lean();
@@ -311,7 +361,58 @@ const handler = async (client, interaction) => {
         }
         return;
     }
+// =================== COMIENZA EL BLOQUE DE CÓDIGO DEL PASO 5 ===================
 
+// Este bloque se activa si el ID de un botón pulsado empieza con "paginate_"
+if (customId.startsWith('paginate_')) {
+    // Le decimos a Discord "Recibido, estoy trabajando en ello" para que no muestre un error.
+    await interaction.deferUpdate();
+
+    // Rompemos el ID del botón (ej: "paginate_view_1") en sus partes.
+    const parts = customId.split('_');
+    const action = parts[1]; // Será 'view', 'apply', o 'manage'
+    const newPage = parseInt(parts[2], 10); // El número de la página a la que vamos
+
+    // Preparamos variables que llenaremos a continuación.
+    let teams;
+    let baseCustomId;
+    let contentMessage;
+
+    // Según la acción del botón original, cargamos la lista de equipos y los textos correctos.
+    // Esto asegura que si estamos paginando la lista de "aplicar", no mostremos equipos que no tienen reclutamiento abierto.
+    if (action === 'view') {
+        teams = await Team.find({ guildId: guild.id }).sort({ name: 1 }).lean();
+        baseCustomId = 'view_team_roster_select';
+        contentMessage = 'Elige un equipo para ver su plantilla:';
+    } else if (action === 'apply') {
+        teams = await Team.find({ guildId: guild.id, recruitmentOpen: true }).sort({ name: 1 }).lean();
+        baseCustomId = 'apply_to_team_select';
+        contentMessage = 'Selecciona el equipo al que quieres aplicar:';
+    } else if (action === 'manage') {
+        teams = await Team.find({ guildId: interaction.guildId }).sort({ name: 1 }).lean();
+        baseCustomId = 'admin_select_team_to_manage';
+        contentMessage = 'Selecciona el equipo que deseas gestionar:';
+    } else {
+        // Si la acción no se reconoce, no hacemos nada para evitar errores.
+        return;
+    }
+
+    // Si la lista de equipos existe...
+    if (teams && teams.length > 0) {
+        // ...volvemos a llamar a la función que crea el menú (del Paso 1),
+        // pero esta vez le pasamos el nuevo número de página.
+        await sendPaginatedTeamMenu(interaction, teams, baseCustomId, action, newPage, contentMessage);
+    } else {
+        // Si por alguna razón la lista ahora está vacía (ej. se borró el último equipo), informamos.
+        await interaction.editReply({ content: 'No se encontraron equipos.', components: [] });
+    }
+    
+    // Es CRUCIAL detener la ejecución del código aquí para que no continúe
+    // y entre en otros bloques `if` de este archivo por error.
+    return;
+}
+
+// =================== FINALIZA EL BLOQUE DE CÓDIGO DEL PASO 5 ===================
     if (customId.startsWith('team_submenu_')) {
         await interaction.deferReply({ flags: 64 });
         
@@ -961,56 +1062,62 @@ else if (customId === 'market_post_offer') {
         return interaction.editReply({ content: 'Selecciona la liga para tu equipo:', components: [new ActionRowBuilder().addComponents(selectMenu)]});
     }
 
-    if (customId === 'view_teams_button' || customId === 'team_view_roster_button') {
-        await interaction.deferReply({ flags: 64 });
-        let teamToView;
-        if(customId === 'team_view_roster_button') {
-             teamToView = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }, { players: user.id }] });
-             if (!teamToView) return interaction.editReply({ content: 'No perteneces a ningún equipo.' });
-             const allMemberIds = [teamToView.managerId, ...teamToView.captains, ...teamToView.players].filter(id => id);
-             if (allMemberIds.length === 0) return interaction.editReply({ content: 'Tu equipo no tiene miembros.' });
-             const memberProfiles = await VPGUser.find({ discordId: { $in: allMemberIds } }).lean();
-             const memberMap = new Map(memberProfiles.map(p => [p.discordId, p]));
-             let rosterString = '';
-             const fetchMemberInfo = async (ids, roleName) => {
-                 if (!ids || ids.length === 0) return;
-                 rosterString += `\n**${roleName}**\n`;
-                 for (const memberId of ids) {
-                     try {
-                        const memberData = await guild.members.fetch(memberId);
-                        const vpgUser = memberMap.get(memberId)?.vpgUsername || 'N/A';
-                        rosterString += `> ${memberData.user.username} (${vpgUser})\n`;
-                     } catch (error) { rosterString += `> *Usuario no encontrado (ID: ${memberId})*\n`; }
-                 }
-             };
-             await fetchMemberInfo([teamToView.managerId].filter(Boolean), '👑 Mánager');
-             await fetchMemberInfo(teamToView.captains, '🛡️ Capitanes');
-             await fetchMemberInfo(teamToView.players, 'Jugadores');
-             const embed = new EmbedBuilder().setTitle(`Plantilla de ${teamToView.name}`).setDescription(rosterString.trim() || 'Este equipo no tiene miembros.').setColor('#3498db').setThumbnail(teamToView.logoUrl).setFooter({ text: `Liga: ${teamToView.league}` });
-             return interaction.editReply({ embeds: [embed] });
-        } else {
-            const teams = await Team.find({ guildId: guild.id }).limit(25).sort({ name: 1 });
-            if (teams.length === 0) return interaction.editReply({ content: 'No hay equipos registrados.' });
-            const teamOptions = teams.map(t => ({ label: `${t.name} (${t.abbreviation})`, value: t._id.toString() }));
-            const selectMenu = new StringSelectMenuBuilder().setCustomId('view_team_roster_select').setPlaceholder('Selecciona un equipo').addOptions(teamOptions);
-            return interaction.editReply({ content: 'Elige un equipo:', components: [new ActionRowBuilder().addComponents(selectMenu)] });
-        }
+    if (customId === 'view_teams_button') {
+    await interaction.deferReply({ ephemeral: true });
+    const teams = await Team.find({ guildId: guild.id }).sort({ name: 1 }).lean();
+    if (teams.length === 0) {
+        return interaction.editReply({ content: 'No hay equipos registrados.' });
     }
+    await sendPaginatedTeamMenu(interaction, teams, 'view_team_roster_select', 'view', 0, 'Elige un equipo para ver su plantilla:');
+}
+
+if (customId === 'team_view_roster_button') {
+    await interaction.deferReply({ flags: 64 });
+    const teamToView = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }, { players: user.id }] });
+    if (!teamToView) return interaction.editReply({ content: 'No perteneces a ningún equipo.' });
+    // El resto de la lógica para ver tu propia plantilla queda igual
+    const allMemberIds = [teamToView.managerId, ...teamToView.captains, ...teamToView.players].filter(id => id);
+     if (allMemberIds.length === 0) return interaction.editReply({ content: 'Tu equipo no tiene miembros.' });
+     const memberProfiles = await VPGUser.find({ discordId: { $in: allMemberIds } }).lean();
+     const memberMap = new Map(memberProfiles.map(p => [p.discordId, p]));
+     let rosterString = '';
+     const fetchMemberInfo = async (ids, roleName) => {
+         if (!ids || ids.length === 0) return;
+         rosterString += `\n**${roleName}**\n`;
+         for (const memberId of ids) {
+             try {
+                const memberData = await guild.members.fetch(memberId);
+                const vpgUser = memberMap.get(memberId)?.vpgUsername || 'N/A';
+                rosterString += `> ${memberData.user.username} (${vpgUser})\n`;
+             } catch (error) { rosterString += `> *Usuario no encontrado (ID: ${memberId})*\n`; }
+         }
+     };
+     await fetchMemberInfo([teamToView.managerId].filter(Boolean), '👑 Mánager');
+     await fetchMemberInfo(teamToView.captains, '🛡️ Capitanes');
+     await fetchMemberInfo(teamToView.players, 'Jugadores');
+     const embed = new EmbedBuilder().setTitle(`Plantilla de ${teamToView.name}`).setDescription(rosterString.trim() || 'Este equipo no tiene miembros.').setColor('#3498db').setThumbnail(teamToView.logoUrl).setFooter({ text: `Liga: ${teamToView.league}` });
+     return interaction.editReply({ embeds: [embed] });
+}
 
     if (customId === 'apply_to_team_button') {
-        await interaction.deferReply({ flags: 64 });
-        const isManager = await Team.findOne({ guildId: guild.id, managerId: user.id });
-        if (isManager) {
-            return interaction.editReply({ content: '❌ Como Mánager de un equipo, no puedes enviar solicitudes de unión a otros equipos.' });
-        }
-        const existingApplication = await PlayerApplication.findOne({ userId: user.id, status: 'pending' });
-        if (existingApplication) return interaction.editReply({ content: 'Ya tienes una solicitud de aplicación pendiente.' });
-        const openTeams = await Team.find({ guildId: guild.id, recruitmentOpen: true }).sort({ name: 1 });
-        if (openTeams.length === 0) return interaction.editReply({ content: 'No hay equipos con reclutamiento abierto.' });
-        const teamOptions = openTeams.map(t => ({ label: t.name, value: t._id.toString() }));
-        const selectMenu = new StringSelectMenuBuilder().setCustomId('apply_to_team_select').setPlaceholder('Elige un equipo').addOptions(teamOptions);
-        return interaction.editReply({ content: 'Selecciona el equipo al que quieres aplicar:', components: [new ActionRowBuilder().addComponents(selectMenu)] });
+    await interaction.deferReply({ ephemeral: true });
+    const isManager = await Team.findOne({ guildId: guild.id, managerId: user.id });
+    if (isManager) {
+        return interaction.editReply({ content: '❌ Como Mánager de un equipo, no puedes enviar solicitudes de unión a otros equipos.' });
     }
+    const existingApplication = await PlayerApplication.findOne({ userId: user.id, status: 'pending' });
+    if (existingApplication) {
+        return interaction.editReply({ content: 'Ya tienes una solicitud de aplicación pendiente.' });
+    }
+    
+    const openTeams = await Team.find({ guildId: guild.id, recruitmentOpen: true }).sort({ name: 1 }).lean();
+    if (openTeams.length === 0) {
+        return interaction.editReply({ content: 'No hay equipos con reclutamiento abierto en este momento.' });
+    }
+
+    // Llama a la nueva función de paginación
+    await sendPaginatedTeamMenu(interaction, openTeams, 'apply_to_team_select', 'apply', 0, 'Selecciona el equipo al que quieres aplicar:');
+}
 
     if (customId === 'leave_team_button') {
         await interaction.deferReply({ flags: 64 });
@@ -1037,15 +1144,19 @@ else if (customId === 'market_post_offer') {
         return interaction.editReply({ content: 'Selecciona del menú las ligas que quieres borrar:', components: [new ActionRowBuilder().addComponents(selectMenu)] });
     }
 
-    if (customId === 'admin_manage_team_button') {
-        await interaction.deferReply({ flags: 64 });
-        if (!isAdmin) return interaction.editReply({content: 'Acción restringida.'});
-        const teams = await Team.find({ guildId: interaction.guildId }).limit(25).sort({ name: 1 });
-        if (teams.length === 0) return interaction.editReply({ content: 'No hay equipos registrados para gestionar.' });
-        const teamOptions = teams.map(t => ({ label: `${t.name} (${t.abbreviation})`, value: t._id.toString() }));
-        const selectMenu = new StringSelectMenuBuilder().setCustomId('admin_select_team_to_manage').setPlaceholder('Selecciona un equipo').addOptions(teamOptions);
-        return interaction.editReply({ content: 'Selecciona el equipo que deseas gestionar:', components: [new ActionRowBuilder().addComponents(selectMenu)] });
+    f (customId === 'admin_manage_team_button') {
+    await interaction.deferReply({ ephemeral: true });
+    if (!isAdmin) {
+        return interaction.editReply({content: 'Acción restringida.'});
     }
+    const teams = await Team.find({ guildId: interaction.guildId }).sort({ name: 1 }).lean();
+    if (teams.length === 0) {
+        return interaction.editReply({ content: 'No hay equipos registrados para gestionar.' });
+    }
+    
+    // Llama a la nueva función de paginación
+    await sendPaginatedTeamMenu(interaction, teams, 'admin_select_team_to_manage', 'manage', 0, 'Selecciona el equipo que deseas gestionar:');
+}
 
     if (customId.startsWith('admin_manage_members_') || customId === 'team_manage_roster_button') {
         await interaction.deferReply({ flags: 64 });
