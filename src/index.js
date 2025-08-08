@@ -174,29 +174,39 @@ client.on(Events.InteractionCreate, async interaction => {
         }
 
     } catch (error) {
-        console.error(`Fallo crítico durante el procesamiento de una interacción de tipo [${handlerName}]:`, error);
-        
-        const errorMessage = { 
-            content: 'Ha ocurrido un error al procesar esta solicitud. Por favor, inténtalo de nuevo.', 
-            ephemeral: true 
-        };
-        
-        if (interaction.replied || interaction.deferred) {
-            await interaction.followUp(errorMessage).catch(err => {
-                console.error("Error al intentar enviar un followUp de error:", err);
-            });
-        } else {
-            await interaction.reply(errorMessage).catch(err => {
-                console.error("Error al intentar enviar un reply de error:", err);
-            });
-        }
+    // Si el error es "Unknown Interaction" (código 10062), es probable que sea por un "arranque en frío" de Render.
+    // En este caso, simplemente lo registramos en la consola y no intentamos responder al usuario,
+    // porque la interacción ya ha expirado y causaría otro error.
+    if (error.code === 10062) {
+        console.warn(`Se ignoró un error de "Interacción Desconocida" (código 10062), probablemente debido a un arranque en frío.`);
+        return; // Detenemos la ejecución aquí para este caso específico.
     }
+
+    // Para todos los demás errores, mantenemos la lógica de notificar al usuario.
+    console.error(`Fallo crítico durante el procesamiento de una interacción de tipo [${handlerName}]:`, error);
+    
+    const errorMessage = { 
+        content: 'Ha ocurrido un error al procesar esta solicitud. Por favor, inténtalo de nuevo.', 
+        ephemeral: true 
+    };
+    
+    try {
+        if (interaction.replied || interaction.deferred) {
+            await interaction.followUp(errorMessage);
+        } else {
+            await interaction.reply(errorMessage);
+        }
+    } catch (followUpError) {
+        // Este catch interno previene un crash si el envío del mensaje de error también falla.
+        console.error("No se pudo enviar el mensaje de error al usuario:", followUpError);
+    }
+}
 });
 
 // DESPERTADOR INTERNO
 const selfPingUrl = `https://bot-vpg-pro.onrender.com`;
 setInterval(() => {
     axios.get(selfPingUrl).catch(() => {}); // Simplemente hacemos la petición, ignoramos el error 404
-}, 4 * 60 * 1000); // Cada 4 minutos
+}, 2 * 60 * 1000); // Cada 2 minutos
 
 client.login(process.env.DISCORD_TOKEN);
