@@ -7,6 +7,8 @@ const AvailabilityPanel = require('../models/availabilityPanel.js');
 const VPGUser = require('../models/user.js');
 const FreeAgent = require('../models/freeAgent.js');
 const TeamOffer = require('../models/teamOffer.js');
+const recentlyNotifiedAgentAd = new Set();
+const AGENT_AD_COOLDOWN = 5 * 60 * 1000; // 5 minutos en milisegundos
 
 const POSITIONS = ['POR', 'DFC', 'CARR', 'MCD', 'MV', 'MCO', 'DC'];
 
@@ -456,18 +458,65 @@ const handler = async (client, interaction) => {
     if (customId.startsWith('market_')) {
         
         if (customId === 'market_post_agent') {
-            const hasRequiredRole = member.roles.cache.has(process.env.PLAYER_ROLE_ID) || member.roles.cache.has(process.env.CAPTAIN_ROLE_ID);
-            if (!hasRequiredRole) {
-                return interaction.reply({ content: '❌ Necesitas el rol de "Jugador" o "Capitán" para anunciarte.', flags: MessageFlags.Ephemeral });
-            }
+    const hasRequiredRole = member.roles.cache.has(process.env.PLAYER_ROLE_ID) || member.roles.cache.has(process.env.CAPTAIN_ROLE_ID);
+    
+    // Si el usuario SÍ tiene el rol, todo funciona como antes.
+    if (hasRequiredRole) {
+        const modal = new ModalBuilder().setCustomId('market_agent_modal').setTitle('Anunciarse como Agente Libre');
+        const experienceInput = new TextInputBuilder().setCustomId('experienceInput').setLabel("Tu experiencia (clubes, logros, etc.)").setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(500);
+        const seekingInput = new TextInputBuilder().setCustomId('seekingInput').setLabel("¿Qué tipo de equipo buscas?").setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(500);
+        const availabilityInput = new TextInputBuilder().setCustomId('availabilityInput').setLabel("Tu disponibilidad horaria").setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(200);
+        modal.addComponents(new ActionRowBuilder().addComponents(experienceInput), new ActionRowBuilder().addComponents(seekingInput), new ActionRowBuilder().addComponents(availabilityInput));
+        return interaction.showModal(modal);
+    }
 
-            const modal = new ModalBuilder().setCustomId('market_agent_modal').setTitle('Anunciarse como Agente Libre');
-            const experienceInput = new TextInputBuilder().setCustomId('experienceInput').setLabel("Tu experiencia (clubes, logros, etc.)").setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(500);
-            const seekingInput = new TextInputBuilder().setCustomId('seekingInput').setLabel("¿Qué tipo de equipo buscas?").setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(500);
-            const availabilityInput = new TextInputBuilder().setCustomId('availabilityInput').setLabel("Tu disponibilidad horaria").setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(200);
-            modal.addComponents(new ActionRowBuilder().addComponents(experienceInput), new ActionRowBuilder().addComponents(seekingInput), new ActionRowBuilder().addComponents(availabilityInput));
-            await interaction.showModal(modal);
-        }
+    // --- NUEVA LÓGICA PARA USUARIOS SIN ROL ---
+
+    // 1. Comprobar si el usuario está en cooldown para evitar spam.
+    if (recentlyNotifiedAgentAd.has(user.id)) {
+        return interaction.reply({
+            content: '❌ Ya te he enviado las instrucciones por MD hace poco. Por favor, revísalas antes de volver a intentarlo.',
+            ephemeral: true
+        });
+    }
+
+    // 2. Si no está en cooldown, preparamos y enviamos la guía por MD.
+    // !! IMPORTANTE: Asegúrate de que este ID de canal es el correcto para tu servidor !!
+    const targetChannelId = '1396815232122228827';
+    
+    const guideEmbed = new EmbedBuilder()
+        .setTitle('📝 Completa tu perfil para ser Agente Libre')
+        .setColor('Orange')
+        .setDescription('He visto que intentas anunciarte como Agente Libre. ¡Genial! Para poder hacerlo, primero necesitas tener el rol de "Jugador", que se te asigna automáticamente al completar tu perfil.')
+        .addFields(
+            { name: 'Paso 1: Ve al canal de control', value: `Haz clic aquí para ir al canal <#${targetChannelId}>.` },
+            { name: 'Paso 2: Abre el menú de jugador', value: 'Pulsa el botón **"Acciones de Jugador"**.' },
+            { name: 'Paso 3: Completa tu perfil', value: 'En el menú que aparecerá, pulsa **"Actualizar Perfil"** y rellena todos tus datos.' }
+        )
+        .setFooter({ text: 'Una vez completado, recibirás el rol y podrás anunciarte sin problemas.' });
+
+    try {
+        await user.send({ embeds: [guideEmbed] });
+
+        // 3. Añadir al usuario al cooldown y responder en el canal.
+        recentlyNotifiedAgentAd.add(user.id);
+        setTimeout(() => {
+            recentlyNotifiedAgentAd.delete(user.id);
+        }, AGENT_AD_COOLDOWN); // Se eliminará del cooldown después de 5 minutos.
+
+        return interaction.reply({
+            content: 'ℹ️ Para anunciarte, primero debes tener el rol de "Jugador". ¡Te acabo de enviar un Mensaje Directo con las instrucciones para conseguirlo!',
+            ephemeral: true
+        });
+
+    } catch (error) {
+        // Manejar el caso en que el usuario tenga los MDs cerrados.
+        return interaction.reply({
+            content: '❌ Necesitas el rol de "Jugador" para anunciarte. Intenté enviarte una guía por MD pero los tienes desactivados. Por favor, busca el canal de control y completa tu perfil.',
+            ephemeral: true
+        });
+    }
+}
         // ESTE ES EL NUEVO BLOQUE QUE DEBES PEGAR EN SU LUGAR
 else if (customId === 'market_post_offer') {
     // CORRECCIÓN: Se aplaza la respuesta ANTES de la consulta a la base de datos.
