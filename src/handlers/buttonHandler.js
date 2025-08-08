@@ -1144,11 +1144,16 @@ if (customId === 'team_view_roster_button') {
         return interaction.editReply({ content: 'Selecciona del menú las ligas que quieres borrar:', components: [new ActionRowBuilder().addComponents(selectMenu)] });
     }
 
-    f (customId === 'admin_manage_team_button') {
+    // ESTE ES EL BLOQUE CORREGIDO PARA EL BOTÓN DE "GESTIONAR EQUIPO" DEL ADMIN
+if (customId === 'admin_manage_team_button') {
     await interaction.deferReply({ ephemeral: true });
+    
+    // Comprobamos si es admin
+    const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
     if (!isAdmin) {
         return interaction.editReply({content: 'Acción restringida.'});
     }
+    
     const teams = await Team.find({ guildId: interaction.guildId }).sort({ name: 1 }).lean();
     if (teams.length === 0) {
         return interaction.editReply({ content: 'No hay equipos registrados para gestionar.' });
