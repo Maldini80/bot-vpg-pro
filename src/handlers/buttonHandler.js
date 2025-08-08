@@ -866,7 +866,7 @@ else if (customId === 'market_post_offer') {
                 if(isTargetCaptain && !isManagerAction) return interaction.editReply({content: 'Un capitán no puede expulsar a otro capitán.', components: []});
                 team.players = team.players.filter(p => p !== targetId);
                 team.captains = team.captains.filter(c => c !== targetId);
-                await targetMember.roles.remove([process.env.PLAYER_ROLE_ID, process.env.CAPTAIN_ROLE_ID, process.env.MUTED_ROLE_ID]).catch(() => {});
+                await targetMember.roles.remove([process.env.CAPTAIN_ROLE_ID, process.env.MUTED_ROLE_ID]).catch(() => {});
                 if (targetMember.id !== interaction.guild.ownerId) await targetMember.setNickname(targetMember.user.username).catch(()=>{});
                 await interaction.editReply({ content: `✅ **${targetMember.user.username}** ha sido expulsado.`, components: [] });
             } else if (customId.startsWith('promote_player_')) {
@@ -970,7 +970,7 @@ else if (customId === 'market_post_offer') {
         teamToLeave.players = teamToLeave.players.filter(p => p !== user.id);
         teamToLeave.captains = teamToLeave.captains.filter(c => c !== user.id);
         await teamToLeave.save();
-        await member.roles.remove([process.env.PLAYER_ROLE_ID, process.env.CAPTAIN_ROLE_ID, process.env.MUTED_ROLE_ID]).catch(() => {});
+        await member.roles.remove([process.env.CAPTAIN_ROLE_ID, process.env.MUTED_ROLE_ID]).catch(() => {});
         if (member.id !== guild.ownerId) await member.setNickname(user.username).catch(()=>{});
         await interaction.editReply({ content: `Has abandonado el equipo **${teamToLeave.name}**.` });
         const manager = await client.users.fetch(teamToLeave.managerId).catch(() => null);
