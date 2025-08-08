@@ -51,21 +51,46 @@ module.exports = async (client, interaction) => {
     }
 
     if (customId === 'edit_profile_modal') {
-        // CORRECCIÓN: deferReply() ya estaba aquí, lo cual es correcto.
-        await interaction.deferReply({ ephemeral: true });
+    // Aplazamos la respuesta para tener tiempo de procesar todo.
+    await interaction.deferReply({ ephemeral: true });
 
-        const vpgUsername = fields.getTextInputValue('vpgUsernameInput');
-        const twitterHandle = fields.getTextInputValue('twitterInput');
-        const psnId = fields.getTextInputValue('psnIdInput') || null;
-        const eaId = fields.getTextInputValue('eaIdInput') || null;
+    // Recogemos los datos del formulario.
+    const vpgUsername = fields.getTextInputValue('vpgUsernameInput');
+    const twitterHandle = fields.getTextInputValue('twitterInput');
+    const psnId = fields.getTextInputValue('psnIdInput') || null;
+    const eaId = fields.getTextInputValue('eaIdInput') || null;
 
-        await VPGUser.findOneAndUpdate(
-            { discordId: user.id }, 
-            { vpgUsername, twitterHandle, psnId, eaId }, 
-            { upsert: true }
-        );
-        return interaction.editReply({ content: '✅ ¡Tu perfil ha sido actualizado con éxito!' });
+    // Actualizamos la base de datos y pedimos que nos devuelva el perfil actualizado.
+    const updatedProfile = await VPGUser.findOneAndUpdate(
+        { discordId: user.id },
+        { vpgUsername, twitterHandle, psnId, eaId },
+        { upsert: true, new: true } // `new: true` es clave para obtener los datos más recientes.
+    );
+
+    // Preparamos el mensaje de respuesta.
+    let responseMessage = '✅ ¡Tu perfil ha sido actualizado con éxito!';
+    const playerRoleId = process.env.PLAYER_ROLE_ID;
+
+    // --- INICIO DE LA NUEVA LÓGICA ---
+    // Comprobamos si el usuario tiene una posición principal (perfil completo),
+    // si tenemos configurado el rol de jugador, y si el usuario NO tiene ese rol.
+    if (updatedProfile && updatedProfile.primaryPosition && playerRoleId && !member.roles.cache.has(playerRoleId)) {
+        try {
+            // Si cumple las condiciones, le añadimos el rol.
+            await member.roles.add(playerRoleId);
+            // Y modificamos el mensaje de respuesta para notificarle.
+            responseMessage += '\n\n¡Hemos detectado que no tenías el rol de Jugador y te lo hemos asignado!';
+        } catch (error) {
+            // Si hay un error (ej. el bot no tiene permisos), lo notificamos en consola y al usuario.
+            console.error(`Error al asignar rol de jugador a ${user.tag} tras actualizar perfil:`, error);
+            responseMessage += '\n\nHubo un problema al intentar asignarte el rol de Jugador. Por favor, contacta a un administrador.';
+        }
     }
+    // --- FIN DE LA NUEVA LÓGICA ---
+
+    // Enviamos la respuesta final, que puede incluir o no la notificación del rol.
+    return interaction.editReply({ content: responseMessage });
+}
 
     if (customId === 'market_agent_modal' || customId.startsWith('market_agent_modal_edit')) {
         await interaction.deferReply({ ephemeral: true });
