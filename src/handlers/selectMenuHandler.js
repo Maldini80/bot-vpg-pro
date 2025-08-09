@@ -267,6 +267,41 @@ module.exports = async (client, interaction) => {
                 const playerRole = await guild.roles.fetch(process.env.PLAYER_ROLE_ID);
                 if (playerRole) {
                     await member.roles.add(playerRole);
+                    // --- INICIO DEL CÓDIGO AÑADIDO: MD de bienvenida al jugador ---
+try {
+    const playerGuideEmbed = new EmbedBuilder()
+        .setTitle('✅ ¡Perfil Completado y Rol de Jugador Desbloqueado!')
+        .setColor('Green')
+        .setImage('https://i.imgur.com/7sB0gaa.jpg')
+        .setDescription(`¡Felicidades, ${member.user.username}! Has completado tu perfil. Ahora tienes acceso a las herramientas de jugador. A continuación, te explicamos en detalle todo lo que puedes hacer:`)
+        .addFields(
+            {
+                name: '➡️ ¿Ya tienes equipo pero necesitas unirte en Discord?',
+                value: 'Tienes dos formas de hacerlo:\n' +
+                       '1. **La más recomendada:** Habla con tu **Mánager o Capitán**. Ellos pueden usar la función `Invitar Jugador` desde su panel para añadirte al instante.\n' +
+                       '2. **Si prefieres tomar la iniciativa:** Puedes ir al panel de <#1396815232122228827>, pulsar `Acciones de Jugador` -> `Aplicar a un Equipo`, buscar tu club en la lista y enviarles una solicitud formal.'
+            },
+            { 
+                name: '🔎 ¿Buscas un nuevo reto? Guía Completa del Mercado de Fichajes', 
+                value: 'El canal <#1402608609724072040> es tu centro de operaciones.\n' +
+                       '• **Para anunciarte**: Usa `Anunciarse como Agente Libre`. Si ya tenías un anuncio publicado, **este será reemplazado automáticamente por el nuevo**, nunca tendrás duplicados. Esta acción de publicar/reemplazar tu anuncio solo se puede realizar **una vez cada 3 días**.\n' +
+                       '• **Para buscar**: Usa `Buscar Ofertas de Equipo` para ver qué equipos han publicado vacantes y qué perfiles necesitan.\n' +
+                       '• **Para administrar tu anuncio**: Usa `Gestionar mi Anuncio` en cualquier momento para **editar** los detalles o **borrarlo** definitivamente si encuentras equipo.'
+            },
+            {
+                name: '⚙️ Herramientas Clave de tu Carrera',
+                value: 'Desde el panel principal de <#1396815232122228827> (`Acciones de Jugador`) tienes control total:\n' +
+                       '• **`Actualizar Perfil`**: Es crucial que mantengas tus IDs de juego (PSN, EA) actualizados.\n' +
+                       '• **`Abandonar Equipo`**: Si en el futuro decides dejar tu equipo actual, esta opción te dará total independencia para hacerlo.'
+            }
+        );
+
+    await member.send({ embeds: [playerGuideEmbed] });
+
+} catch (dmError) {
+    console.log(`AVISO: No se pudo enviar el MD de guía al nuevo jugador ${member.user.tag}.`);
+}
+// --- FIN DEL CÓDIGO AÑADIDO ---
                 }
                 
                 await interaction.editReply({ 
