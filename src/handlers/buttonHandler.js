@@ -1026,6 +1026,36 @@ else if (customId === 'market_post_offer') {
                 await targetMember.roles.remove(process.env.PLAYER_ROLE_ID).catch(()=>{});
                 await targetMember.roles.add(process.env.CAPTAIN_ROLE_ID).catch(()=>{});
                 if (targetMember.id !== interaction.guild.ownerId) await targetMember.setNickname(`|C| ${team.abbreviation} ${targetMember.user.username}`).catch(()=>{});
+                // --- INICIO DEL CÓDIGO AÑADIDO: MD de bienvenida al Capitán ---
+                try {
+                    const captainGuideEmbed = new EmbedBuilder()
+                        .setTitle(`🛡️ ¡Enhorabuena! Has sido ascendido a Capitán de "${team.name}".`)
+                        .setColor('Blue')
+                        .setDescription(`El Mánager confía en ti para ser su mano derecha. Has obtenido acceso a nuevas herramientas en el panel de equipo de <#1396815967685705738> para ayudar en la gestión.`)
+                        .addFields(
+                            { 
+                                name: '✅ Tus Nuevas Responsabilidades', 
+                                value: '• **Gestionar Amistosos**: Eres clave para mantener al equipo en forma. Puedes programar y buscar partidos.\n' +
+                                       '• **Gestionar Fichajes**: Ayuda a buscar nuevos talentos creando y actualizando las ofertas del equipo.\n' +
+                                       '• **Gestionar Miembros**: Mantén el orden. Puedes expulsar jugadores (excepto a otros capitanes) y usar la función de mutear en el chat de equipo.'
+                            },
+                            { 
+                                name: '❌ Límites de tu Rol (Reservado al Mánager)', 
+                                value: '• No puedes editar los datos principales del equipo (nombre, logo).\n' +
+                                       '• No puedes invitar jugadores directamente.\n' +
+                                       '• No puedes ascender o degradar a otros miembros.'
+                            },
+                            {
+                                name: '💡 Un Rol de Liderazgo',
+                                value: 'Eres un pilar fundamental y un ejemplo para la plantilla. Usa tus nuevas herramientas con responsabilidad para llevar al equipo al éxito.'
+                            }
+                        );
+
+                    await targetMember.send({ embeds: [captainGuideEmbed] });
+                } catch (dmError) {
+                    console.log(`AVISO: No se pudo enviar el MD de guía al nuevo capitán ${targetMember.user.tag}.`);
+                }
+                // --- FIN DEL CÓDIGO AÑADIDO ---
                 await interaction.editReply({ content: `✅ **${targetMember.user.username}** ascendido a Capitán.`, components: [] });
             } else if (customId.startsWith('demote_captain_')) {
                 if(!isManagerAction) return interaction.editReply({content: 'Solo el Mánager puede degradar.', components: []});
