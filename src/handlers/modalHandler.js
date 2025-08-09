@@ -51,46 +51,94 @@ module.exports = async (client, interaction) => {
     }
 
     if (customId === 'edit_profile_modal') {
-    // Aplazamos la respuesta para tener tiempo de procesar todo.
-    await interaction.deferReply({ ephemeral: true });
+        // Aplazamos la respuesta para tener tiempo de procesar todo.
+        await interaction.deferReply({ ephemeral: true });
 
-    // Recogemos los datos del formulario.
-    const vpgUsername = fields.getTextInputValue('vpgUsernameInput');
-    const twitterHandle = fields.getTextInputValue('twitterInput');
-    const psnId = fields.getTextInputValue('psnIdInput') || null;
-    const eaId = fields.getTextInputValue('eaIdInput') || null;
+        // Recogemos los datos del formulario.
+        const vpgUsername = fields.getTextInputValue('vpgUsernameInput');
+        const twitterHandle = fields.getTextInputValue('twitterInput');
+        const psnId = fields.getTextInputValue('psnIdInput') || null;
+        const eaId = fields.getTextInputValue('eaIdInput') || null;
 
-    // Actualizamos la base de datos y pedimos que nos devuelva el perfil actualizado.
-    const updatedProfile = await VPGUser.findOneAndUpdate(
-        { discordId: user.id },
-        { vpgUsername, twitterHandle, psnId, eaId },
-        { upsert: true, new: true } // `new: true` es clave para obtener los datos más recientes.
-    );
+        // Actualizamos la base de datos y pedimos que nos devuelva el perfil actualizado.
+        const updatedProfile = await VPGUser.findOneAndUpdate(
+            { discordId: user.id },
+            { vpgUsername, twitterHandle, psnId, eaId },
+            { upsert: true, new: true } // `new: true` es clave para obtener los datos más recientes.
+        );
 
-    // Preparamos el mensaje de respuesta.
-    let responseMessage = '✅ ¡Tu perfil ha sido actualizado con éxito!';
-    const playerRoleId = process.env.PLAYER_ROLE_ID;
+        // Preparamos el mensaje de respuesta.
+        let responseMessage = '✅ ¡Tu perfil ha sido actualizado con éxito!';
+        const playerRoleId = process.env.PLAYER_ROLE_ID;
 
-    // --- INICIO DE LA NUEVA LÓGICA ---
-    // Comprobamos si el usuario tiene una posición principal (perfil completo),
-    // si tenemos configurado el rol de jugador, y si el usuario NO tiene ese rol.
-    if (updatedProfile && updatedProfile.primaryPosition && playerRoleId && !member.roles.cache.has(playerRoleId)) {
-        try {
-            // Si cumple las condiciones, le añadimos el rol.
-            await member.roles.add(playerRoleId);
-            // Y modificamos el mensaje de respuesta para notificarle.
-            responseMessage += '\n\n¡Hemos detectado que no tenías el rol de Jugador y te lo hemos asignado!';
-        } catch (error) {
-            // Si hay un error (ej. el bot no tiene permisos), lo notificamos en consola y al usuario.
-            console.error(`Error al asignar rol de jugador a ${user.tag} tras actualizar perfil:`, error);
-            responseMessage += '\n\nHubo un problema al intentar asignarte el rol de Jugador. Por favor, contacta a un administrador.';
+        // --- INICIO DE LA LÓGICA DE ASIGNACIÓN DE ROL (SE MANTIENE IGUAL) ---
+        if (updatedProfile && updatedProfile.primaryPosition && playerRoleId && !member.roles.cache.has(playerRoleId)) {
+            try {
+                await member.roles.add(playerRoleId);
+                responseMessage += '\n\n¡Hemos detectado que no tenías el rol de Jugador y te lo hemos asignado!';
+            } catch (error) {
+                console.error(`Error al asignar rol de jugador a ${user.tag} tras actualizar perfil:`, error);
+                responseMessage += '\n\nHubo un problema al intentar asignarte el rol de Jugador. Por favor, contacta a un administrador.';
+            }
         }
-    }
-    // --- FIN DE LA NUEVA LÓGICA ---
+        // --- FIN DE LA LÓGICA DE ASIGNACIÓN DE ROL ---
 
-    // Enviamos la respuesta final, que puede incluir o no la notificación del rol.
-    return interaction.editReply({ content: responseMessage });
-}
+        // =================================================================================
+        // == INICIO DEL NUEVO CÓDIGO: ENVIAR GUÍA SI ACTUALIZA PERFIL Y ES JUGADOR NORMAL ==
+        // =================================================================================
+        
+        // Obtenemos los IDs de los roles de Mánager y Capitán desde las variables de entorno
+        const managerRoleId = process.env.MANAGER_ROLE_ID;
+        const captainRoleId = process.env.CAPTAIN_ROLE_ID;
+
+        // Comprobamos si el miembro tiene el rol de Mánager o Capitán
+        const isManagerOrCaptain = member.roles.cache.has(managerRoleId) || member.roles.cache.has(captainRoleId);
+
+        // Si el usuario NO es Mánager ni Capitán, le enviamos la guía.
+        if (!isManagerOrCaptain) {
+            try {
+                const playerGuideEmbed = new EmbedBuilder()
+                    .setTitle('✅ ¡Perfil Actualizado! Aquí tienes tu Guía de Jugador.')
+                    .setColor('Green')
+                    .setImage('https://i.imgur.com/7sB0gaa.jpg')
+                    .setDescription(`¡Hola, ${member.user.username}! Hemos actualizado tu perfil. Te recordamos las herramientas que tienes a tu disposición como jugador:`)
+                    .addFields(
+                        {
+                            name: '➡️ ¿Ya tienes equipo pero necesitas unirte en Discord?',
+                            value: 'Tienes dos formas de hacerlo:\n' +
+                                   '1. **La más recomendada:** Habla con tu **Mánager o Capitán**. Ellos pueden usar la función `Invitar Jugador` desde su panel para añadirte al instante.\n' +
+                                   '2. **Si prefieres tomar la iniciativa:** Puedes ir al panel de <#1396815232122228827>, pulsar `Acciones de Jugador` -> `Aplicar a un Equipo`, buscar tu club en la lista y enviarles una solicitud formal.'
+                        },
+                        { 
+                            name: '🔎 ¿Buscas un nuevo reto? Guía Completa del Mercado de Fichajes', 
+                            value: 'El canal <#1402608609724072040> es tu centro de operaciones.\n' +
+                                   '• **Para anunciarte**: Usa `Anunciarse como Agente Libre`. Si ya tenías un anuncio publicado, **este será reemplazado automáticamente por el nuevo**, nunca tendrás duplicados. Esta acción de publicar/reemplazar tu anuncio solo se puede realizar **una vez cada 3 días**.\n' +
+                                   '• **Para buscar**: Usa `Buscar Ofertas de Equipo` para ver qué equipos han publicado vacantes y qué perfiles necesitan.\n' +
+                                   '• **Para administrar tu anuncio**: Usa `Gestionar mi Anuncio` en cualquier momento para **editar** los detalles o **borrarlo** definitivamente si encuentras equipo.'
+                        },
+                        {
+                            name: '⚙️ Herramientas Clave de tu Carrera',
+                            value: 'Desde el panel principal de <#1396815232122228827> (`Acciones de Jugador`) tienes control total:\n' +
+                                   '• **`Actualizar Perfil`**: Es crucial que mantengas tus IDs de juego (PSN, EA) actualizados.\n' +
+                                   '• **`Abandonar Equipo`**: Si en el futuro decides dejar tu equipo actual, esta opción te dará total independencia para hacerlo.'
+                        }
+                    );
+                
+                // Enviamos el MD y añadimos una pequeña nota al mensaje de confirmación en el canal.
+                await member.send({ embeds: [playerGuideEmbed] });
+                responseMessage += '\n\nℹ️ Te hemos enviado un recordatorio de tu guía de jugador por MD.';
+
+            } catch (dmError) {
+                console.log(`AVISO: No se pudo enviar el MD de recordatorio al jugador ${member.user.tag} (flujo de actualización).`);
+            }
+        }
+        // ===============================================================================
+        // == FIN DEL NUEVO CÓDIGO =======================================================
+        // ===============================================================================
+
+        // Enviamos la respuesta final, que puede incluir o no la notificación del rol y/o del MD.
+        return interaction.editReply({ content: responseMessage });
+    }
 
     if (customId === 'market_agent_modal' || customId.startsWith('market_agent_modal_edit')) {
         await interaction.deferReply({ ephemeral: true });
