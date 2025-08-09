@@ -277,7 +277,39 @@ module.exports = async (client, interaction) => {
             await applicantMember.setNickname(`|MG| ${teamAbbr} ${applicantMember.user.username}`).catch(err => console.log(`No se pudo cambiar apodo: ${err.message}`));
             const disabledRow = new ActionRowBuilder().addComponents(ButtonBuilder.from(originalMessage.components[0].components[0]).setDisabled(true).setLabel('Aprobado'), ButtonBuilder.from(originalMessage.components[0].components[1]).setDisabled(true));
             await originalMessage.edit({ components: [disabledRow] });
-            await applicantMember.send(`¡Felicidades! Tu solicitud para el equipo **${teamName}** ha sido **aprobada**.`).catch(() => {});
+            // --- INICIO DEL CÓDIGO REEMPLAZADO: Guía completa para el Mánager ---
+try {
+    const managerGuideEmbed = new EmbedBuilder()
+        .setTitle(`👑 ¡Felicidades, Mánager! Tu equipo "${teamName}" ha sido aprobado.`)
+        .setColor('Gold')
+        .setImage('https://i.imgur.com/KjamtCg.jpeg')
+        .setDescription('¡Bienvenido a la élite de la comunidad! Aquí tienes una guía detallada de tus nuevas responsabilidades y herramientas. Tu centro de mando principal es el panel del canal <#1396815967685705738>.')
+        .addFields(
+            { 
+                name: 'Paso 1: Construye tu Plantilla', 
+                value: 'Tu prioridad es formar tu equipo. Desde el submenú `Gestionar Plantilla` puedes:\n' +
+                       '• **`Invitar Jugador`**: Añade miembros directamente a tu plantilla.\n' +
+                       '• **`Ascender a Capitán`**: Delega responsabilidades en jugadores de confianza para que te ayuden con la gestión diaria (amistosos, fichajes).'
+            },
+            {
+                name: 'Paso 2: Mantén tu Equipo Activo',
+                value: 'La actividad es clave para el éxito. Desde los submenús correspondientes puedes:\n' +
+                       '• **`Gestionar Amistosos`**: Usa `Programar Búsqueda` para anunciar tu disponibilidad con antelación o `Buscar Rival (Ahora)` para un partido inmediato.\n' +
+                       '• **`Gestionar Fichajes`**: Usa `Crear / Editar Oferta` para publicar que buscas jugadores. Tu oferta será visible para todos los agentes libres.'
+            },
+            {
+                name: 'Paso 3: Administración y Consejos',
+                value: '• **`Editar Datos del Equipo`**: Mantén actualizados el nombre, abreviatura, logo y Twitter de tu equipo.\n' +
+                       '• **`Abrir/Cerrar Reclutamiento`**: Controla si tu equipo acepta solicitudes de nuevos miembros.\n' +
+                       '• **Consejo Pro**: Usa el comando `/activar-chat-canal` en un canal privado. Esto hará que los mensajes de tus jugadores aparezcan con el logo y nombre del equipo, creando una identidad única.'
+            }
+        );
+
+    await applicantMember.send({ embeds: [managerGuideEmbed] });
+} catch (dmError) {
+    console.log(`AVISO: No se pudo enviar el MD de guía al nuevo mánager ${applicantMember.user.tag}.`);
+}
+// --- FIN DEL CÓDIGO REEMPLAZADO ---
             return interaction.editReply({ content: `✅ Equipo **${teamName}** creado en la liga **${leagueName}**. ${applicantMember.user.tag} es ahora Mánager.` });
         } catch (error) {
             console.error("Error en aprobación de equipo:", error);
