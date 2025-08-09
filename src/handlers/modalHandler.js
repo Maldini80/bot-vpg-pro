@@ -301,7 +301,7 @@ try {
                 name: 'Paso 3: Administración y Consejos',
                 value: '• **`Editar Datos del Equipo`**: Mantén actualizados el nombre, abreviatura, logo y Twitter de tu equipo.\n' +
                        '• **`Abrir/Cerrar Reclutamiento`**: Controla si tu equipo acepta solicitudes de nuevos miembros.\n' +
-                       '• **Consejo Pro**: Usa el comando `/activar-chat-canal` en un canal privado. Esto hará que los mensajes de tus jugadores aparezcan con el logo y nombre del equipo, creando una identidad única.'
+                       '• **Tienes el control total**: Eres el máximo responsable de tu equipo'
             }
         );
 
