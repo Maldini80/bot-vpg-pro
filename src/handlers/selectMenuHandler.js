@@ -79,10 +79,9 @@ module.exports = async (client, interaction) => {
                 .setColor('Green')
                 .addFields(
                     { name: 'Posiciones Buscadas', value: `\`${offer.positions.join(', ')}\`` },
-                    { name: 'Requisitos', value: offer.requirements },
-                    { name: 'Contacto', value: `<@${offer.postedById}>` }
+                    { name: 'Requisitos', value: offer.requirements }
                 );
-            await interaction.followUp({ embeds: [offerEmbed], flags: MessageFlags.Ephemeral });
+            await interaction.followUp({ content: `**Contacto:** <@${offer.postedById}>`, embeds: [offerEmbed], ephemeral: true });
         }
 
     } else if (customId === 'search_player_pos_filter') {
