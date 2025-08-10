@@ -87,7 +87,7 @@ async function updatePanelMessage(client, panelId) {
             panelColor = "Greyple";
         }
         
-        let description = `**Anfitrión:** ${hostTeam.name}\n**Contacto:** <@${panel.postedById}>`;
+        let description = `**Anfitrión:** ${hostTeam.name}`;
         if (panel.leagues && panel.leagues.length > 0) {
             description += `\n**Filtro de liga:** \`${panel.leagues.join(', ')}\``;
         }
@@ -152,6 +152,7 @@ async function updatePanelMessage(client, panelId) {
         }
 
         await webhook.editMessage(panel.messageId, {
+            content: `**Contacto:** <@${panel.postedById}>`,
             username: hostTeam.name,
             avatarURL: hostTeam.logoUrl,
             embeds: [embed],
