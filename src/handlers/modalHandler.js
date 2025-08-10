@@ -191,11 +191,11 @@ module.exports = async (client, interaction) => {
         if (isEditing && existingAd && existingAd.messageId) {
             try {
                 const adMessage = await channel.messages.fetch(existingAd.messageId);
-                await adMessage.edit(messagePayload); // CORREGIDO: Usar messagePayload
+                await adMessage.edit(messagePayload); // CORREGIDO
                 messageId = existingAd.messageId;
                 responseMessage = '✅ ¡Tu anuncio ha sido actualizado con éxito!';
             } catch (error) {
-                const newMessage = await channel.send(messagePayload); // CORREGIDO: Usar messagePayload
+                const newMessage = await channel.send(messagePayload); // CORREGIDO
                 messageId = newMessage.id;
                 responseMessage = '✅ Tu anuncio anterior no se encontró, así que se ha publicado uno nuevo.';
             }
@@ -203,7 +203,7 @@ module.exports = async (client, interaction) => {
             if (existingAd && existingAd.messageId) {
                 try { await channel.messages.delete(existingAd.messageId); } catch(e) {}
             }
-            const newMessage = await channel.send(messagePayload); // CORREGIDO: Usar messagePayload
+            const newMessage = await channel.send(messagePayload); // CORREGIDO
             messageId = newMessage.id;
             responseMessage = '✅ ¡Tu anuncio ha sido publicado con éxito!';
         }
@@ -259,14 +259,14 @@ module.exports = async (client, interaction) => {
         if (existingOffer && existingOffer.messageId) {
             try {
                 const oldMessage = await channel.messages.fetch(existingOffer.messageId);
-                offerMessage = await oldMessage.edit(messagePayload); // CORREGIDO: Usar messagePayload
+                offerMessage = await oldMessage.edit(messagePayload); // CORREGIDO
                 responseText = 'actualizada';
             } catch (error) {
-                offerMessage = await channel.send(messagePayload); // CORREGIDO: Usar messagePayload
+                offerMessage = await channel.send(messagePayload); // CORREGIDO
                 responseText = 're-publicada (el mensaje anterior no se encontró)';
             }
         } else {
-            offerMessage = await channel.send(messagePayload); // CORREGIDO: Usar messagePayload
+            offerMessage = await channel.send(messagePayload); // CORREGIDO
             responseText = 'publicada';
         }
         
