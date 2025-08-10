@@ -174,7 +174,6 @@ module.exports = async (client, interaction) => {
             .setColor('Blue')
             .addFields(
                 { name: 'Posiciones', value: `**${profile.primaryPosition}** / ${profile.secondaryPosition || 'N/A'}`, inline: true },
-                { name: 'Contacto', value: `<@${user.id}>`, inline: true },
                 { name: 'IDs de Juego', value: `PSN: ${profile.psnId || 'N/A'}\nEA ID: ${profile.eaId || 'N/A'}`, inline: false },
                 { name: 'Experiencia', value: experience, inline: false },
                 { name: 'Busco un equipo que...', value: seeking, inline: false },
@@ -184,6 +183,12 @@ module.exports = async (client, interaction) => {
         
         let messageId;
         let responseMessage;
+        
+        // Preparamos el contenido del mensaje que irá fuera del embed
+        const messagePayload = {
+            content: `**Contacto:** <@${user.id}>`,
+            embeds: [playerAdEmbed]
+        };
 
         if (isEditing && existingAd && existingAd.messageId) {
             // --- LÓGICA DE EDICIÓN ---
@@ -242,7 +247,6 @@ module.exports = async (client, interaction) => {
             { name: '📄 Posiciones Vacantes', value: `\`\`\`${positions.join(' | ')}\`\`\`` },
             { name: '📋 Requisitos', value: `> ${requirements.replace(/\n/g, '\n> ')}` },
             { name: '🏆 Liga', value: team.league, inline: true },
-            { name: '📞 Contacto', value: `<@${team.managerId}>`, inline: true },
             { name: '🐦 Twitter', value: team.twitterHandle ? `[@${team.twitterHandle}](https://twitter.com/${team.twitterHandle})` : 'No especificado', inline: true }
         )
         .setTimestamp();
@@ -252,6 +256,11 @@ module.exports = async (client, interaction) => {
     let offerMessage;
     let responseText;
 
+const messagePayload = {
+        content: `**Contacto:** <@${team.managerId}>`,
+        embeds: [teamOfferEmbed]
+    };
+        
     if (existingOffer && existingOffer.messageId) {
         try {
             // Intenta editar el mensaje existente
@@ -292,9 +301,9 @@ module.exports = async (client, interaction) => {
         if (!approvalChannelId) return interaction.editReply({ content: 'Error: El canal de aprobaciones no está configurado.' });
         const approvalChannel = await client.channels.fetch(approvalChannelId).catch(() => null);
         if(!approvalChannel) return interaction.editReply({ content: 'Error: No se pudo encontrar el canal de aprobaciones.' });
-        const embed = new EmbedBuilder().setTitle('📝 Nueva Solicitud de Registro').setColor('Orange').setAuthor({ name: user.tag, iconURL: user.displayAvatarURL() }).addFields({ name: 'Solicitante', value: `<@${user.id}>` }, { name: 'Usuario VPG', value: vpgUsername }, { name: 'Nombre del Equipo', value: teamName }, { name: 'Abreviatura', value: teamAbbr }, { name: 'Liga Seleccionada', value: leagueName }).setTimestamp();
+        const embed = new EmbedBuilder().setTitle('📝 Nueva Solicitud de Registro').setColor('Orange').setAuthor({ name: user.tag, iconURL: user.displayAvatarURL() }).addFields({ name: 'Usuario VPG', value: vpgUsername }, { name: 'Nombre del Equipo', value: teamName }, { name: 'Abreviatura', value: teamAbbr }, { name: 'Liga Seleccionada', value: leagueName }).setTimestamp();
         const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`approve_request_${user.id}_${leagueName}`).setLabel('Aprobar').setStyle(ButtonStyle.Success), new ButtonBuilder().setCustomId(`reject_request_${user.id}`).setLabel('Rechazar').setStyle(ButtonStyle.Danger));
-        await approvalChannel.send({ embeds: [embed], components: [row] });
+        await approvalChannel.send({ content: `**Solicitante:** <@${user.id}>`, embeds: [embed], components: [row] });
         return interaction.editReply({ content: '✅ ¡Tu solicitud ha sido enviada!' });
     }
     
