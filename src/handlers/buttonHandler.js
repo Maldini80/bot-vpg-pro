@@ -1034,14 +1034,65 @@ else if (customId === 'market_post_offer') {
             return interaction.showModal(modal);
         }
         if (customId.startsWith('approve_request_')) {
-            if (!esAprobador) return interaction.reply({ content: 'No tienes permiso.', flags: 64 });
-            const parts = customId.split('_');
-            const applicantId = parts[2];
-            const leagueName = parts[3];
-            const modal = new ModalBuilder().setCustomId(`approve_modal_${applicantId}_${leagueName}`).setTitle(`Aprobar Equipo`);
-            const teamLogoInput = new TextInputBuilder().setCustomId('teamLogoUrl').setLabel("URL del Escudo del Equipo").setStyle(TextInputStyle.Short).setRequired(true);
-            modal.addComponents(new ActionRowBuilder().addComponents(teamLogoInput));
-            return interaction.showModal(modal);
+            await interaction.deferReply({ ephemeral: true });
+
+            if (!esAprobador) return interaction.editReply({ content: 'No tienes permiso.' });
+
+            try {
+                const originalMessage = interaction.message;
+                if (!originalMessage || !originalMessage.embeds[0]) {
+                    return interaction.editReply({ content: 'Error: No se pudo encontrar la solicitud original.' });
+                }
+
+                const parts = customId.split('_');
+                const applicantId = parts[2];
+                const leagueName = parts[3];
+
+                const embed = originalMessage.embeds[0];
+                const teamName = embed.fields.find(f => f.name === 'Nombre del Equipo').value;
+                const teamAbbr = embed.fields.find(f => f.name === 'Abreviatura').value;
+                const teamLogoUrl = embed.fields.find(f => f.name === 'URL del Logo').value.match(/\(([^)]+)\)/)[1]; // Extrae la URL del formato [Ver Logo](URL)
+                const twitterValue = embed.fields.find(f => f.name === 'Twitter del Equipo').value;
+                const teamTwitter = (twitterValue && twitterValue !== 'No especificado') ? twitterValue : null;
+                
+                const applicantMember = await interaction.guild.members.fetch(applicantId).catch(() => null);
+                if (!applicantMember) return interaction.editReply({ content: `Error: El usuario solicitante ya no está en el servidor.` });
+
+                const existingTeam = await Team.findOne({ $or: [{ name: teamName }, { managerId: applicantId }], guildId: interaction.guild.id });
+                if (existingTeam) return interaction.editReply({ content: `Error: Ya existe un equipo con ese nombre o el usuario ya es mánager.` });
+
+                const newTeam = new Team({ name: teamName, abbreviation: teamAbbr, guildId: interaction.guild.id, league: leagueName, logoUrl: teamLogoUrl, managerId: applicantId, twitterHandle: teamTwitter });
+                await newTeam.save();
+
+                await applicantMember.roles.add(process.env.MANAGER_ROLE_ID);
+                await applicantMember.roles.add(process.env.PLAYER_ROLE_ID);
+                await applicantMember.setNickname(`|MG| ${teamAbbr} ${applicantMember.user.username}`).catch(err => console.log(`No se pudo cambiar apodo: ${err.message}`));
+
+                const disabledRow = new ActionRowBuilder().addComponents(ButtonBuilder.from(originalMessage.components[0].components[0]).setDisabled(true).setLabel('Aprobado'), ButtonBuilder.from(originalMessage.components[0].components[1]).setDisabled(true));
+                await originalMessage.edit({ components: [disabledRow] });
+                
+                try {
+                    const managerGuideEmbed = new EmbedBuilder()
+                        .setTitle(`👑 ¡Felicidades, Mánager! Tu equipo "${teamName}" ha sido aprobado.`)
+                        .setColor('Gold')
+                        .setImage('https://i.imgur.com/KjamtCg.jpeg')
+                        .setDescription('¡Bienvenido a la élite de la comunidad! Tu centro de mando principal es el panel del canal <#1396815967685705738>.')
+                        .addFields(
+                            { name: 'Paso 1: Construye tu Plantilla', value: 'Desde el submenú `Gestionar Plantilla` puedes:\n• **`Invitar Jugador`**: Añade miembros directamente.\n• **`Ascender a Capitán`**: Delega responsabilidades en jugadores de confianza.' },
+                            { name: 'Paso 2: Mantén tu Equipo Activo', value: 'Desde los submenús correspondientes puedes:\n• **`Gestionar Amistosos`**: Anuncia tu disponibilidad o busca rivales.\n• **`Gestionar Fichajes`**: Publica ofertas para encontrar nuevos talentos.'},
+                            { name: 'Paso 3: Administración y Consejos', value: '• **`Editar Datos del Equipo`**: Mantén actualizados el nombre, logo, etc.\n• **`Abrir/Cerrar Reclutamiento`**: Controla si tu equipo acepta solicitudes.'}
+                        );
+                    await applicantMember.send({ embeds: [managerGuideEmbed] });
+                } catch (dmError) {
+                    console.log(`AVISO: No se pudo enviar el MD de guía al nuevo mánager ${applicantMember.user.tag}.`);
+                }
+
+                return interaction.editReply({ content: `✅ Equipo **${teamName}** creado en la liga **${leagueName}**. ${applicantMember.user.tag} es ahora Mánager.` });
+
+            } catch (error) {
+                console.error("Error en aprobación de equipo:", error);
+                return interaction.editReply({ content: 'Ocurrió un error inesperado.' });
+            }
         }
         if (customId.startsWith('admin_change_data_') || customId === 'team_edit_data_button') {
             let team;
