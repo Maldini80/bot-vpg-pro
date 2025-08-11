@@ -328,11 +328,13 @@ module.exports = async (client, interaction) => {
             const embed = originalMessage.embeds[0];
             const teamName = embed.fields.find(f => f.name === 'Nombre del Equipo').value;
             const teamAbbr = embed.fields.find(f => f.name === 'Abreviatura').value;
+            const twitterValue = embed.fields.find(f => f.name === 'Twitter del Equipo').value;
+            const teamTwitter = (twitterValue && twitterValue !== 'No especificado') ? twitterValue : null;
             const applicantMember = await guild.members.fetch(applicantId).catch(() => null);
             if (!applicantMember) return interaction.editReply({ content: `Error: El usuario solicitante ya no está en el servidor.` });
             const existingTeam = await Team.findOne({ $or: [{ name: teamName }, { managerId: applicantId }], guildId: guild.id });
             if (existingTeam) return interaction.editReply({ content: `Error: Ya existe un equipo con ese nombre o el usuario ya es mánager.` });
-            const newTeam = new Team({ name: teamName, abbreviation: teamAbbr, guildId: guild.id, league: leagueName, logoUrl: teamLogoUrl, managerId: applicantId });
+            const newTeam = new Team({ name: teamName, abbreviation: teamAbbr, guildId: guild.id, league: leagueName, logoUrl: teamLogoUrl, managerId: applicantId, twitterHandle: teamTwitter });
             await newTeam.save();
             await applicantMember.roles.add(process.env.MANAGER_ROLE_ID);
             await applicantMember.roles.add(process.env.PLAYER_ROLE_ID);
