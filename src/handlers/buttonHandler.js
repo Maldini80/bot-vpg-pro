@@ -1531,17 +1531,16 @@ if (customId === 'post_scheduled_panel' || customId === 'post_instant_panel') {
 };
 function getLogoGuideEmbed() {
     return new EmbedBuilder()
-        .setTitle('Guía para Añadir un Logo')
+        .setTitle('Guía para Añadir/Cambiar un Logo')
         .setColor('Blue')
         .setDescription(
-            'Para usar un logo personalizado, necesitas un enlace directo a la imagen.\n\n' +
-            '**Pasos recomendados:**\n' +
-            '1. Haz clic en el botón **"Subir a Imgur"** de abajo.\n' +
-            '2. Arrastra tu imagen a la página.\n' +
-            '3. Una vez subida, haz **clic derecho** sobre tu imagen y selecciona **"Copiar dirección de imagen"**.\n\n' +
-            'Ese es el enlace que deberás pegar en el siguiente paso.'
+            'Para usar un logo personalizado, necesitas un enlace directo a la imagen. Sigue estos sencillos pasos:\n\n' +
+            '1. Abre el siguiente enlace en tu navegador:\n' +
+            '👉 **https://imgur.com/upload** 👈\n\n' +
+            '2. Arrastra tu imagen a la página de Imgur.\n\n' +
+            '3. Una vez subida, haz **clic derecho** sobre la imagen y selecciona **"Copiar dirección de imagen"**.\n\n' +
+            'Esa URL es la que deberás pegar en el campo "Nueva URL Del Logo" del formulario de edición.'
         );
-        // ✅ La línea .setImage() ha sido eliminada.
 }
 
 function parseTeamData(dataString) {
