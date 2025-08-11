@@ -365,35 +365,28 @@ try {
     }
     
     if (customId.startsWith('edit_data_modal_')) {
-        // CORRECCIÓN: Añadido deferReply al inicio.
-        await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ ephemeral: true });
 
-        const teamId = customId.split('_')[3];
-        const team = await Team.findById(teamId);
-        if (!team) return interaction.editReply({ content: 'El equipo ya no existe.' });
-        const isManager = team.managerId === user.id;
-        const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
-        if (!isManager && !isAdmin) return interaction.editReply({ content: 'No tienes permiso.' });
-        const newName = fields.getTextInputValue('newName') || team.name;
-        const newAbbr = fields.getTextInputValue('newAbbr')?.toUpperCase() || team.abbreviation;
-        const newLogo = fields.getTextInputValue('newLogo') || team.logoUrl;
-        const newTwitter = fields.getTextInputValue('newTwitter') || team.twitterHandle;
-        if (isManager && !isAdmin) {
-            const approvalChannelId = process.env.APPROVAL_CHANNEL_ID;
-            if (!approvalChannelId) return interaction.editReply({ content: 'Error: Canal de aprobaciones no configurado.' });
-            const approvalChannel = await client.channels.fetch(approvalChannelId);
-            const embed = new EmbedBuilder().setTitle('✏️ Solicitud de Cambio de Datos').setAuthor({ name: user.tag, iconURL: user.displayAvatarURL() }).addFields({ name: 'Equipo', value: team.name }, { name: 'Solicitante', value: `<@${user.id}>` }, { name: 'Nuevo Nombre', value: newName }, { name: 'Nueva Abreviatura', value: newAbbr }, { name: 'Nuevo Logo', value: newLogo }, { name: 'Nuevo Twitter', value: newTwitter }).setColor('Blue');
-            await approvalChannel.send({ embeds: [embed] });
-            return interaction.editReply({ content: '✅ Tu solicitud de cambio ha sido enviada para aprobación.' });
-        } else {
-            team.name = newName;
-            team.abbreviation = newAbbr;
-            team.logoUrl = newLogo;
-            team.twitterHandle = newTwitter;
-            await team.save();
-            return interaction.editReply({ content: `✅ Los datos del equipo **${team.name}** han sido actualizados.` });
-        }
-    }
+    const teamId = customId.split('_')[3];
+    const team = await Team.findById(teamId);
+    if (!team) return interaction.editReply({ content: 'El equipo ya no existe.' });
+
+    const isManager = team.managerId === user.id;
+    const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
+    if (!isManager && !isAdmin) return interaction.editReply({ content: 'No tienes permiso.' });
+
+    // Recogemos todos los datos nuevos del formulario
+    team.name = fields.getTextInputValue('newName') || team.name;
+    team.abbreviation = fields.getTextInputValue('newAbbr')?.toUpperCase() || team.abbreviation;
+    team.logoUrl = fields.getTextInputValue('newLogo') || team.logoUrl;
+    team.twitterHandle = fields.getTextInputValue('newTwitter') || team.twitterHandle;
+
+    // Guardamos los cambios directamente en la base de datos, sin pedir aprobación
+    await team.save();
+
+    // Confirmamos al usuario que los cambios se han realizado
+    return interaction.editReply({ content: `✅ Los datos del equipo **${team.name}** han sido actualizados.` });
+}
 
     if (customId.startsWith('invite_player_modal_')) {
         // CORRECCIÓN: Añadido deferReply al inicio.
