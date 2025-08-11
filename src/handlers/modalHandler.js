@@ -365,6 +365,7 @@ try {
     }
     
     if (customId.startsWith('edit_data_modal_')) {
+    console.log("-> Se ha activado el modal 'edit_data_modal_'."); // LOG 1
     await interaction.deferReply({ ephemeral: true });
 
     const teamId = customId.split('_')[3];
@@ -375,39 +376,35 @@ try {
     const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
     if (!isManager && !isAdmin) return interaction.editReply({ content: 'No tienes permiso.' });
 
-    // Guardamos los datos antiguos para poder compararlos y mostrar qué cambió.
-    const oldData = {
-        name: team.name,
-        abbreviation: team.abbreviation,
-        logoUrl: team.logoUrl,
-        twitterHandle: team.twitterHandle,
-    };
+    const oldData = { name: team.name, abbreviation: team.abbreviation, logoUrl: team.logoUrl, twitterHandle: team.twitterHandle };
 
-    // Recogemos y aplicamos los nuevos datos al objeto del equipo
     team.name = fields.getTextInputValue('newName') || oldData.name;
     team.abbreviation = fields.getTextInputValue('newAbbr')?.toUpperCase() || oldData.abbreviation;
     team.logoUrl = fields.getTextInputValue('newLogo') || oldData.logoUrl;
     team.twitterHandle = fields.getTextInputValue('newTwitter') || oldData.twitterHandle;
 
-    // Guardamos los cambios en la base de datos
     await team.save();
+    console.log("-> Datos del equipo guardados en la base de datos."); // LOG 2
 
-    // --- NUEVO: Lógica de Notificación para Admins ---
-    // Si el que hizo el cambio es un mánager (y no un admin), enviamos un log.
+    // Lógica de Notificación para Admins
     if (isManager && !isAdmin) {
+        console.log("-> Condición (isManager && !isAdmin) CUMPLIDA. Intentando enviar notificación..."); // LOG 3
         try {
-            const logChannelId = process.env.APPROVAL_CHANNEL_ID; // Usamos el mismo canal
+            const logChannelId = process.env.APPROVAL_CHANNEL_ID;
+            console.log(`-> ID del canal de logs obtenido de .env: ${logChannelId}`); // LOG 4
+
             if (logChannelId) {
                 const logChannel = await client.channels.fetch(logChannelId);
+                console.log(`-> Canal encontrado: ${logChannel ? logChannel.name : 'NO ENCONTRADO'}`); // LOG 5
 
-                // Creamos un registro de los cambios para mostrarlo de forma clara.
                 const changes = [];
                 if (team.name !== oldData.name) changes.push(`**Nombre:** \`\`\`diff\n- ${oldData.name}\n+ ${team.name}\`\`\``);
                 if (team.abbreviation !== oldData.abbreviation) changes.push(`**Abreviatura:** \`\`\`diff\n- ${oldData.abbreviation}\n+ ${team.abbreviation}\`\`\``);
                 if (team.logoUrl !== oldData.logoUrl) changes.push(`**Logo:** Se ha actualizado la URL.`);
                 if (team.twitterHandle !== oldData.twitterHandle) changes.push(`**Twitter:** \`\`\`diff\n- ${oldData.twitterHandle || 'Ninguno'}\n+ ${team.twitterHandle || 'Ninguno'}\`\`\``);
+                
+                console.log("-> Cambios detectados:", changes); // LOG 6
 
-                // Solo enviamos la notificación si realmente hubo algún cambio.
                 if (changes.length > 0) {
                     const logEmbed = new EmbedBuilder()
                         .setTitle('📢 Notificación: Datos de Equipo Actualizados')
@@ -418,14 +415,17 @@ try {
                         .setTimestamp();
 
                     await logChannel.send({ embeds: [logEmbed] });
+                    console.log("-> ¡Notificación enviada con éxito!"); // LOG 7
                 }
             }
         } catch (error) {
-            console.error("Error al enviar la notificación de cambio de datos:", error);
+            console.error("¡ERROR CAPTURADO! No se pudo enviar el log:", error); // LOG DE ERROR
         }
+    } else {
+        console.log("-> Condición (isManager && !isAdmin) NO CUMPLIDA. Saltando notificación."); // LOG 8
+        console.log(`-> isManager: ${isManager}, isAdmin: ${isAdmin}`);
     }
 
-    // Finalmente, confirmamos al usuario que los cambios se han realizado
     return interaction.editReply({ content: `✅ Los datos del equipo **${team.name}** han sido actualizados.` });
 }
 
