@@ -1132,10 +1132,10 @@ else if (customId === 'market_post_offer') {
         }
 
         // PASO 2.A: El Mánager elige "Sí, cambiar el logo"
-        if (customId.startsWith('edit_choice_yes_logo_')) {
+       if (customId.startsWith('edit_choice_yes_logo_')) {
+            await interaction.deferUpdate(); // <-- LÍNEA AÑADIDA
             const teamId = customId.split('_')[4];
             
-            // Le mostramos la guía que ya conocemos
             const guideEmbed = getLogoGuideEmbed();
             const row = new ActionRowBuilder().addComponents(
                 new ButtonBuilder()
@@ -1149,7 +1149,8 @@ else if (customId === 'market_post_offer') {
                     .setStyle(ButtonStyle.Primary)
             );
 
-            await interaction.update({
+            // Cambiamos .update por .editReply
+            await interaction.editReply({
                 content: "Sigue la guía para obtener el enlace de tu nuevo logo. Cuando lo tengas, pulsa el botón para abrir el formulario.",
                 embeds: [guideEmbed],
                 components: [row]
@@ -1193,7 +1194,8 @@ else if (customId === 'market_post_offer') {
         
         // Manejador para el botón de cancelar la edición
         if (customId === 'cancel_edit') {
-            await interaction.update({
+            await interaction.deferUpdate(); // <-- LÍNEA AÑADIDA
+            await interaction.editReply({      // <-- LÍNEA CAMBIADA
                 content: 'Acción cancelada.',
                 embeds: [],
                 components: []
