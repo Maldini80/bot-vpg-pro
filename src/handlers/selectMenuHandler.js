@@ -181,7 +181,7 @@ module.exports = async (client, interaction) => {
             const leagues = await League.find({ guildId: guild.id }).sort({ name: 1 });
             const leagueOptions = leagues.map(l => ({ label: l.name, value: `admin_set_league_${teamId}_${l._id}`, default: team.league === l.name }));
             const leagueMenu = new StringSelectMenuBuilder().setCustomId('admin_change_league_menu').setPlaceholder('Cambiar la liga del equipo').addOptions(leagueOptions);
-            const embed = new EmbedBuilder().setTitle(`Gestión: ${team.name}`).setColor('DarkRed').setThumbnail(team.logoUrl);
+            const embed = new EmbedBuilder().setTitle(`Gestión: ${team.name}`).setColor('DarkRed').setThumbnail(team.logoUrl && team.logoUrl.startsWith('http') ? team.logoUrl : null);
             const row1 = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`admin_change_data_${teamId}`).setLabel('Cambiar Datos').setStyle(ButtonStyle.Secondary), new ButtonBuilder().setCustomId(`admin_manage_members_${teamId}`).setLabel('Gestionar Miembros').setStyle(ButtonStyle.Primary));
             const row2 = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`admin_dissolve_team_${teamId}`).setLabel('DISOLVER EQUIPO').setStyle(ButtonStyle.Danger));
             const row3 = new ActionRowBuilder().addComponents(leagueMenu);
@@ -241,7 +241,7 @@ module.exports = async (client, interaction) => {
         await fetchMemberInfo([team.managerId].filter(Boolean), '👑 Mánager');
         await fetchMemberInfo(team.captains, '🛡️ Capitanes');
         await fetchMemberInfo(team.players, 'Jugadores');
-        const embed = new EmbedBuilder().setTitle(`Plantilla de ${team.name} (${team.abbreviation})`).setDescription(rosterString.trim() || 'Este equipo no tiene miembros.').setColor('#3498db').setThumbnail(team.logoUrl).setFooter({ text: `Liga: ${team.league}` });
+        const embed = new EmbedBuilder().setTitle(`Plantilla de ${team.name} (${team.abbreviation})`).setDescription(rosterString.trim() || 'Este equipo no tiene miembros.').setColor('#3498db').setThumbnail(team.logoUrl && team.logoUrl.startsWith('http') ? team.logoUrl : null).setFooter({ text: `Liga: ${team.league}` });
         return interaction.editReply({ embeds: [embed] });
 
     } else if (customId === 'delete_league_select_menu') {
