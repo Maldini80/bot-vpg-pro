@@ -1455,7 +1455,7 @@ function getLogoGuideEmbed() {
             'Ese es el enlace que deberás pegar en el siguiente paso.'
         )
         // Usamos una imagen estática JPG como pediste
-        .setImage('https://i.imgur.com/g4g4syE.jpeg'); 
+        .setImage('https://i.imgur.com/VFhLnSY.png'); 
 }
 
 function parseTeamData(dataString) {
