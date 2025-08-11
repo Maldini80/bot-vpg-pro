@@ -280,22 +280,37 @@ module.exports = async (client, interaction) => {
     }
 
     if (customId.startsWith('manager_request_modal_')) {
-        // CORRECCIÓN: Añadido deferReply al inicio.
-        await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ ephemeral: true });
+    
+    const leagueName = customId.split('_')[3];
+    const vpgUsername = fields.getTextInputValue('vpgUsername');
+    const teamName = fields.getTextInputValue('teamName');
+    const teamAbbr = fields.getTextInputValue('teamAbbr').toUpperCase();
+    // --- LÍNEA AÑADIDA ---
+    const teamTwitter = fields.getTextInputValue('teamTwitterInput');
+    
+    const approvalChannelId = process.env.APPROVAL_CHANNEL_ID;
+    if (!approvalChannelId) return interaction.editReply({ content: 'Error: El canal de aprobaciones no está configurado.' });
+    const approvalChannel = await client.channels.fetch(approvalChannelId).catch(() => null);
+    if(!approvalChannel) return interaction.editReply({ content: 'Error: No se pudo encontrar el canal de aprobaciones.' });
+
+    const embed = new EmbedBuilder()
+        .setTitle('📝 Nueva Solicitud de Registro')
+        .setColor('Orange')
+        .setAuthor({ name: user.tag, iconURL: user.displayAvatarURL() })
+        .addFields(
+            { name: 'Usuario VPG', value: vpgUsername }, 
+            { name: 'Nombre del Equipo', value: teamName }, 
+            { name: 'Abreviatura', value: teamAbbr }, 
+            { name: 'Twitter del Equipo', value: teamTwitter || 'No especificado' }, // <-- AÑADIDO
+            { name: 'Liga Seleccionada', value: leagueName }
+        )
+        .setTimestamp();
         
-        const leagueName = customId.split('_')[3];
-        const vpgUsername = fields.getTextInputValue('vpgUsername');
-        const teamName = fields.getTextInputValue('teamName');
-        const teamAbbr = fields.getTextInputValue('teamAbbr').toUpperCase();
-        const approvalChannelId = process.env.APPROVAL_CHANNEL_ID;
-        if (!approvalChannelId) return interaction.editReply({ content: 'Error: El canal de aprobaciones no está configurado.' });
-        const approvalChannel = await client.channels.fetch(approvalChannelId).catch(() => null);
-        if(!approvalChannel) return interaction.editReply({ content: 'Error: No se pudo encontrar el canal de aprobaciones.' });
-        const embed = new EmbedBuilder().setTitle('📝 Nueva Solicitud de Registro').setColor('Orange').setAuthor({ name: user.tag, iconURL: user.displayAvatarURL() }).addFields({ name: 'Usuario VPG', value: vpgUsername }, { name: 'Nombre del Equipo', value: teamName }, { name: 'Abreviatura', value: teamAbbr }, { name: 'Liga Seleccionada', value: leagueName }).setTimestamp();
-        const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`approve_request_${user.id}_${leagueName}`).setLabel('Aprobar').setStyle(ButtonStyle.Success), new ButtonBuilder().setCustomId(`reject_request_${user.id}`).setLabel('Rechazar').setStyle(ButtonStyle.Danger));
-        await approvalChannel.send({ content: `**Solicitante:** <@${user.id}>`, embeds: [embed], components: [row] });
-        return interaction.editReply({ content: '✅ ¡Tu solicitud ha sido enviada!' });
-    }
+    const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`approve_request_${user.id}_${leagueName}`).setLabel('Aprobar').setStyle(ButtonStyle.Success), new ButtonBuilder().setCustomId(`reject_request_${user.id}`).setLabel('Rechazar').setStyle(ButtonStyle.Danger));
+    await approvalChannel.send({ content: `**Solicitante:** <@${user.id}>`, embeds: [embed], components: [row] });
+    return interaction.editReply({ content: '✅ ¡Tu solicitud ha sido enviada!' });
+}
     
     if (customId.startsWith('approve_modal_')) {
         // CORRECCIÓN: Añadido deferReply al inicio.
