@@ -1457,7 +1457,6 @@ if (customId === 'post_scheduled_panel' || customId === 'post_instant_panel') {
 function getLogoGuideEmbed() {
     return new EmbedBuilder()
         .setTitle('Guía para Añadir un Logo')
-        .setURL('https://imgur.com/upload')
         .setColor('Blue')
         .setDescription(
             'Para usar un logo personalizado, necesitas un enlace directo a la imagen.\n\n' +
