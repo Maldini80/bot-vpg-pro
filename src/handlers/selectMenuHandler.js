@@ -146,7 +146,9 @@ module.exports = async (client, interaction) => {
 
     } else if (customId === 'select_league_for_registration') {
     const leagueName = selectedValue;
-    const modal = new ModalBuilder().setCustomId(`manager_request_modal_${leagueName}`).setTitle(`Registrar Equipo en ${leagueName}`);
+    const modal = new ModalBuilder()
+        .setCustomId(`manager_request_modal_${leagueName}`)
+        .setTitle(`Registrar Equipo en ${leagueName}`);
     
     const vpgUsernameInput = new TextInputBuilder().setCustomId('vpgUsername').setLabel("Tu nombre de usuario en VPG").setStyle(TextInputStyle.Short).setRequired(true);
     const teamNameInput = new TextInputBuilder().setCustomId('teamName').setLabel("Nombre de tu equipo").setStyle(TextInputStyle.Short).setRequired(true);
