@@ -249,9 +249,10 @@ const handler = async (client, interaction) => {
     // --- AÑADE ESTE NUEVO BLOQUE COMPLETO ---
     else if (customId === 'get_imgur_link_button') {
         await interaction.reply({
-            content: 'Aquí tienes el enlace para subir tu logo: https://imgur.com/upload\n\n' +
+            content: 'Aquí tienes el enlace para subir tu logo:\n\n' +
+                     '👉 **https://imgur.com/upload** 👈\n\n' +
                      'Una vez que tengas la URL de la imagen, **vuelve al mensaje anterior** y pulsa **"Continuar y Pegar URL"**.',
-            ephemeral: true // Solo el usuario que hizo clic lo verá
+            ephemeral: true
         });
     }
 
