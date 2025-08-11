@@ -973,7 +973,8 @@ else if (customId === 'market_post_offer') {
                 if (!team) return interaction.reply({ content: 'Solo los mánagers pueden editar los datos.', flags: 64 });
             }
             if (!team) return interaction.reply({ content: 'No se encontró el equipo.', flags: 64 });
-            const modal = new ModalBuilder().setCustomId(`edit_data_modal_${team._id}`).setTitle(`Editar Datos de ${team.name}`);
+            const modalTitle = `Editar Datos de ${team.name}`.substring(0, 45);
+            const modal = new ModalBuilder().setCustomId(`edit_data_modal_${team._id}`).setTitle(modalTitle);
             const newNameInput = new TextInputBuilder().setCustomId('newName').setLabel("Nuevo Nombre (opcional)").setStyle(TextInputStyle.Short).setRequired(false).setValue(team.name);
             const newAbbrInput = new TextInputBuilder().setCustomId('newAbbr').setLabel("Nueva Abreviatura (opcional)").setStyle(TextInputStyle.Short).setRequired(false).setValue(team.abbreviation).setMinLength(3).setMaxLength(3);
            const newLogoInput = new TextInputBuilder().setCustomId('newLogo').setLabel("Nueva URL del Logo (opcional)").setStyle(TextInputStyle.Short).setRequired(false);
