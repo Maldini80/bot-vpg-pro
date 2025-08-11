@@ -75,7 +75,7 @@ module.exports = async (client, interaction) => {
         for (const offer of offers) {
             const offerEmbed = new EmbedBuilder()
                 .setAuthor({ name: offer.teamId.name, iconURL: offer.teamId.logoUrl })
-                .setThumbnail(offer.teamId.logoUrl)
+                .setThumbnail(offer.teamId.logoUrl && offer.teamId.logoUrl.startsWith('http') ? offer.teamId.logoUrl : null)
                 .setColor('Green')
                 .addFields(
                     { name: 'Posiciones Buscadas', value: `\`${offer.positions.join(', ')}\`` },
