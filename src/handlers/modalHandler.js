@@ -378,6 +378,7 @@ try {
         const newAbbr = fields.getTextInputValue('newAbbr')?.toUpperCase() || team.abbreviation;
         const newLogo = fields.getTextInputValue('newLogo') || team.logoUrl;
         const newTwitter = fields.getTextInputValue('newTwitter') || team.twitterHandle;
+        const newTwitter = fields.getTextInputValue('newTwitter') || team.twitterHandle;
         if (isManager && !isAdmin) {
             const approvalChannelId = process.env.APPROVAL_CHANNEL_ID;
             if (!approvalChannelId) return interaction.editReply({ content: 'Error: Canal de aprobaciones no configurado.' });
