@@ -9,12 +9,50 @@ const TeamOffer = require('../models/teamOffer.js');
 
 const POSITIONS = ['POR', 'DFC', 'CARR', 'MCD', 'MV', 'MCO', 'DC'];
 
+// --- Función de Ayuda para Parsear Datos (la necesitamos aquí) ---
+function parseTeamData(dataString) {
+    const data = {};
+    dataString.split('|||').forEach(part => {
+        const [key, value] = part.split(':', 2);
+        data[key] = value === 'none' ? null : value;
+    });
+    return data;
+}
+
+// --- Función de Ayuda para Enviar Solicitud (la necesitamos aquí) ---
+async function sendApprovalRequest(interaction, client, { vpg, name, abbr, twitter, leagueName, logoUrl }) {
+    const approvalChannelId = process.env.APPROVAL_CHANNEL_ID;
+    if (!approvalChannelId) return;
+    const approvalChannel = await client.channels.fetch(approvalChannelId).catch(() => null);
+    if (!approvalChannel) return;
+
+    const embed = new EmbedBuilder()
+        .setTitle('📝 Nueva Solicitud de Registro')
+        .setColor('Orange')
+        .setAuthor({ name: interaction.user.tag, iconURL: interaction.user.displayAvatarURL() })
+        .setThumbnail(logoUrl && logoUrl.startsWith('http') ? logoUrl : null)
+        .addFields(
+            { name: 'Usuario VPG', value: vpg },
+            { name: 'Nombre del Equipo', value: name },
+            { name: 'Abreviatura', value: abbr },
+            { name: 'Twitter del Equipo', value: twitter || 'No especificado' },
+            { name: 'URL del Logo', value: `[Ver Logo](${logoUrl})` },
+            { name: 'Liga Seleccionada', value: leagueName }
+        )
+        .setTimestamp();
+
+    const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId(`approve_request_${interaction.user.id}_${leagueName}`).setLabel('Aprobar').setStyle(ButtonStyle.Success),
+        new ButtonBuilder().setCustomId(`reject_request_${interaction.user.id}`).setLabel('Rechazar').setStyle(ButtonStyle.Danger)
+    );
+    await approvalChannel.send({ content: `**Solicitante:** <@${interaction.user.id}>`, embeds: [embed], components: [row] });
+}
+
+
 module.exports = async (client, interaction) => {
     const { customId, fields, guild, user, member, message } = interaction;
 
-    // --- LÓGICA NUEVA PARA EL REGISTRO DE JUGADOR ---
     if (customId === 'player_registration_modal') {
-        // CORRECCIÓN: deferReply() ya estaba aquí, lo cual es correcto.
         await interaction.deferReply({ ephemeral: true }); 
 
         const vpgUsername = fields.getTextInputValue('vpgUsernameInput');
@@ -51,27 +89,22 @@ module.exports = async (client, interaction) => {
     }
 
     if (customId === 'edit_profile_modal') {
-        // Aplazamos la respuesta para tener tiempo de procesar todo.
         await interaction.deferReply({ ephemeral: true });
 
-        // Recogemos los datos del formulario.
         const vpgUsername = fields.getTextInputValue('vpgUsernameInput');
         const twitterHandle = fields.getTextInputValue('twitterInput');
         const psnId = fields.getTextInputValue('psnIdInput') || null;
         const eaId = fields.getTextInputValue('eaIdInput') || null;
 
-        // Actualizamos la base de datos y pedimos que nos devuelva el perfil actualizado.
         const updatedProfile = await VPGUser.findOneAndUpdate(
             { discordId: user.id },
             { vpgUsername, twitterHandle, psnId, eaId },
-            { upsert: true, new: true } // `new: true` es clave para obtener los datos más recientes.
+            { upsert: true, new: true }
         );
 
-        // Preparamos el mensaje de respuesta.
         let responseMessage = '✅ ¡Tu perfil ha sido actualizado con éxito!';
         const playerRoleId = process.env.PLAYER_ROLE_ID;
 
-        // --- INICIO DE LA LÓGICA DE ASIGNACIÓN DE ROL (SE MANTIENE IGUAL) ---
         if (updatedProfile && updatedProfile.primaryPosition && playerRoleId && !member.roles.cache.has(playerRoleId)) {
             try {
                 await member.roles.add(playerRoleId);
@@ -81,20 +114,11 @@ module.exports = async (client, interaction) => {
                 responseMessage += '\n\nHubo un problema al intentar asignarte el rol de Jugador. Por favor, contacta a un administrador.';
             }
         }
-        // --- FIN DE LA LÓGICA DE ASIGNACIÓN DE ROL ---
-
-        // =================================================================================
-        // == INICIO DEL NUEVO CÓDIGO: ENVIAR GUÍA SI ACTUALIZA PERFIL Y ES JUGADOR NORMAL ==
-        // =================================================================================
         
-        // Obtenemos los IDs de los roles de Mánager y Capitán desde las variables de entorno
         const managerRoleId = process.env.MANAGER_ROLE_ID;
         const captainRoleId = process.env.CAPTAIN_ROLE_ID;
-
-        // Comprobamos si el miembro tiene el rol de Mánager o Capitán
         const isManagerOrCaptain = member.roles.cache.has(managerRoleId) || member.roles.cache.has(captainRoleId);
 
-        // Si el usuario NO es Mánager ni Capitán, le enviamos la guía.
         if (!isManagerOrCaptain) {
             try {
                 const playerGuideEmbed = new EmbedBuilder()
@@ -103,28 +127,11 @@ module.exports = async (client, interaction) => {
                     .setImage('https://i.imgur.com/7sB0gaa.jpg')
                     .setDescription(`¡Hola, ${member.user.username}! Hemos actualizado tu perfil. Te recordamos las herramientas que tienes a tu disposición como jugador:`)
                     .addFields(
-                        {
-                            name: '➡️ ¿Ya tienes equipo pero necesitas unirte en Discord?',
-                            value: 'Tienes dos formas de hacerlo:\n' +
-                                   '1. **La más recomendada:** Habla con tu **Mánager o Capitán**. Ellos pueden usar la función `Invitar Jugador` desde su panel para añadirte al instante.\n' +
-                                   '2. **Si prefieres tomar la iniciativa:** Puedes ir al panel de <#1396815232122228827>, pulsar `Acciones de Jugador` -> `Aplicar a un Equipo`, buscar tu club en la lista y enviarles una solicitud formal.'
-                        },
-                        { 
-                            name: '🔎 ¿Buscas un nuevo reto? Guía Completa del Mercado de Fichajes', 
-                            value: 'El canal <#1402608609724072040> es tu centro de operaciones.\n' +
-                                   '• **Para anunciarte**: Usa `Anunciarse como Agente Libre`. Si ya tenías un anuncio publicado, **este será reemplazado automáticamente por el nuevo**, nunca tendrás duplicados. Esta acción de publicar/reemplazar tu anuncio solo se puede realizar **una vez cada 3 días**.\n' +
-                                   '• **Para buscar**: Usa `Buscar Ofertas de Equipo` para ver qué equipos han publicado vacantes y qué perfiles necesitan.\n' +
-                                   '• **Para administrar tu anuncio**: Usa `Gestionar mi Anuncio` en cualquier momento para **editar** los detalles o **borrarlo** definitivamente si encuentras equipo.'
-                        },
-                        {
-                            name: '⚙️ Herramientas Clave de tu Carrera',
-                            value: 'Desde el panel principal de <#1396815232122228827> (`Acciones de Jugador`) tienes control total:\n' +
-                                   '• **`Actualizar Perfil`**: Es crucial que mantengas tus IDs de juego (PSN, EA) actualizados.\n' +
-                                   '• **`Abandonar Equipo`**: Si en el futuro decides dejar tu equipo actual, esta opción te dará total independencia para hacerlo.'
-                        }
+                        { name: '➡️ ¿Ya tienes equipo pero necesitas unirte en Discord?', value: 'Tienes dos formas de hacerlo:\n1. **La más recomendada:** Habla con tu **Mánager o Capitán**. Ellos pueden usar la función `Invitar Jugador` desde su panel para añadirte al instante.\n2. **Si prefieres tomar la iniciativa:** Puedes ir al panel de <#1396815232122228827>, pulsar `Acciones de Jugador` -> `Aplicar a un Equipo`, buscar tu club en la lista y enviarles una solicitud formal.' },
+                        { name: '🔎 ¿Buscas un nuevo reto? Guía Completa del Mercado de Fichajes', value: 'El canal <#1402608609724072040> es tu centro de operaciones.\n• **Para anunciarte**: Usa `Anunciarse como Agente Libre`. Si ya tenías un anuncio publicado, **este será reemplazado automáticamente por el nuevo**, nunca tendrás duplicados. Esta acción de publicar/reemplazar tu anuncio solo se puede realizar **una vez cada 3 días**.\n• **Para buscar**: Usa `Buscar Ofertas de Equipo` para ver qué equipos han publicado vacantes y qué perfiles necesitan.\n• **Para administrar tu anuncio**: Usa `Gestionar mi Anuncio` en cualquier momento para **editar** los detalles o **borrarlo** definitivamente si encuentras equipo.'},
+                        { name: '⚙️ Herramientas Clave de tu Carrera', value: 'Desde el panel principal de <#1396815232122228827> (`Acciones de Jugador`) tienes control total:\n• **`Actualizar Perfil`**: Es crucial que mantengas tus IDs de juego (PSN, EA) actualizados.\n• **`Abandonar Equipo`**: Si en el futuro decides dejar tu equipo actual, esta opción te dará total independencia para hacerlo.'}
                     );
                 
-                // Enviamos el MD y añadimos una pequeña nota al mensaje de confirmación en el canal.
                 await member.send({ embeds: [playerGuideEmbed] });
                 responseMessage += '\n\nℹ️ Te hemos enviado un recordatorio de tu guía de jugador por MD.';
 
@@ -132,14 +139,119 @@ module.exports = async (client, interaction) => {
                 console.log(`AVISO: No se pudo enviar el MD de recordatorio al jugador ${member.user.tag} (flujo de actualización).`);
             }
         }
-        // ===============================================================================
-        // == FIN DEL NUEVO CÓDIGO =======================================================
-        // ===============================================================================
 
-        // Enviamos la respuesta final, que puede incluir o no la notificación del rol y/o del MD.
         return interaction.editReply({ content: responseMessage });
     }
 
+    if (customId.startsWith('manager_request_modal_')) {
+        await interaction.deferReply({ ephemeral: true });
+        
+        const leagueName = customId.split('_')[3];
+        const vpgUsername = fields.getTextInputValue('vpgUsername');
+        const teamName = fields.getTextInputValue('teamName');
+        const teamAbbr = fields.getTextInputValue('teamAbbr').toUpperCase();
+        const teamTwitter = fields.getTextInputValue('teamTwitterInput');
+
+        const teamDataString = `vpg:${vpgUsername}|||name:${teamName}|||abbr:${teamAbbr}|||twitter:${teamTwitter || 'none'}`;
+
+        const embed = new EmbedBuilder()
+            .setTitle('✅ Datos guardados. ¿Quieres añadir un logo a tu equipo?')
+            .setDescription('Este paso es opcional. Puedes subir un logo personalizado para tu club o usar uno genérico proporcionado por la comunidad.')
+            .setColor('Green');
+
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId(`ask_logo_yes_${leagueName}_${teamDataString}`)
+                .setLabel('Sí, añadir logo')
+                .setStyle(ButtonStyle.Success)
+                .setEmoji('🖼️'),
+            new ButtonBuilder()
+                .setCustomId(`ask_logo_no_${leagueName}_${teamDataString}`)
+                .setLabel('No, usar logo por defecto')
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('🛡️')
+        );
+        
+        await interaction.editReply({ embeds: [embed], components: [row], ephemeral: true });
+    }
+
+    if (customId.startsWith('final_logo_submit_')) {
+        await interaction.deferReply({ ephemeral: true });
+
+        const parts = customId.split('_');
+        const leagueName = parts[3];
+        const teamDataString = parts.slice(4).join('_');
+        
+        const teamData = parseTeamData(teamDataString);
+        const logoUrl = fields.getTextInputValue('teamLogoUrlInput');
+
+        await sendApprovalRequest(interaction, client, { ...teamData, vpg: teamData.vpg, name: teamData.name, abbr: teamData.abbr, twitter: teamData.twitter, leagueName, logoUrl });
+        
+        await interaction.editReply({ content: '✅ ¡Perfecto! Tu solicitud ha sido enviada con tu logo personalizado. Un administrador la revisará.', components: [] });
+    }
+
+    if (customId.startsWith('edit_data_modal_')) {
+        await interaction.deferReply({ ephemeral: true });
+
+        const teamId = customId.split('_')[3];
+        const team = await Team.findById(teamId);
+        if (!team) return interaction.editReply({ content: 'El equipo ya no existe.' });
+
+        const isManager = team.managerId === user.id;
+        const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
+        if (!isManager && !isAdmin) return interaction.editReply({ content: 'No tienes permiso.' });
+
+        const oldData = {
+            name: team.name,
+            abbreviation: team.abbreviation,
+            logoUrl: team.logoUrl,
+            twitterHandle: team.twitterHandle
+        };
+
+        const newName = fields.getTextInputValue('newName') || oldData.name;
+        const newAbbr = fields.getTextInputValue('newAbbr')?.toUpperCase() || oldData.abbreviation;
+        const newLogo = fields.getTextInputValue('newLogo') || oldData.logoUrl;
+        const newTwitter = fields.getTextInputValue('newTwitter') || oldData.twitterHandle;
+
+        team.name = newName;
+        team.abbreviation = newAbbr;
+        team.logoUrl = newLogo;
+        team.twitterHandle = newTwitter;
+        await team.save();
+
+        if (isManager && !isAdmin) {
+            try {
+                const logChannelId = process.env.APPROVAL_CHANNEL_ID;
+                if (logChannelId) {
+                    const logChannel = await client.channels.fetch(logChannelId);
+                    
+                    const changes = [];
+                    if (oldData.name !== newName) changes.push(`**Nombre:** \`\`\`diff\n- ${oldData.name}\n+ ${newName}\`\`\``);
+                    if (oldData.abbreviation !== newAbbr) changes.push(`**Abreviatura:** \`\`\`diff\n- ${oldData.abbreviation}\n+ ${newAbbr}\`\`\``);
+                    if (oldData.logoUrl !== newLogo) changes.push(`**Logo:** Se ha cambiado la URL del logo.`);
+                    if ((oldData.twitterHandle || '') !== (newTwitter || '')) changes.push(`**Twitter:** \`\`\`diff\n- ${oldData.twitterHandle || 'Ninguno'}\n+ ${newTwitter || 'Ninguno'}\`\`\``);
+
+                    if (changes.length > 0) {
+                        const logEmbed = new EmbedBuilder()
+                            .setTitle(`📢 Notificación: Datos de "${team.name}" Editados`)
+                            .setColor('Blue')
+                            .setAuthor({ name: `Realizado por: ${user.tag}`, iconURL: user.displayAvatarURL() })
+                            .setDescription(`El mánager ha actualizado los siguientes datos:\n\n${changes.join('\n')}`)
+                            .setThumbnail(newLogo && newLogo.startsWith('http') ? newLogo : null)
+                            .setFooter({ text: `ID del Equipo: ${team._id}` })
+                            .setTimestamp();
+                        await logChannel.send({ embeds: [logEmbed] });
+                    }
+                }
+            } catch (error) {
+                console.error("Error al enviar la notificación de cambio de datos:", error);
+            }
+        }
+        return interaction.editReply({ content: `✅ Los datos del equipo **${team.name}** han sido actualizados.` });
+    }
+
+    // El resto de los manejadores de modales (market_agent_modal, offer_add_requirements, etc.) van aquí sin cambios...
+    // (Asegúrate de que el resto de tu código original de este archivo esté aquí)
     if (customId === 'market_agent_modal' || customId.startsWith('market_agent_modal_edit')) {
         await interaction.deferReply({ ephemeral: true });
 
@@ -191,11 +303,11 @@ module.exports = async (client, interaction) => {
         if (isEditing && existingAd && existingAd.messageId) {
             try {
                 const adMessage = await channel.messages.fetch(existingAd.messageId);
-                await adMessage.edit(messagePayload); // CORREGIDO
+                await adMessage.edit(messagePayload);
                 messageId = existingAd.messageId;
                 responseMessage = '✅ ¡Tu anuncio ha sido actualizado con éxito!';
             } catch (error) {
-                const newMessage = await channel.send(messagePayload); // CORREGIDO
+                const newMessage = await channel.send(messagePayload);
                 messageId = newMessage.id;
                 responseMessage = '✅ Tu anuncio anterior no se encontró, así que se ha publicado uno nuevo.';
             }
@@ -203,7 +315,7 @@ module.exports = async (client, interaction) => {
             if (existingAd && existingAd.messageId) {
                 try { await channel.messages.delete(existingAd.messageId); } catch(e) {}
             }
-            const newMessage = await channel.send(messagePayload); // CORREGIDO
+            const newMessage = await channel.send(messagePayload);
             messageId = newMessage.id;
             responseMessage = '✅ ¡Tu anuncio ha sido publicado con éxito!';
         }
@@ -259,14 +371,14 @@ module.exports = async (client, interaction) => {
         if (existingOffer && existingOffer.messageId) {
             try {
                 const oldMessage = await channel.messages.fetch(existingOffer.messageId);
-                offerMessage = await oldMessage.edit(messagePayload); // CORREGIDO
+                offerMessage = await oldMessage.edit(messagePayload);
                 responseText = 'actualizada';
             } catch (error) {
-                offerMessage = await channel.send(messagePayload); // CORREGIDO
+                offerMessage = await channel.send(messagePayload);
                 responseText = 're-publicada (el mensaje anterior no se encontró)';
             }
         } else {
-            offerMessage = await channel.send(messagePayload); // CORREGIDO
+            offerMessage = await channel.send(messagePayload);
             responseText = 'publicada';
         }
         
@@ -278,169 +390,10 @@ module.exports = async (client, interaction) => {
 
         return interaction.editReply({ content: `✅ ¡La oferta de tu equipo ha sido ${responseText} con éxito en el canal ${channel}!` });
     }
-
-    if (customId.startsWith('manager_request_modal_')) {
-        await interaction.deferReply({ ephemeral: true });
-        
-        // Recogemos los datos del formulario inicial
-        const leagueName = customId.split('_')[3];
-        const vpgUsername = fields.getTextInputValue('vpgUsername');
-        const teamName = fields.getTextInputValue('teamName');
-        const teamAbbr = fields.getTextInputValue('teamAbbr').toUpperCase();
-        const teamTwitter = fields.getTextInputValue('teamTwitterInput');
-
-        // Creamos un string único para pasar los datos a la siguiente interacción de forma segura.
-        const teamDataString = `vpg:${vpgUsername}|||name:${teamName}|||abbr:${teamAbbr}|||twitter:${teamTwitter || 'none'}`;
-
-        // Ahora, en lugar de enviar la solicitud, preguntamos al usuario si quiere añadir un logo.
-        const embed = new EmbedBuilder()
-            .setTitle('✅ Datos guardados. ¿Quieres añadir un logo a tu equipo?')
-            .setDescription('Este paso es opcional. Puedes subir un logo personalizado para tu club o usar uno genérico proporcionado por la comunidad.')
-            .setColor('Green');
-
-        const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                // Pasamos la liga y todos los datos en el customId para no perderlos.
-                .setCustomId(`ask_logo_yes_${leagueName}_${teamDataString}`)
-                .setLabel('Sí, añadir logo')
-                .setStyle(ButtonStyle.Success)
-                .setEmoji('🖼️'),
-            new ButtonBuilder()
-                .setCustomId(`ask_logo_no_${leagueName}_${teamDataString}`)
-                .setLabel('No, usar logo por defecto')
-                .setStyle(ButtonStyle.Secondary)
-                .setEmoji('🛡️')
-        );
-        
-        // Mostramos la pregunta al usuario en un mensaje que solo él puede ver.
-        await interaction.editReply({ embeds: [embed], components: [row], ephemeral: true });
-    }
     
-    if (customId.startsWith('approve_modal_')) {
-        // CORRECCIÓN: Añadido deferReply al inicio.
-        await interaction.deferReply({ ephemeral: true });
+    // El bloque approve_modal_ ya no es necesario, lo hemos eliminado del flujo.
 
-        const esAprobador = member.permissions.has(PermissionFlagsBits.Administrator) || member.roles.cache.has(process.env.APPROVER_ROLE_ID);
-        if (!esAprobador) return interaction.editReply({ content: 'No tienes permiso.' });
-        try {
-            const parts = customId.split('_');
-            const applicantId = parts[2];
-            const leagueName = parts[3];
-            const teamLogoUrl = fields.getTextInputValue('teamLogoUrl');
-            const originalMessage = message;
-            if (!originalMessage || !originalMessage.embeds[0]) return interaction.editReply({ content: 'Error: No se pudo encontrar la solicitud original.' });
-            const embed = originalMessage.embeds[0];
-            const teamName = embed.fields.find(f => f.name === 'Nombre del Equipo').value;
-            const teamAbbr = embed.fields.find(f => f.name === 'Abreviatura').value;
-            const twitterValue = embed.fields.find(f => f.name === 'Twitter del Equipo').value;
-            const teamTwitter = (twitterValue && twitterValue !== 'No especificado') ? twitterValue : null;
-            const applicantMember = await guild.members.fetch(applicantId).catch(() => null);
-            if (!applicantMember) return interaction.editReply({ content: `Error: El usuario solicitante ya no está en el servidor.` });
-            const existingTeam = await Team.findOne({ $or: [{ name: teamName }, { managerId: applicantId }], guildId: guild.id });
-            if (existingTeam) return interaction.editReply({ content: `Error: Ya existe un equipo con ese nombre o el usuario ya es mánager.` });
-            const newTeam = new Team({ name: teamName, abbreviation: teamAbbr, guildId: guild.id, league: leagueName, logoUrl: teamLogoUrl, managerId: applicantId, twitterHandle: teamTwitter });
-            await newTeam.save();
-            await applicantMember.roles.add(process.env.MANAGER_ROLE_ID);
-            await applicantMember.roles.add(process.env.PLAYER_ROLE_ID);
-            await applicantMember.setNickname(`|MG| ${teamAbbr} ${applicantMember.user.username}`).catch(err => console.log(`No se pudo cambiar apodo: ${err.message}`));
-            const disabledRow = new ActionRowBuilder().addComponents(ButtonBuilder.from(originalMessage.components[0].components[0]).setDisabled(true).setLabel('Aprobado'), ButtonBuilder.from(originalMessage.components[0].components[1]).setDisabled(true));
-            await originalMessage.edit({ components: [disabledRow] });
-            // --- INICIO DEL CÓDIGO REEMPLAZADO: Guía completa para el Mánager ---
-try {
-    const managerGuideEmbed = new EmbedBuilder()
-        .setTitle(`👑 ¡Felicidades, Mánager! Tu equipo "${teamName}" ha sido aprobado.`)
-        .setColor('Gold')
-        .setImage('https://i.imgur.com/KjamtCg.jpeg')
-        .setDescription('¡Bienvenido a la élite de la comunidad! Aquí tienes una guía detallada de tus nuevas responsabilidades y herramientas. Tu centro de mando principal es el panel del canal <#1396815967685705738>.')
-        .addFields(
-            { 
-                name: 'Paso 1: Construye tu Plantilla', 
-                value: 'Tu prioridad es formar tu equipo. Desde el submenú `Gestionar Plantilla` puedes:\n' +
-                       '• **`Invitar Jugador`**: Añade miembros directamente a tu plantilla.\n' +
-                       '• **`Ascender a Capitán`**: Delega responsabilidades en jugadores de confianza para que te ayuden con la gestión diaria (amistosos, fichajes).'
-            },
-            {
-                name: 'Paso 2: Mantén tu Equipo Activo',
-                value: 'La actividad es clave para el éxito. Desde los submenús correspondientes puedes:\n' +
-                       '• **`Gestionar Amistosos`**: Usa `Programar Búsqueda` para anunciar tu disponibilidad con antelación o `Buscar Rival (Ahora)` para un partido inmediato.\n' +
-                       '• **`Gestionar Fichajes`**: Usa `Crear / Editar Oferta` para publicar que buscas jugadores. Tu oferta será visible para todos los agentes libres.'
-            },
-            {
-                name: 'Paso 3: Administración y Consejos',
-                value: '• **`Editar Datos del Equipo`**: Mantén actualizados el nombre, abreviatura, logo y Twitter de tu equipo.\n' +
-                       '• **`Abrir/Cerrar Reclutamiento`**: Controla si tu equipo acepta solicitudes de nuevos miembros.\n' +
-                       '• **Tienes el control total**: Eres el máximo responsable de tu equipo'
-            }
-        );
-
-    await applicantMember.send({ embeds: [managerGuideEmbed] });
-} catch (dmError) {
-    console.log(`AVISO: No se pudo enviar el MD de guía al nuevo mánager ${applicantMember.user.tag}.`);
-}
-// --- FIN DEL CÓDIGO REEMPLAZADO ---
-            return interaction.editReply({ content: `✅ Equipo **${teamName}** creado en la liga **${leagueName}**. ${applicantMember.user.tag} es ahora Mánager.` });
-        } catch (error) {
-            console.error("Error en aprobación de equipo:", error);
-            return interaction.editReply({ content: 'Ocurrió un error inesperado.' });
-        }
-    }
-    
-    if (customId.startsWith('edit_data_modal_')) {
-    await interaction.deferReply({ ephemeral: true });
-
-    const teamId = customId.split('_')[3];
-    const team = await Team.findById(teamId);
-    if (!team) return interaction.editReply({ content: 'El equipo ya no existe.' });
-
-    const isManager = team.managerId === user.id;
-    const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
-    if (!isManager && !isAdmin) return interaction.editReply({ content: 'No tienes permiso.' });
-
-    // 1. Recogemos los nuevos datos del formulario
-    const newName = fields.getTextInputValue('newName') || team.name;
-    const newAbbr = fields.getTextInputValue('newAbbr')?.toUpperCase() || team.abbreviation;
-    const newLogo = fields.getTextInputValue('newLogo') || team.logoUrl;
-    const newTwitter = fields.getTextInputValue('newTwitter') || team.twitterHandle;
-    
-    // 2. Aplicamos y guardamos los cambios en la base de datos INMEDIATAMENTE
-    team.name = newName;
-    team.abbreviation = newAbbr;
-    team.logoUrl = newLogo;
-    team.twitterHandle = newTwitter;
-    await team.save();
-
-    // 3. SI el cambio lo hizo un mánager, ENVIAMOS la notificación
-    if (isManager && !isAdmin) {
-        try {
-            const logChannelId = process.env.APPROVAL_CHANNEL_ID;
-            if (logChannelId) {
-                const logChannel = await client.channels.fetch(logChannelId);
-                const logEmbed = new EmbedBuilder()
-                    .setTitle('📢 Notificación: Datos de Equipo Editados')
-                    .setColor('Blue')
-                    .setAuthor({ name: `Realizado por: ${user.tag}`, iconURL: user.displayAvatarURL() })
-                    .setDescription(`El mánager de **${team.name}** ha actualizado los datos del equipo.`)
-                    .addFields(
-                        { name: 'Nombre Guardado', value: newName },
-                        { name: 'Abreviatura Guardada', value: newAbbr },
-                        { name: 'Logo Guardado', value: newLogo ? `[Ver URL](${newLogo})` : 'No especificado' },
-                        { name: 'Twitter Guardado', value: newTwitter || 'No especificado' }
-                    )
-                    .setFooter({ text: `ID del Equipo: ${team._id}` })
-                    .setTimestamp();
-
-                await logChannel.send({ embeds: [logEmbed] });
-            }
-        } catch (error) {
-            console.error("Error al enviar la notificación de cambio de datos:", error);
-        }
-    }
-
-    // 4. Respondemos al usuario que todo ha ido bien
-    return interaction.editReply({ content: `✅ Los datos del equipo **${team.name}** han sido actualizados.` });
-}
     if (customId.startsWith('invite_player_modal_')) {
-        // CORRECCIÓN: Añadido deferReply al inicio.
         await interaction.deferReply({ ephemeral: true });
 
         const teamId = customId.split('_')[3];
@@ -485,7 +438,6 @@ try {
     }
 
     if (customId === 'create_league_modal') {
-        // CORRECCIÓN: Añadido deferReply al inicio.
         await interaction.deferReply({ ephemeral: true });
 
         const leagueName = fields.getTextInputValue('leagueNameInput');
@@ -496,7 +448,6 @@ try {
     }
 
     if (customId.startsWith('confirm_dissolve_modal_')) {
-        // CORRECCIÓN: Añadido deferReply al inicio.
         await interaction.deferReply({ ephemeral: true });
 
         const teamId = customId.split('_')[3];
@@ -522,7 +473,6 @@ try {
     }
     
     if (customId.startsWith('application_modal_')) {
-        // CORRECCIÓN: Añadido deferReply al inicio.
         await interaction.deferReply({ ephemeral: true });
 
         const teamId = customId.split('_')[2];
