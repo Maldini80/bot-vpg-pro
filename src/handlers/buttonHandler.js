@@ -1096,57 +1096,48 @@ else if (customId === 'market_post_offer') {
         }
      // --- INICIO DEL BLOQUE DE EDICIÓN FINAL Y FUNCIONAL ---
 
-        if (customId.startsWith('admin_change_data_') || customId === 'team_edit_data_button') {
-            
-            // Primero, enviamos la guía al mánager por mensaje directo (MD)
-            if (customId === 'team_edit_data_button') {
-                try {
-                    const guideEmbed = getLogoGuideEmbed();
-                    await interaction.user.send({
-                        content: 'Aquí tienes una guía por si necesitas cambiar el logo de tu equipo. Puedes abrir el formulario de edición desde el panel de equipo.',
-                        embeds: [guideEmbed]
-                    });
-                } catch (error) {
-                    // Si tiene los MDs cerrados, se lo notificamos de forma efímera
-                    await interaction.reply({ content: 'No pude enviarte la guía del logo por MD. Asegúrate de tenerlos abiertos.', ephemeral: true });
-                }
-            }
+        // --- INICIO DEL BLOQUE DE EDICIÓN FINAL Y FUNCIONAL ---
 
-            // Ahora, procedemos a abrir el formulario como primera y única respuesta
-            let team;
-            if (customId.startsWith('admin_change_data_')) {
-                if (!isAdmin) return interaction.reply({ content: 'Acción restringida.', ephemeral: true });
-                const teamId = customId.split('_')[3];
-                team = await Team.findById(teamId);
-            } else {
-                team = await Team.findOne({ guildId: guild.id, managerId: user.id });
-            }
+if (customId.startsWith('admin_change_data_') || customId === 'team_edit_data_button') {
+    
+    // Se ha eliminado la lógica de enviar MDs desde aquí para evitar dobles respuestas.
+    // La única responsabilidad de este bloque ahora es mostrar el formulario (modal).
 
-            if (!team) return interaction.reply({ content: 'No se encontró el equipo.', ephemeral: true });
+    let team;
+    if (customId.startsWith('admin_change_data_')) {
+        if (!isAdmin) return interaction.reply({ content: 'Acción restringida.', ephemeral: true });
+        const teamId = customId.split('_')[3];
+        team = await Team.findById(teamId);
+    } else {
+        team = await Team.findOne({ guildId: guild.id, managerId: user.id });
+    }
 
-            const modalTitle = `Editar Datos de ${team.name}`.substring(0, 45);
-            const modal = new ModalBuilder().setCustomId(`edit_data_modal_${team._id}`).setTitle(modalTitle);
-            
-            const newNameInput = new TextInputBuilder().setCustomId('newName').setLabel("Nuevo Nombre (Opcional)").setStyle(TextInputStyle.Short).setRequired(false).setValue(team.name);
-            const newAbbrInput = new TextInputBuilder().setCustomId('newAbbr').setLabel("Nueva Abreviatura (Opcional)").setStyle(TextInputStyle.Short).setRequired(false).setValue(team.abbreviation).setMinLength(3).setMaxLength(3);
-            const newLogoInput = new TextInputBuilder().setCustomId('newLogo').setLabel("Nueva URL Del Logo (Opcional)").setStyle(TextInputStyle.Short).setRequired(false).setPlaceholder('Pega aquí el nuevo enlace si quieres cambiarlo.');
-            const newTwitterInput = new TextInputBuilder().setCustomId('newTwitter').setLabel("Twitter del Equipo (Solo Usuario, Sin @)").setStyle(TextInputStyle.Short).setRequired(false).setValue(team.twitterHandle || '');
+    // Si no se encuentra el equipo, respondemos aquí y detenemos la ejecución.
+    // Esto es seguro porque es la primera y única respuesta.
+    if (!team) {
+        return interaction.reply({ content: 'No se encontró el equipo para editar o no tienes los permisos necesarios.', ephemeral: true });
+    }
 
-            modal.addComponents(
-                new ActionRowBuilder().addComponents(newNameInput),
-                new ActionRowBuilder().addComponents(newAbbrInput),
-                new ActionRowBuilder().addComponents(newLogoInput),
-                new ActionRowBuilder().addComponents(newTwitterInput)
-            );
-            
-            // showModal siempre debe ser la primera respuesta.
-            // Si la interacción ya fue respondida (ej. con el aviso de MDs cerrados), no hacemos nada.
-            if (!interaction.replied) {
-                await interaction.showModal(modal);
-            }
-        }
+    const modalTitle = `Editar Datos de ${team.name}`.substring(0, 45);
+    const modal = new ModalBuilder().setCustomId(`edit_data_modal_${team._id}`).setTitle(modalTitle);
+    
+    const newNameInput = new TextInputBuilder().setCustomId('newName').setLabel("Nuevo Nombre (Opcional)").setStyle(TextInputStyle.Short).setRequired(false).setValue(team.name);
+    const newAbbrInput = new TextInputBuilder().setCustomId('newAbbr').setLabel("Nueva Abreviatura (Opcional)").setStyle(TextInputStyle.Short).setRequired(false).setValue(team.abbreviation).setMinLength(3).setMaxLength(3);
+    const newLogoInput = new TextInputBuilder().setCustomId('newLogo').setLabel("Nueva URL Del Logo (Opcional)").setStyle(TextInputStyle.Short).setRequired(false).setPlaceholder('Pega aquí el nuevo enlace si quieres cambiarlo.');
+    const newTwitterInput = new TextInputBuilder().setCustomId('newTwitter').setLabel("Twitter del Equipo (Solo Usuario, Sin @)").setStyle(TextInputStyle.Short).setRequired(false).setValue(team.twitterHandle || '');
 
-        // --- FIN DEL BLOQUE DE EDICIÓN ---
+    modal.addComponents(
+        new ActionRowBuilder().addComponents(newNameInput),
+        new ActionRowBuilder().addComponents(newAbbrInput),
+        new ActionRowBuilder().addComponents(newLogoInput),
+        new ActionRowBuilder().addComponents(newTwitterInput)
+    );
+    
+    // Mostramos el modal como la única y primera respuesta a la interacción.
+    await interaction.showModal(modal);
+}
+
+// --- FIN DEL BLOQUE DE EDICIÓN ---
         
         if (customId === 'team_invite_player_button') {
             const team = await Team.findOne({ guildId: guild.id, managerId: user.id });
