@@ -230,17 +230,29 @@ const handler = async (client, interaction) => {
         const guideEmbed = getLogoGuideEmbed();
 
         const row = new ActionRowBuilder().addComponents(
+            // --- INICIO DE LA MODIFICACIÓN DEL BOTÓN ---
             new ButtonBuilder()
-                .setLabel('Subir a Imgur')
-                .setStyle(ButtonStyle.Link)
-                .setURL('https://imgur.com/upload'),
+                .setCustomId('get_imgur_link_button') // Nuevo ID para que el bot lo reconozca
+                .setLabel('Obtener Enlace para Subir Logo') // Texto más claro
+                .setStyle(ButtonStyle.Success) // ¡Color verde!
+                .setEmoji('🖼️'),
+            // --- FIN DE LA MODIFICACIÓN DEL BOTÓN ---
             new ButtonBuilder()
                 .setCustomId(`show_logo_modal_${leagueName}_${teamDataString}`)
                 .setLabel('Continuar y Pegar URL')
-                .setStyle(ButtonStyle.Success)
+                .setStyle(ButtonStyle.Primary) // Lo ponemos azul para diferenciarlo
         );
 
         await interaction.editReply({ embeds: [guideEmbed], components: [row] });
+    }
+
+    // --- AÑADE ESTE NUEVO BLOQUE COMPLETO ---
+    else if (customId === 'get_imgur_link_button') {
+        await interaction.reply({
+            content: 'Aquí tienes el enlace para subir tu logo: https://imgur.com/upload\n\n' +
+                     'Una vez que tengas la URL de la imagen, **vuelve al mensaje anterior** y pulsa **"Continuar y Pegar URL"**.',
+            ephemeral: true // Solo el usuario que hizo clic lo verá
+        });
     }
 
     // --- NUEVO BLOQUE PARA "NO, USAR LOGO POR DEFECTO" ---
@@ -1445,8 +1457,7 @@ if (customId === 'post_scheduled_panel' || customId === 'post_instant_panel') {
 function getLogoGuideEmbed() {
     return new EmbedBuilder()
         .setTitle('Guía para Añadir un Logo')
-        // --- LÍNEA AÑADIDA ---
-        .setURL('https://imgur.com/upload') // Esto hace que el título sea un enlace
+        .setURL('https://imgur.com/upload')
         .setColor('Blue')
         .setDescription(
             'Para usar un logo personalizado, necesitas un enlace directo a la imagen.\n\n' +
@@ -1455,8 +1466,8 @@ function getLogoGuideEmbed() {
             '2. Arrastra tu imagen a la página.\n' +
             '3. Una vez subida, haz **clic derecho** sobre tu imagen y selecciona **"Copiar dirección de imagen"**.\n\n' +
             'Ese es el enlace que deberás pegar en el siguiente paso.'
-        )
-        .setImage('https://i.imgur.com/VFhLnSY.png'); 
+        );
+        // ✅ La línea .setImage() ha sido eliminada.
 }
 
 function parseTeamData(dataString) {
