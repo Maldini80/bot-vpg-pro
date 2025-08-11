@@ -1374,6 +1374,58 @@ if (customId === 'post_scheduled_panel' || customId === 'post_instant_panel') {
         return interaction.editReply({ content: `✅ Tu panel de amistosos de tipo **${panelType}** ha sido eliminado.` });
     }
 };
+function getLogoGuideEmbed() {
+    return new EmbedBuilder()
+        .setTitle('Guía para Añadir un Logo')
+        .setColor('Blue')
+        .setDescription(
+            'Para usar un logo personalizado, necesitas un enlace directo a la imagen.\n\n' +
+            '**Pasos recomendados:**\n' +
+            '1. Haz clic en el botón **"Subir a Imgur"** de abajo.\n' +
+            '2. Arrastra tu imagen a la página.\n' +
+            '3. Una vez subida, haz **clic derecho** sobre tu imagen y selecciona **"Copiar dirección de imagen"**.\n\n' +
+            'Ese es el enlace que deberás pegar en el siguiente paso.'
+        )
+        // Usamos una imagen estática JPG como pediste
+        .setImage('https://i.imgur.com/g4g4syE.jpeg'); 
+}
+
+function parseTeamData(dataString) {
+    const data = {};
+    dataString.split('|||').forEach(part => {
+        const [key, value] = part.split(':', 2); // El 2 asegura que solo divida en el primer ':'
+        data[key] = value === 'none' ? null : value;
+    });
+    return data;
+}
+
+async function sendApprovalRequest(interaction, client, { vpg, name, abbr, twitter, leagueName, logoUrl }) {
+    const approvalChannelId = process.env.APPROVAL_CHANNEL_ID;
+    if (!approvalChannelId) return;
+    const approvalChannel = await client.channels.fetch(approvalChannelId).catch(() => null);
+    if(!approvalChannel) return;
+
+    const embed = new EmbedBuilder()
+        .setTitle('📝 Nueva Solicitud de Registro')
+        .setColor('Orange')
+        .setAuthor({ name: interaction.user.tag, iconURL: interaction.user.displayAvatarURL() })
+        .setThumbnail(logoUrl && logoUrl.startsWith('http') ? logoUrl : null)
+        .addFields(
+            { name: 'Usuario VPG', value: vpg }, 
+            { name: 'Nombre del Equipo', value: name }, 
+            { name: 'Abreviatura', value: abbr }, 
+            { name: 'Twitter del Equipo', value: twitter || 'No especificado' },
+            { name: 'URL del Logo', value: `[Ver Logo](${logoUrl})` },
+            { name: 'Liga Seleccionada', value: leagueName }
+        )
+        .setTimestamp();
+        
+    const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId(`approve_request_${interaction.user.id}_${leagueName}`).setLabel('Aprobar').setStyle(ButtonStyle.Success), 
+        new ButtonBuilder().setCustomId(`reject_request_${interaction.user.id}`).setLabel('Rechazar').setStyle(ButtonStyle.Danger)
+    );
+    await approvalChannel.send({ content: `**Solicitante:** <@${interaction.user.id}>`, embeds: [embed], components: [row] });
+}
 
 handler.updatePanelMessage = updatePanelMessage;
 handler.getOrCreateWebhook = getOrCreateWebhook;
