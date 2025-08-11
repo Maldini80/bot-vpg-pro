@@ -976,15 +976,21 @@ else if (customId === 'market_post_offer') {
             const modal = new ModalBuilder().setCustomId(`edit_data_modal_${team._id}`).setTitle(`Editar Datos de ${team.name}`);
             const newNameInput = new TextInputBuilder().setCustomId('newName').setLabel("Nuevo Nombre (opcional)").setStyle(TextInputStyle.Short).setRequired(false).setValue(team.name);
             const newAbbrInput = new TextInputBuilder().setCustomId('newAbbr').setLabel("Nueva Abreviatura (opcional)").setStyle(TextInputStyle.Short).setRequired(false).setValue(team.abbreviation).setMinLength(3).setMaxLength(3);
-            const newLogoInput = new TextInputBuilder().setCustomId('newLogo').setLabel("Nueva URL del Logo (opcional)").setStyle(TextInputStyle.Short).setRequired(false);
-            const newTwitterInput = new TextInputBuilder()
+           const newLogoInput = new TextInputBuilder().setCustomId('newLogo').setLabel("Nueva URL del Logo (opcional)").setStyle(TextInputStyle.Short).setRequired(false);
+const newTwitterInput = new TextInputBuilder()
     .setCustomId('newTwitter')
-    .setLabel("Twitter del equipo (sin @)")
+    .setLabel("Twitter del equipo (solo el usuario, sin @)")
     .setStyle(TextInputStyle.Short)
     .setRequired(false)
-    .setValue(team.twitterHandle || '');
-            modal.addComponents(new ActionRowBuilder().addComponents(newNameInput), new ActionRowBuilder().addComponents(newAbbrInput), new ActionRowBuilder().addComponents(newLogoInput), new ActionRowBuilder().addComponents(newTwitterInput));
-            return interaction.showModal(modal);
+    .setValue(team.twitterHandle || ''); // Esto pre-rellena el campo si ya existe
+
+modal.addComponents(
+    new ActionRowBuilder().addComponents(newNameInput), 
+    new ActionRowBuilder().addComponents(newAbbrInput), 
+    new ActionRowBuilder().addComponents(newLogoInput),
+    new ActionRowBuilder().addComponents(newTwitterInput) // <-- Campo añadido
+);
+return interaction.showModal(modal);
         }
         if (customId === 'team_invite_player_button') {
             const team = await Team.findOne({ guildId: guild.id, managerId: user.id });
