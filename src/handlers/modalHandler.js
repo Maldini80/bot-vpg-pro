@@ -365,7 +365,6 @@ try {
     }
     
     if (customId.startsWith('edit_data_modal_')) {
-    console.log("-> Se ha activado el modal 'edit_data_modal_'."); // LOG 1
     await interaction.deferReply({ ephemeral: true });
 
     const teamId = customId.split('_')[3];
@@ -376,59 +375,50 @@ try {
     const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
     if (!isManager && !isAdmin) return interaction.editReply({ content: 'No tienes permiso.' });
 
-    const oldData = { name: team.name, abbreviation: team.abbreviation, logoUrl: team.logoUrl, twitterHandle: team.twitterHandle };
-
-    team.name = fields.getTextInputValue('newName') || oldData.name;
-    team.abbreviation = fields.getTextInputValue('newAbbr')?.toUpperCase() || oldData.abbreviation;
-    team.logoUrl = fields.getTextInputValue('newLogo') || oldData.logoUrl;
-    team.twitterHandle = fields.getTextInputValue('newTwitter') || oldData.twitterHandle;
-
+    // Recogemos y aplicamos los nuevos datos del formulario.
+    const newName = fields.getTextInputValue('newName') || team.name;
+    const newAbbr = fields.getTextInputValue('newAbbr')?.toUpperCase() || team.abbreviation;
+    const newLogo = fields.getTextInputValue('newLogo') || team.logoUrl;
+    const newTwitter = fields.getTextInputValue('newTwitter') || team.twitterHandle;
+    
+    // Guardamos los cambios en la base de datos.
+    team.name = newName;
+    team.abbreviation = newAbbr;
+    team.logoUrl = newLogo;
+    team.twitterHandle = newTwitter;
     await team.save();
-    console.log("-> Datos del equipo guardados en la base de datos."); // LOG 2
 
-    // Lógica de Notificación para Admins
+    // --- Lógica de Notificación Simplificada y Fiable ---
+    // Si el que hizo el cambio fue un mánager (y no un admin), enviamos SIEMPRE la notificación.
     if (isManager && !isAdmin) {
-        console.log("-> Condición (isManager && !isAdmin) CUMPLIDA. Intentando enviar notificación..."); // LOG 3
         try {
             const logChannelId = process.env.APPROVAL_CHANNEL_ID;
-            console.log(`-> ID del canal de logs obtenido de .env: ${logChannelId}`); // LOG 4
-
             if (logChannelId) {
                 const logChannel = await client.channels.fetch(logChannelId);
-                console.log(`-> Canal encontrado: ${logChannel ? logChannel.name : 'NO ENCONTRADO'}`); // LOG 5
+                const logEmbed = new EmbedBuilder()
+                    .setTitle('📢 Notificación: Datos de Equipo Editados')
+                    .setColor('Blue')
+                    .setAuthor({ name: `Realizado por: ${user.tag}`, iconURL: user.displayAvatarURL() })
+                    .setDescription(`El mánager de **${team.name}** ha usado la función para editar los datos del equipo.`)
+                    .addFields(
+                        { name: 'Nombre Guardado', value: newName },
+                        { name: 'Abreviatura Guardada', value: newAbbr },
+                        { name: 'Logo Guardado', value: `[Ver URL](${newLogo})` || 'No especificado' },
+                        { name: 'Twitter Guardado', value: newTwitter || 'No especificado' }
+                    )
+                    .setFooter({ text: `ID del Equipo: ${team._id}` })
+                    .setTimestamp();
 
-                const changes = [];
-                if (team.name !== oldData.name) changes.push(`**Nombre:** \`\`\`diff\n- ${oldData.name}\n+ ${team.name}\`\`\``);
-                if (team.abbreviation !== oldData.abbreviation) changes.push(`**Abreviatura:** \`\`\`diff\n- ${oldData.abbreviation}\n+ ${team.abbreviation}\`\`\``);
-                if (team.logoUrl !== oldData.logoUrl) changes.push(`**Logo:** Se ha actualizado la URL.`);
-                if (team.twitterHandle !== oldData.twitterHandle) changes.push(`**Twitter:** \`\`\`diff\n- ${oldData.twitterHandle || 'Ninguno'}\n+ ${team.twitterHandle || 'Ninguno'}\`\`\``);
-                
-                console.log("-> Cambios detectados:", changes); // LOG 6
-
-                if (changes.length > 0) {
-                    const logEmbed = new EmbedBuilder()
-                        .setTitle('📢 Notificación: Datos de Equipo Actualizados')
-                        .setColor('Blue')
-                        .setAuthor({ name: `Realizado por: ${user.tag}`, iconURL: user.displayAvatarURL() })
-                        .setDescription(`El mánager de **${team.name}** ha actualizado los datos del equipo.\n\n${changes.join('\n')}`)
-                        .setFooter({ text: `ID del Equipo: ${team._id}` })
-                        .setTimestamp();
-
-                    await logChannel.send({ embeds: [logEmbed] });
-                    console.log("-> ¡Notificación enviada con éxito!"); // LOG 7
-                }
+                await logChannel.send({ embeds: [logEmbed] });
             }
         } catch (error) {
-            console.error("¡ERROR CAPTURADO! No se pudo enviar el log:", error); // LOG DE ERROR
+            console.error("Error al enviar la notificación de cambio de datos:", error);
         }
-    } else {
-        console.log("-> Condición (isManager && !isAdmin) NO CUMPLIDA. Saltando notificación."); // LOG 8
-        console.log(`-> isManager: ${isManager}, isAdmin: ${isAdmin}`);
     }
 
+    // Confirmamos al usuario que los cambios se han realizado.
     return interaction.editReply({ content: `✅ Los datos del equipo **${team.name}** han sido actualizados.` });
 }
-
     if (customId.startsWith('invite_player_modal_')) {
         // CORRECCIÓN: Añadido deferReply al inicio.
         await interaction.deferReply({ ephemeral: true });
