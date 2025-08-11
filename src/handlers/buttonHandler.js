@@ -1445,6 +1445,8 @@ if (customId === 'post_scheduled_panel' || customId === 'post_instant_panel') {
 function getLogoGuideEmbed() {
     return new EmbedBuilder()
         .setTitle('Guía para Añadir un Logo')
+        // --- LÍNEA AÑADIDA ---
+        .setURL('https://imgur.com/upload') // Esto hace que el título sea un enlace
         .setColor('Blue')
         .setDescription(
             'Para usar un logo personalizado, necesitas un enlace directo a la imagen.\n\n' +
@@ -1454,7 +1456,6 @@ function getLogoGuideEmbed() {
             '3. Una vez subida, haz **clic derecho** sobre tu imagen y selecciona **"Copiar dirección de imagen"**.\n\n' +
             'Ese es el enlace que deberás pegar en el siguiente paso.'
         )
-        // Usamos una imagen estática JPG como pediste
         .setImage('https://i.imgur.com/VFhLnSY.png'); 
 }
 
