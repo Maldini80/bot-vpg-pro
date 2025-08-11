@@ -1094,37 +1094,114 @@ else if (customId === 'market_post_offer') {
                 return interaction.editReply({ content: 'Ocurrió un error inesperado.' });
             }
         }
-        if (customId.startsWith('admin_change_data_') || customId === 'team_edit_data_button') {
-            let team;
+        // --- INICIO DEL NUEVO FLUJO DE EDICIÓN INTELIGENTE ---
+
+        // PASO 1: El Mánager pulsa el botón inicial "Editar Datos del Equipo"
+        if (customId === 'team_edit_data_button') {
+            await interaction.deferReply({ ephemeral: true });
+
+            const team = await Team.findOne({ guildId: guild.id, managerId: user.id });
+            if (!team) return interaction.editReply({ content: 'Solo los mánagers pueden editar los datos.' });
+
+            // Creamos un mensaje que muestra el logo actual y pregunta qué hacer
+            const embed = new EmbedBuilder()
+                .setTitle(`Editar Datos de "${team.name}"`)
+                .setColor('Blue')
+                .setDescription('Tu logo actual se muestra en la miniatura. ¿Deseas cambiarlo o prefieres editar solo los otros datos del equipo?')
+                .setThumbnail(team.logoUrl && team.logoUrl.startsWith('http') ? team.logoUrl : null);
+
+            const row = new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`edit_choice_yes_logo_${team._id}`)
+                    .setLabel('Sí, cambiar el logo')
+                    .setStyle(ButtonStyle.Success)
+                    .setEmoji('🖼️'),
+                new ButtonBuilder()
+                    .setCustomId(`edit_choice_no_logo_${team._id}`)
+                    .setLabel('No, editar otros datos')
+                    .setStyle(ButtonStyle.Primary)
+                    .setEmoji('✏️'),
+                new ButtonBuilder()
+                    .setCustomId('cancel_edit')
+                    .setLabel('Cancelar')
+                    .setStyle(ButtonStyle.Secondary)
+            );
+
+            await interaction.editReply({ embeds: [embed], components: [row] });
+            return;
+        }
+
+        // PASO 2.A: El Mánager elige "Sí, cambiar el logo"
+        if (customId.startsWith('edit_choice_yes_logo_')) {
+            const teamId = customId.split('_')[4];
+            
+            // Le mostramos la guía que ya conocemos
+            const guideEmbed = getLogoGuideEmbed();
+            const row = new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setCustomId('get_imgur_link_button')
+                    .setLabel('Obtener Enlace para Subir Logo')
+                    .setStyle(ButtonStyle.Success)
+                    .setEmoji('🖼️'),
+                new ButtonBuilder()
+                    .setCustomId(`show_edit_form_${teamId}`)
+                    .setLabel('Abrir Formulario de Edición')
+                    .setStyle(ButtonStyle.Primary)
+            );
+
+            await interaction.update({
+                content: "Sigue la guía para obtener el enlace de tu nuevo logo. Cuando lo tengas, pulsa el botón para abrir el formulario.",
+                embeds: [guideEmbed],
+                components: [row]
+            });
+            return;
+        }
+
+        // PASO 2.B y 2.C: El Mánager elige "No" o ya tiene el enlace, o es un admin
+        if (customId.startsWith('edit_choice_no_logo_') || customId.startsWith('show_edit_form_') || customId.startsWith('admin_change_data_')) {
+            let teamId;
             if (customId.startsWith('admin_change_data_')) {
-                if (!isAdmin) return interaction.reply({ content: 'Acción restringida.', flags: 64 });
-                const teamId = customId.split('_')[3];
-                team = await Team.findById(teamId);
+                if (!member.permissions.has(PermissionFlagsBits.Administrator)) return interaction.reply({ content: 'Acción restringida.', ephemeral: true });
+                teamId = customId.split('_')[3];
             } else {
-                team = await Team.findOne({ guildId: guild.id, managerId: user.id });
-                if (!team) return interaction.reply({ content: 'Solo los mánagers pueden editar los datos.', flags: 64 });
+                teamId = customId.split('_')[4];
             }
-            if (!team) return interaction.reply({ content: 'No se encontró el equipo.', flags: 64 });
+
+            const team = await Team.findById(teamId);
+            if (!team) return interaction.reply({ content: 'No se encontró el equipo.', ephemeral: true });
+
             const modalTitle = `Editar Datos de ${team.name}`.substring(0, 45);
             const modal = new ModalBuilder().setCustomId(`edit_data_modal_${team._id}`).setTitle(modalTitle);
-            const newNameInput = new TextInputBuilder().setCustomId('newName').setLabel("Nuevo Nombre (opcional)").setStyle(TextInputStyle.Short).setRequired(false).setValue(team.name);
-            const newAbbrInput = new TextInputBuilder().setCustomId('newAbbr').setLabel("Nueva Abreviatura (opcional)").setStyle(TextInputStyle.Short).setRequired(false).setValue(team.abbreviation).setMinLength(3).setMaxLength(3);
-           const newLogoInput = new TextInputBuilder().setCustomId('newLogo').setLabel("Nueva URL del Logo (opcional)").setStyle(TextInputStyle.Short).setRequired(false);
-const newTwitterInput = new TextInputBuilder()
-    .setCustomId('newTwitter')
-    .setLabel("Twitter del equipo (solo el usuario, sin @)")
-    .setStyle(TextInputStyle.Short)
-    .setRequired(false)
-    .setValue(team.twitterHandle || ''); // Esto pre-rellena el campo si ya existe
 
-modal.addComponents(
-    new ActionRowBuilder().addComponents(newNameInput), 
-    new ActionRowBuilder().addComponents(newAbbrInput), 
-    new ActionRowBuilder().addComponents(newLogoInput),
-    new ActionRowBuilder().addComponents(newTwitterInput) // <-- Campo añadido
-);
-return interaction.showModal(modal);
+            const newNameInput = new TextInputBuilder().setCustomId('newName').setLabel("Nuevo Nombre (Opcional)").setStyle(TextInputStyle.Short).setRequired(false).setValue(team.name);
+            const newAbbrInput = new TextInputBuilder().setCustomId('newAbbr').setLabel("Nueva Abreviatura (Opcional)").setStyle(TextInputStyle.Short).setRequired(false).setValue(team.abbreviation).setMinLength(3).setMaxLength(3);
+            const newLogoInput = new TextInputBuilder().setCustomId('newLogo').setLabel("Nueva URL del Logo (Opcional)").setStyle(TextInputStyle.Short).setRequired(false).setPlaceholder('Pega aquí el nuevo enlace para cambiarlo.');
+            const newTwitterInput = new TextInputBuilder().setCustomId('newTwitter').setLabel("Twitter del Equipo (Solo Usuario, Sin @)").setStyle(TextInputStyle.Short).setRequired(false).setValue(team.twitterHandle || '');
+
+            modal.addComponents(
+                new ActionRowBuilder().addComponents(newNameInput),
+                new ActionRowBuilder().addComponents(newAbbrInput),
+                new ActionRowBuilder().addComponents(newLogoInput),
+                new ActionRowBuilder().addComponents(newTwitterInput)
+            );
+            
+            if (interaction.isButton()) {
+                await interaction.showModal(modal);
+            }
+            return;
         }
+        
+        // Manejador para el botón de cancelar la edición
+        if (customId === 'cancel_edit') {
+            await interaction.update({
+                content: 'Acción cancelada.',
+                embeds: [],
+                components: []
+            });
+            return;
+        }
+
+        // --- FIN DEL NUEVO FLUJO DE EDICIÓN ---
         if (customId === 'team_invite_player_button') {
             const team = await Team.findOne({ guildId: guild.id, managerId: user.id });
             if (!team) return interaction.reply({ content: 'Solo los mánagers pueden invitar.', flags: 64 });
