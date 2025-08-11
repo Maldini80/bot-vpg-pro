@@ -93,10 +93,11 @@ async function updatePanelMessage(client, panelId) {
         }
 
         const embed = new EmbedBuilder()
-            .setTitle(panelTitle)
-            .setColor(panelColor)
-            .setDescription(description)
-            .setThumbnail(hostTeam.logoUrl);
+    .setAuthor({ name: hostTeam.name, iconURL: hostTeam.logoUrl }) // <-- LÍNEA AÑADIDA
+    .setTitle(panelTitle)
+    .setColor(panelColor)
+    .setDescription(description)
+    .setThumbnail(hostTeam.logoUrl);
 
         const components = [];
         let currentRow = new ActionRowBuilder();
