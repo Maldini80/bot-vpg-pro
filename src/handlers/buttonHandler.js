@@ -219,6 +219,74 @@ const handler = async (client, interaction) => {
         return interaction.reply({ embeds: [subMenuEmbed], components: [subMenuRow], flags: MessageFlags.Ephemeral });
     }
 
+     // --- NUEVO BLOQUE PARA "SÍ, AÑADIR LOGO" ---
+    if (customId.startsWith('ask_logo_yes_')) {
+        await interaction.deferUpdate();
+
+        const parts = customId.split('_');
+        const leagueName = parts[3];
+        const teamDataString = parts.slice(4).join('_');
+
+        const guideEmbed = getLogoGuideEmbed();
+
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setLabel('Subir a Imgur')
+                .setStyle(ButtonStyle.Link)
+                .setURL('https://imgur.com/upload'),
+            new ButtonBuilder()
+                .setCustomId(`show_logo_modal_${leagueName}_${teamDataString}`)
+                .setLabel('Continuar y Pegar URL')
+                .setStyle(ButtonStyle.Success)
+        );
+
+        await interaction.editReply({ embeds: [guideEmbed], components: [row] });
+    }
+
+    // --- NUEVO BLOQUE PARA "NO, USAR LOGO POR DEFECTO" ---
+    else if (customId.startsWith('ask_logo_no_')) {
+        await interaction.deferReply({ ephemeral: true });
+
+        const parts = customId.split('_');
+        const leagueName = parts[3];
+        const teamDataString = parts.slice(4).join('_');
+        
+        const teamData = parseTeamData(teamDataString);
+        const logoUrl = 'https://i.imgur.com/WBCpaMW.png'; // Logo por defecto
+
+        await sendApprovalRequest(interaction, client, { ...teamData, leagueName, logoUrl });
+
+        const guideEmbed = getLogoGuideEmbed();
+        await interaction.editReply({ 
+            content: '✅ Tu solicitud ha sido enviada con el logo por defecto. Un administrador la revisará pronto.\n\n' +
+                     '**Nota:** Podrás cambiar el logo más adelante desde el panel de gestión (`Gestionar Plantilla` -> `Editar Datos`). ' +
+                     'Aquí tienes una guía para cuando la necesites:',
+            embeds: [guideEmbed],
+            components: [] 
+        });
+    }
+    
+    // --- NUEVO BLOQUE PARA MOSTRAR EL FORMULARIO FINAL DEL LOGO ---
+    else if (customId.startsWith('show_logo_modal_')) {
+        const parts = customId.split('_');
+        const leagueName = parts[3];
+        const teamDataString = parts.slice(4).join('_');
+
+        const modal = new ModalBuilder()
+            .setCustomId(`final_logo_submit_${leagueName}_${teamDataString}`)
+            .setTitle('Pegar URL del Logo');
+
+        const logoUrlInput = new TextInputBuilder()
+            .setCustomId('teamLogoUrlInput')
+            .setLabel("Pega aquí la URL de la imagen que copiaste")
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setPlaceholder('Ej: https://i.imgur.com/tu_imagen.png');
+            
+        modal.addComponents(new ActionRowBuilder().addComponents(logoUrlInput));
+        await interaction.showModal(modal);
+    }
+
     if (!interaction.inGuild()) {
         await interaction.deferUpdate();
         const { message } = interaction;
