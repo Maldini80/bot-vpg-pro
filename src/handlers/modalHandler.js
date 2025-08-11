@@ -375,21 +375,20 @@ try {
     const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
     if (!isManager && !isAdmin) return interaction.editReply({ content: 'No tienes permiso.' });
 
-    // Recogemos y aplicamos los nuevos datos del formulario.
+    // 1. Recogemos los nuevos datos del formulario
     const newName = fields.getTextInputValue('newName') || team.name;
     const newAbbr = fields.getTextInputValue('newAbbr')?.toUpperCase() || team.abbreviation;
     const newLogo = fields.getTextInputValue('newLogo') || team.logoUrl;
     const newTwitter = fields.getTextInputValue('newTwitter') || team.twitterHandle;
     
-    // Guardamos los cambios en la base de datos.
+    // 2. Aplicamos y guardamos los cambios en la base de datos INMEDIATAMENTE
     team.name = newName;
     team.abbreviation = newAbbr;
     team.logoUrl = newLogo;
     team.twitterHandle = newTwitter;
     await team.save();
 
-    // --- Lógica de Notificación Simplificada y Fiable ---
-    // Si el que hizo el cambio fue un mánager (y no un admin), enviamos SIEMPRE la notificación.
+    // 3. SI el cambio lo hizo un mánager, ENVIAMOS la notificación
     if (isManager && !isAdmin) {
         try {
             const logChannelId = process.env.APPROVAL_CHANNEL_ID;
@@ -399,11 +398,11 @@ try {
                     .setTitle('📢 Notificación: Datos de Equipo Editados')
                     .setColor('Blue')
                     .setAuthor({ name: `Realizado por: ${user.tag}`, iconURL: user.displayAvatarURL() })
-                    .setDescription(`El mánager de **${team.name}** ha usado la función para editar los datos del equipo.`)
+                    .setDescription(`El mánager de **${team.name}** ha actualizado los datos del equipo.`)
                     .addFields(
                         { name: 'Nombre Guardado', value: newName },
                         { name: 'Abreviatura Guardada', value: newAbbr },
-                        { name: 'Logo Guardado', value: `[Ver URL](${newLogo})` || 'No especificado' },
+                        { name: 'Logo Guardado', value: newLogo ? `[Ver URL](${newLogo})` : 'No especificado' },
                         { name: 'Twitter Guardado', value: newTwitter || 'No especificado' }
                     )
                     .setFooter({ text: `ID del Equipo: ${team._id}` })
@@ -416,7 +415,7 @@ try {
         }
     }
 
-    // Confirmamos al usuario que los cambios se han realizado.
+    // 4. Respondemos al usuario que todo ha ido bien
     return interaction.editReply({ content: `✅ Los datos del equipo **${team.name}** han sido actualizados.` });
 }
     if (customId.startsWith('invite_player_modal_')) {
