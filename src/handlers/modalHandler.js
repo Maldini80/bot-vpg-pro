@@ -152,7 +152,7 @@ module.exports = async (client, interaction) => {
         const teamAbbr = fields.getTextInputValue('teamAbbr').toUpperCase();
         const teamTwitter = fields.getTextInputValue('teamTwitterInput');
 
-        const teamDataString = `vpg:${vpgUsername}|||name:${teamName}|||abbr:${teamAbbr}|||twitter:${teamTwitter || 'none'}`; 
+        const teamDataString = `vpg:${vpgUsername}|||name:${teamName}|||abbr:${teamAbbr}|||twitter:${teamTwitter || 'none'}`;
 
         const embed = new EmbedBuilder()
             .setTitle('✅ Datos guardados. ¿Quieres añadir un logo a tu equipo?')
@@ -239,7 +239,7 @@ module.exports = async (client, interaction) => {
 
                     if (changes.length > 0) {
                         const logEmbed = new EmbedBuilder()
-                            .setTitle(`📢 Notificación: Datos de "${team.name}" Editados`)
+                            .setTitle(\`📢 Notificación: Datos de \"${team.name}\" Editados​`)
                             .setColor('Blue')
                             .setAuthor({ name: `Realizado por: ${user.tag}`, iconURL: user.displayAvatarURL() })
                             .setDescription(`El mánager ha actualizado los siguientes datos:
