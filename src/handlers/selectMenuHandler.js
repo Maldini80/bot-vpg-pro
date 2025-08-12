@@ -12,6 +12,33 @@ const POSITIONS = ['POR', 'DFC', 'CARR', 'MCD', 'MV', 'MCO', 'DC'];
 module.exports = async (client, interaction) => {
     const { customId, values, guild, user } = interaction;
     const selectedValue = values[0];
+     if (customId === 'invite_player_select') {
+        await interaction.deferUpdate();
+        const targetId = selectedValue;
+
+        const team = await Team.findOne({ guildId: guild.id, managerId: user.id });
+        if (!team) {
+            return interaction.editReply({ content: 'No se ha encontrado tu equipo o ya no eres el mánager.', components: [] });
+        }
+
+        const targetMember = await guild.members.fetch(targetId).catch(() => null);
+        if (!targetMember) {
+            return interaction.editReply({ content: 'El miembro seleccionado ya no se encuentra en el servidor.', components: [] });
+        }
+
+        const isManager = await Team.findOne({ managerId: targetMember.id });
+        if (isManager) {
+            return interaction.editReply({ content: `❌ No puedes invitar a **${targetMember.user.tag}** porque ya es Mánager del equipo **${isManager.name}**.`, components: [] });
+        }
+
+        const embed = new EmbedBuilder().setTitle(`📩 Invitación de Equipo`).setDescription(`Has sido invitado a unirte a **${team.name}**.`).setColor('Green').setThumbnail(team.logoUrl);
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId(`accept_invite_${team._id}_${targetMember.id}`).setLabel('Aceptar').setStyle(ButtonStyle.Success),
+            new ButtonBuilder().setCustomId(`reject_invite_${team._id}_${targetMember.id}`).setLabel('Rechazar').setStyle(ButtonStyle.Danger)
+        );
+        
+        try {
+            await targetMember.send({ embeds: [embed], components: [row] });
 
     // --- LÓGICA CORREGIDA PARA ACTUALIZAR PERFIL ---
     if (customId === 'update_select_primary_position') {
