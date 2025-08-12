@@ -393,50 +393,7 @@ module.exports = async (client, interaction) => {
     
     // El bloque approve_modal_ ya no es necesario, lo hemos eliminado del flujo.
 
-    if (customId.startsWith('invite_player_modal_')) {
-        await interaction.deferReply({ ephemeral: true });
-
-        const teamId = customId.split('_')[3];
-        const team = await Team.findById(teamId);
-        if (!team) return interaction.editReply({ content: 'Tu equipo ya no existe.' });
-
-        const playerNameInput = fields.getTextInputValue('playerName').toLowerCase();
-        
-        const members = await guild.members.fetch();
-        const targetMembers = members.filter(m => 
-            !m.user.bot && (
-                m.user.username.toLowerCase().includes(playerNameInput) || 
-                (m.nickname && m.nickname.toLowerCase().includes(playerNameInput))
-            )
-        );
-
-        if (targetMembers.size === 0) {
-            return interaction.editReply({ content: `❌ No se encontró a ningún miembro que contenga "${playerNameInput}" en su nombre.` });
-        }
-
-        if (targetMembers.size > 1) {
-            const memberNames = targetMembers.map(m => m.user.tag).slice(0, 10).join(', ');
-            return interaction.editReply({ content: `Se encontraron varios miembros: **${memberNames}**... Por favor, sé más específico.` });
-        }
-
-        const targetMember = targetMembers.first();
-
-        const isManager = await Team.findOne({ managerId: targetMember.id });
-        if (isManager) {
-            return interaction.editReply({ content: `❌ No puedes invitar a **${targetMember.user.tag}** porque ya es Mánager del equipo **${isManager.name}**.` });
-        }
-
-        const embed = new EmbedBuilder().setTitle(`📩 Invitación de Equipo`).setDescription(`Has sido invitado a unirte a **${team.name}**.`).setColor('Green').setThumbnail(team.logoUrl);
-        const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`accept_invite_${team._id}_${targetMember.id}`).setLabel('Aceptar').setStyle(ButtonStyle.Success), new ButtonBuilder().setCustomId(`reject_invite_${team._id}_${targetMember.id}`).setLabel('Rechazar').setStyle(ButtonStyle.Danger));
-        
-        try {
-            await targetMember.send({ embeds: [embed], components: [row] });
-            return interaction.editReply({ content: `✅ Invitación enviada a **${targetMember.user.tag}**.` });
-        } catch (error) {
-            return interaction.editReply({ content: `❌ No se pudo enviar la invitación a ${targetMember.user.tag}. Es posible que tenga los MDs cerrados.` });
-        }
-    }
-
+   
     if (customId === 'create_league_modal') {
         await interaction.deferReply({ ephemeral: true });
 
