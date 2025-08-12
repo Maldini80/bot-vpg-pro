@@ -109,7 +109,7 @@ module.exports = async (client, interaction) => {
                     { name: 'Posiciones Buscadas', value: `\`${offer.positions.join(', ')}\`` },
                     { name: 'Requisitos', value: offer.requirements }
                 );
-            await interaction.followUp({ content: `**Contacto:** <@${offer.postedById}>`, embeds: [offerEmbed], ephemeral: true });
+            await interaction.followUp({ content: `**Contacto:** <@${offer.postedById}>`, embeds: [offerEmbed], flags: MessageFlags.Ephemeral });
         }
 
     } else if (customId === 'search_player_pos_filter') {

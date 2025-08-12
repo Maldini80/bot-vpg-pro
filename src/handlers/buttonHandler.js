@@ -99,7 +99,7 @@ async function sendPaginatedTeamMenu(interaction, teams, baseCustomId, paginatio
     if (interaction.deferred || interaction.replied || customId.startsWith('paginate_')) {
         await interaction.editReply({ content: contentMessage, components });
     } else {
-        await interaction.reply({ content: contentMessage, components, ephemeral: true });
+        await interaction.reply({ content: contentMessage, components, flags: MessageFlags.Ephemeral });
     }
 }
 // ===========================================================================
@@ -294,13 +294,13 @@ const handler = async (client, interaction) => {
             content: 'Aquí tienes el enlace para subir tu logo:\n\n' +
                      '👉 **https://imgur.com/upload** 👈\n\n' +
                      'Una vez que tengas la URL de la imagen, **vuelve al mensaje anterior** y pulsa **"Continuar y Pegar URL"**.',
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
         });
     }
 
     // --- NUEVO BLOQUE PARA "NO, USAR LOGO POR DEFECTO" ---
     else if (customId.startsWith('ask_logo_no_')) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const parts = customId.split('_');
         const leagueName = parts[3];
@@ -359,18 +359,18 @@ const handler = async (client, interaction) => {
             const slot = panel.timeSlots.find(s => s.time === time);
             if (!slot) {
                 await message.edit({ content: 'Este horario de partido ya no existe en el panel.', components: [] });
-                return interaction.followUp({ content: 'El horario ya no existe.', ephemeral: true });
+                return interaction.followUp({ content: 'El horario ya no existe.', flags: MessageFlags.Ephemeral });
             }
             
             if (slot.status === 'CONFIRMED') {
                 await message.edit({ content: '❌ Este desafío ha expirado porque ya se ha confirmado otro partido en este horario.', components: [] });
-                return interaction.followUp({ content: '¡Demasiado tarde! Ya has aceptado otro desafío para este horario.', ephemeral: true });
+                return interaction.followUp({ content: '¡Demasiado tarde! Ya has aceptado otro desafío para este horario.', flags: MessageFlags.Ephemeral });
             }
 
             const challengeIndex = slot.pendingChallenges.findIndex(c => c._id.toString() === challengeId);
             if (challengeIndex === -1) {
                 await message.edit({ content: 'Esta petición de desafío ya no es válida o ya fue gestionada.', components: [] });
-                return interaction.followUp({ content: 'La petición ya no es válida.', ephemeral: true });
+                return interaction.followUp({ content: 'La petición ya no es válida.', flags: MessageFlags.Ephemeral });
             }
 
             const [acceptedChallenge] = slot.pendingChallenges.splice(challengeIndex, 1);
@@ -448,7 +448,7 @@ const handler = async (client, interaction) => {
 
             // Comprobación de seguridad: solo el usuario invitado puede responder.
             if (interaction.user.id !== playerId) {
-                return interaction.followUp({ content: 'Esta invitación no es para ti.', ephemeral: true });
+                return interaction.followUp({ content: 'Esta invitación no es para ti.', flags: MessageFlags.Ephemeral });
             }
 
             const team = await Team.findById(teamId);
@@ -717,7 +717,7 @@ if (customId.startsWith('paginate_')) {
     if (recentlyNotifiedAgentAd.has(user.id)) {
         return interaction.reply({
             content: '❌ Ya te he enviado las instrucciones por MD hace poco. Por favor, revísalas antes de volver a intentarlo.',
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
         });
     }
 
@@ -747,14 +747,14 @@ if (customId.startsWith('paginate_')) {
 
         return interaction.reply({
             content: 'ℹ️ Para anunciarte, primero debes tener el rol de "Jugador". ¡Te acabo de enviar un Mensaje Directo con las instrucciones para conseguirlo!',
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
         });
 
     } catch (error) {
         // Manejar el caso en que el usuario tenga los MDs cerrados.
         return interaction.reply({
             content: '❌ Necesitas el rol de "Jugador" para anunciarte. Intenté enviarte una guía por MD pero los tienes desactivados. Por favor, busca el canal de control y completa tu perfil.',
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
         });
     }
 }
@@ -1091,7 +1091,7 @@ else if (customId === 'market_post_offer') {
             return interaction.showModal(modal);
         }
         if (customId.startsWith('approve_request_')) {
-            await interaction.deferReply({ ephemeral: true });
+            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
             if (!esAprobador) return interaction.editReply({ content: 'No tienes permiso.' });
 
@@ -1162,7 +1162,7 @@ if (customId.startsWith('admin_change_data_') || customId === 'team_edit_data_bu
 
     let team;
     if (customId.startsWith('admin_change_data_')) {
-        if (!isAdmin) return interaction.reply({ content: 'Acción restringida.', ephemeral: true });
+        if (!isAdmin) return interaction.reply({ content: 'Acción restringida.', flags: MessageFlags.Ephemeral });
         const teamId = customId.split('_')[3];
         team = await Team.findById(teamId);
     } else {
@@ -1172,7 +1172,7 @@ if (customId.startsWith('admin_change_data_') || customId === 'team_edit_data_bu
     // Si no se encuentra el equipo, respondemos aquí y detenemos la ejecución.
     // Esto es seguro porque es la primera y única respuesta.
     if (!team) {
-        return interaction.reply({ content: 'No se encontró el equipo para editar o no tienes los permisos necesarios.', ephemeral: true });
+        return interaction.reply({ content: 'No se encontró el equipo para editar o no tienes los permisos necesarios.', flags: MessageFlags.Ephemeral });
     }
 
     const modalTitle = `Editar Datos de ${team.name}`.substring(0, 45);
@@ -1197,7 +1197,7 @@ if (customId.startsWith('admin_change_data_') || customId === 'team_edit_data_bu
 // --- FIN DEL BLOQUE DE EDICIÓN ---
         
          if (customId === 'team_invite_player_button') {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const team = await Team.findOne({ guildId: guild.id, managerId: user.id });
         if (!team) {
             return interaction.editReply({ content: 'Solo los mánagers pueden invitar jugadores.' });
@@ -1222,12 +1222,12 @@ if (customId.startsWith('admin_change_data_') || customId === 'team_edit_data_bu
     if (customId.startsWith('reject_request_') || customId.startsWith('promote_player_') || customId.startsWith('demote_captain_') || customId.startsWith('kick_player_') || customId.startsWith('toggle_mute_player_')) {
         await interaction.deferUpdate();
         if (customId.startsWith('reject_request_')) {
-            if (!esAprobador) return interaction.followUp({ content: 'No tienes permiso.', ephemeral: true });
+            if (!esAprobador) return interaction.followUp({ content: 'No tienes permiso.', flags: MessageFlags.Ephemeral });
             const applicantId = customId.split('_')[2];
             const applicant = await guild.members.fetch(applicantId).catch(()=>null);
             const disabledRow = new ActionRowBuilder().addComponents(ButtonBuilder.from(interaction.message.components[0].components[0]).setDisabled(true), ButtonBuilder.from(interaction.message.components[0].components[1]).setDisabled(true));
             await interaction.message.edit({ components: [disabledRow] });
-            await interaction.followUp({ content: `La solicitud de **${applicant ? applicant.user.tag : 'un usuario'}** ha sido rechazada.`, ephemeral: true });
+            await interaction.followUp({ content: `La solicitud de **${applicant ? applicant.user.tag : 'un usuario'}** ha sido rechazada.`, flags: MessageFlags.Ephemeral });
             if (applicant) await applicant.send(`Tu solicitud para registrar un equipo ha sido rechazada.`).catch(() => {});
         } else if (customId.startsWith('promote_player_') || customId.startsWith('demote_captain_') || customId.startsWith('kick_player_') || customId.startsWith('toggle_mute_player_')) {
             const targetId = customId.substring(customId.lastIndexOf('_') + 1);
@@ -1318,7 +1318,7 @@ if (customId.startsWith('admin_change_data_') || customId === 'team_edit_data_bu
     }
 
     if (customId === 'view_teams_button') {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     const teams = await Team.find({ guildId: guild.id }).sort({ name: 1 }).lean();
     if (teams.length === 0) {
         return interaction.editReply({ content: 'No hay equipos registrados.' });
@@ -1355,7 +1355,7 @@ if (customId === 'team_view_roster_button') {
 }
 
     if (customId === 'apply_to_team_button') {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     const isManager = await Team.findOne({ guildId: guild.id, managerId: user.id });
     if (isManager) {
         return interaction.editReply({ content: '❌ Como Mánager de un equipo, no puedes enviar solicitudes de unión a otros equipos.' });
@@ -1401,7 +1401,7 @@ if (customId === 'team_view_roster_button') {
 
     // ESTE ES EL BLOQUE CORREGIDO PARA EL BOTÓN DE "GESTIONAR EQUIPO" DEL ADMIN
 if (customId === 'admin_manage_team_button') {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     
     // Comprobamos si es admin
     const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);

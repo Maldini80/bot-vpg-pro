@@ -1,5 +1,5 @@
 // src/commands/informar-lideres.js
-const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags } = require('discord.js');
 const Team = require('../models/team.js');
 
 // Función de utilidad para la pausa
@@ -12,7 +12,7 @@ module.exports = {
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
     async execute(interaction) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         // ID del canal de gestión de equipo, insertado directamente como solicitaste.
         const panelChannelId = '1396815967685705738';
@@ -77,7 +77,7 @@ module.exports = {
                      `- Se encontraron **${uniqueLeaderIds.length}** líderes únicos.\n` +
                      `- **${notifiedCount}** líderes fueron notificados correctamente.\n` +
                      `- **${failedCount}** líderes no pudieron ser notificados (MDs cerrados o fuera del servidor).`,
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
         });
     },
 };

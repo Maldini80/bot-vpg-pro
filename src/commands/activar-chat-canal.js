@@ -1,5 +1,5 @@
 // src/commands/activar-chat-canal.js
-const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
 const TeamChatChannel = require('../models/teamChatChannel.js');
 
 module.exports = {
@@ -14,7 +14,7 @@ module.exports = {
 
         const existing = await TeamChatChannel.findOne({ channelId, guildId });
         if (existing) {
-            return interaction.reply({ content: 'Este canal ya está activado como un canal de chat de equipo.', ephemeral: true });
+            return interaction.reply({ content: 'Este canal ya está activado como un canal de chat de equipo.', flags: MessageFlags.Ephemeral });
         }
 
         const newChannel = new TeamChatChannel({ channelId, guildId });

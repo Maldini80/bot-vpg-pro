@@ -1,5 +1,5 @@
 // src/commands/verificar-miembros.js
-const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags } = require('discord.js');
 const VPGUser = require('../models/user.js');
 
 // Una pequeña función de utilidad para esperar.
@@ -12,7 +12,7 @@ module.exports = {
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
     async execute(interaction) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         // IDs de roles a excluir de la verificación
         const exclusionRoles = [
@@ -52,7 +52,7 @@ module.exports = {
         for (const member of members.values()) {
             processedCount++;
             if (processedCount % 20 === 0) {
-                 await interaction.followUp({ content: `Procesados ${processedCount} de ${members.size} miembros...`, ephemeral: true });
+                 await interaction.followUp({ content: `Procesados ${processedCount} de ${members.size} miembros...`, flags: MessageFlags.Ephemeral });
             }
 
             if (member.user.bot || 
@@ -81,7 +81,7 @@ module.exports = {
                      `- Se procesaron **${members.size}** miembros en total.\n` +
                      `- **${notifiedCount}** miembro(s) fueron notificados correctamente por MD.\n` +
                      `- **${failedCount}** miembro(s) no pudieron ser notificados (MDs cerrados).`,
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
         });
     },
 };

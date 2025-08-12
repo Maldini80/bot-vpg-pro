@@ -1,5 +1,5 @@
 // src/handlers/modalHandler.js
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits, StringSelectMenuBuilder } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits, StringSelectMenuBuilder, MessageFlags } = require('discord.js');
 const Team = require('../models/team.js');
 const League = require('../models/league.js');
 const PlayerApplication = require('../models/playerApplication.js');
@@ -53,7 +53,7 @@ module.exports = async (client, interaction) => {
     const { customId, fields, guild, user, member, message } = interaction;
 
     if (customId === 'player_registration_modal') {
-        await interaction.deferReply({ ephemeral: true }); 
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral }); 
 
         const vpgUsername = fields.getTextInputValue('vpgUsernameInput');
         const twitterHandle = fields.getTextInputValue('twitterInput');
@@ -84,12 +84,12 @@ module.exports = async (client, interaction) => {
                 new ActionRowBuilder().addComponents(primaryMenu),
                 new ActionRowBuilder().addComponents(secondaryMenu)
             ],
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
         });
     }
 
     if (customId === 'edit_profile_modal') {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const vpgUsername = fields.getTextInputValue('vpgUsernameInput');
         const twitterHandle = fields.getTextInputValue('twitterInput');
@@ -144,7 +144,7 @@ module.exports = async (client, interaction) => {
     }
 
     if (customId.startsWith('manager_request_modal_')) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         
         const leagueName = customId.split('_')[3];
         const vpgUsername = fields.getTextInputValue('vpgUsername');
@@ -172,11 +172,11 @@ module.exports = async (client, interaction) => {
                 .setEmoji('🛡️')
         );
         
-        await interaction.editReply({ embeds: [embed], components: [row], ephemeral: true });
+        await interaction.editReply({ embeds: [embed], components: [row], flags: MessageFlags.Ephemeral });
     }
 
     if (customId.startsWith('final_logo_submit_')) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const parts = customId.split('_');
         const leagueName = parts[3];
@@ -191,7 +191,7 @@ module.exports = async (client, interaction) => {
     }
 
     if (customId.startsWith('edit_data_modal_')) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const teamId = customId.split('_')[3];
         const team = await Team.findById(teamId);
@@ -253,7 +253,7 @@ module.exports = async (client, interaction) => {
     // El resto de los manejadores de modales (market_agent_modal, offer_add_requirements, etc.) van aquí sin cambios...
     // (Asegúrate de que el resto de tu código original de este archivo esté aquí)
     if (customId === 'market_agent_modal' || customId.startsWith('market_agent_modal_edit')) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const isEditing = customId.startsWith('market_agent_modal_edit');
         
@@ -329,7 +329,7 @@ module.exports = async (client, interaction) => {
         return interaction.editReply({ content: `${responseMessage} en el canal ${channel}` });
     }
     if (customId.startsWith('offer_add_requirements_')) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const parts = customId.split('_');
         const teamId = parts[3];
@@ -395,7 +395,7 @@ module.exports = async (client, interaction) => {
 
    
     if (customId === 'create_league_modal') {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const leagueName = fields.getTextInputValue('leagueNameInput');
         const existingLeague = await League.findOne({ name: leagueName, guildId: guild.id });
@@ -405,7 +405,7 @@ module.exports = async (client, interaction) => {
     }
 
     if (customId.startsWith('confirm_dissolve_modal_')) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const teamId = customId.split('_')[3];
         const team = await Team.findById(teamId);
@@ -430,7 +430,7 @@ module.exports = async (client, interaction) => {
     }
     
     if (customId.startsWith('application_modal_')) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const teamId = customId.split('_')[2];
         const team = await Team.findById(teamId);
