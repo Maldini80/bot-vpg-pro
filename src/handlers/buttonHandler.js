@@ -1213,7 +1213,8 @@ if (customId.startsWith('admin_change_data_') || customId === 'team_edit_data_bu
             return interaction.editReply({ content: 'No se encontraron miembros elegibles para invitar.' });
         }
 
-        await sendPaginatedPlayerMenu(interaction, Array.from(eligibleMembers.values()), 0);
+        const sortedMembers = Array.from(eligibleMembers.values()).sort((a, b) => a.user.username.localeCompare(b.user.username));
+        await sendPaginatedPlayerMenu(interaction, sortedMembers, 0);
         return;
     }
     }
