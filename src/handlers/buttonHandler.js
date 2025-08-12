@@ -1,3 +1,4 @@
+// src/handlers/buttonHandler.js
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, EmbedBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
 const Team = require('../models/team.js');
 const League = require('../models/league.js');
@@ -11,6 +12,7 @@ const AGENT_AD_COOLDOWN = 5 * 60 * 1000; // 5 minutos en milisegundos
 
 const POSITIONS = ['POR', 'DFC', 'CARR', 'MCD', 'MV', 'MCO', 'DC'];
 
+// ======================= PEGA LA NUEVA FUNCIÓN AQUÍ =======================
 async function sendPaginatedTeamMenu(interaction, teams, baseCustomId, paginationId, page, contentMessage) {
     const ITEMS_PER_PAGE = 25;
     const totalPages = Math.ceil(teams.length / ITEMS_PER_PAGE);
@@ -50,55 +52,15 @@ async function sendPaginatedTeamMenu(interaction, teams, baseCustomId, paginatio
         components.push(navigationRow);
     }
     
+    // Si la interacción es una respuesta a un botón (ya diferida), usamos editReply.
+    // Si es una interacción de paginación (ya actualizada), usamos editReply.
     if (interaction.deferred || interaction.replied || customId.startsWith('paginate_')) {
         await interaction.editReply({ content: contentMessage, components });
     } else {
         await interaction.reply({ content: contentMessage, components, ephemeral: true });
     }
 }
-
-async function sendPaginatedPlayerMenu(interaction, members, page) {
-    const ITEMS_PER_PAGE = 25;
-    const totalPages = Math.ceil(members.length / ITEMS_PER_PAGE);
-    const startIndex = page * ITEMS_PER_PAGE;
-    const endIndex = startIndex + ITEMS_PER_PAGE;
-    const currentMembers = members.slice(startIndex, endIndex);
-
-    if (currentMembers.length === 0) {
-        return interaction.editReply({ content: 'No se encontraron jugadores elegibles en esta página.', components: [] });
-    }
-
-    const memberOptions = currentMembers.map(m => ({
-        label: m.user.username,
-        description: m.nickname || m.user.id,
-        value: m.id,
-    }));
-
-    const selectMenu = new StringSelectMenuBuilder()
-        .setCustomId('invite_player_select')
-        .setPlaceholder(`Página ${page + 1} de ${totalPages} - Selecciona un jugador a invitar`)
-        .addOptions(memberOptions);
-
-    const navigationRow = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-            .setCustomId(`paginate_invite_player_${page - 1}`)
-            .setLabel('◀️ Anterior')
-            .setStyle(ButtonStyle.Secondary)
-            .setDisabled(page === 0),
-        new ButtonBuilder()
-            .setCustomId(`paginate_invite_player_${page + 1}`)
-            .setLabel('Siguiente ▶️')
-            .setStyle(ButtonStyle.Secondary)
-            .setDisabled(page >= totalPages - 1)
-    );
-
-    const components = [new ActionRowBuilder().addComponents(selectMenu)];
-    if (totalPages > 1) {
-        components.push(navigationRow);
-    }
-    
-    await interaction.editReply({ content: 'Selecciona un jugador del menú para enviarle una invitación:', components });
-}
+// ===========================================================================
 
 async function updatePanelMessage(client, panelId) {
     try {
@@ -131,11 +93,11 @@ async function updatePanelMessage(client, panelId) {
         }
 
         const embed = new EmbedBuilder()
-			.setAuthor({ name: hostTeam.name, iconURL: hostTeam.logoUrl })
-			.setTitle(panelTitle)
-			.setColor(panelColor)
-			.setDescription(description)
-			.setThumbnail(hostTeam.logoUrl);
+    .setAuthor({ name: hostTeam.name, iconURL: hostTeam.logoUrl }) // <-- LÍNEA AÑADIDA
+    .setTitle(panelTitle)
+    .setColor(panelColor)
+    .setDescription(description)
+    .setThumbnail(hostTeam.logoUrl);
 
         const components = [];
         let currentRow = new ActionRowBuilder();
@@ -268,15 +230,17 @@ const handler = async (client, interaction) => {
         const guideEmbed = getLogoGuideEmbed();
 
         const row = new ActionRowBuilder().addComponents(
+            // --- INICIO DE LA MODIFICACIÓN DEL BOTÓN ---
             new ButtonBuilder()
-                .setCustomId('get_imgur_link_button')
-                .setLabel('Obtener Enlace para Subir Logo')
-                .setStyle(ButtonStyle.Success)
+                .setCustomId('get_imgur_link_button') // Nuevo ID para que el bot lo reconozca
+                .setLabel('Obtener Enlace para Subir Logo') // Texto más claro
+                .setStyle(ButtonStyle.Success) // ¡Color verde!
                 .setEmoji('🖼️'),
+            // --- FIN DE LA MODIFICACIÓN DEL BOTÓN ---
             new ButtonBuilder()
                 .setCustomId(`show_logo_modal_${leagueName}_${teamDataString}`)
                 .setLabel('Continuar y Pegar URL')
-                .setStyle(ButtonStyle.Primary)
+                .setStyle(ButtonStyle.Primary) // Lo ponemos azul para diferenciarlo
         );
 
         await interaction.editReply({ embeds: [guideEmbed], components: [row] });
@@ -433,12 +397,14 @@ const handler = async (client, interaction) => {
             await application.teamId.save();
             await application.save();
         }
+        // CORRECCIÓN: AÑADE TODO ESTE BLOQUE DE CÓDIGO
         else if (customId.startsWith('accept_invite_') || customId.startsWith('reject_invite_')) {
             const parts = customId.split('_');
             const action = parts[0];
             const teamId = parts[2];
             const playerId = parts[3];
 
+            // Comprobación de seguridad: solo el usuario invitado puede responder.
             if (interaction.user.id !== playerId) {
                 return interaction.followUp({ content: 'Esta invitación no es para ti.', ephemeral: true });
             }
@@ -478,57 +444,58 @@ const handler = async (client, interaction) => {
         }
         return;
     }
+// =================== COMIENZA EL BLOQUE DE CÓDIGO DEL PASO 5 ===================
 
-    if (customId.startsWith('paginate_invite_player_')) {
-        await interaction.deferUpdate();
-        const newPage = parseInt(customId.split('_')[3], 10);
+// Este bloque se activa si el ID de un botón pulsado empieza con "paginate_"
+if (customId.startsWith('paginate_')) {
+    // Le decimos a Discord "Recibido, estoy trabajando en ello" para que no muestre un error.
+    await interaction.deferUpdate();
 
-        const allMembers = await guild.members.fetch();
-        const teams = await Team.find({ guildId: guild.id }).select('managerId captains players').lean();
-        const playersInTeams = new Set(teams.flatMap(t => [t.managerId, ...t.captains, ...t.players]));
+    // Rompemos el ID del botón (ej: "paginate_view_1") en sus partes.
+    const parts = customId.split('_');
+    const action = parts[1]; // Será 'view', 'apply', o 'manage'
+    const newPage = parseInt(parts[2], 10); // El número de la página a la que vamos
 
-        const eligibleMembers = allMembers.filter(m => !m.user.bot && !playersInTeams.has(m.id));
-        
-        await sendPaginatedPlayerMenu(interaction, Array.from(eligibleMembers.values()), newPage);
+    // Preparamos variables que llenaremos a continuación.
+    let teams;
+    let baseCustomId;
+    let contentMessage;
+
+    // Según la acción del botón original, cargamos la lista de equipos y los textos correctos.
+    // Esto asegura que si estamos paginando la lista de "aplicar", no mostremos equipos que no tienen reclutamiento abierto.
+    if (action === 'view') {
+        teams = await Team.find({ guildId: guild.id }).sort({ name: 1 }).lean();
+        baseCustomId = 'view_team_roster_select';
+        contentMessage = 'Elige un equipo para ver su plantilla:';
+    } else if (action === 'apply') {
+        teams = await Team.find({ guildId: guild.id, recruitmentOpen: true }).sort({ name: 1 }).lean();
+        baseCustomId = 'apply_to_team_select';
+        contentMessage = 'Selecciona el equipo al que quieres aplicar:';
+    } else if (action === 'manage') {
+        teams = await Team.find({ guildId: interaction.guildId }).sort({ name: 1 }).lean();
+        baseCustomId = 'admin_select_team_to_manage';
+        contentMessage = 'Selecciona el equipo que deseas gestionar:';
+    } else {
+        // Si la acción no se reconoce, no hacemos nada para evitar errores.
         return;
     }
 
-    if (customId.startsWith('paginate_')) {
-        await interaction.deferUpdate();
-
-        const parts = customId.split('_');
-        const action = parts[1]; 
-        const newPage = parseInt(parts[2], 10);
-
-        let teams;
-        let baseCustomId;
-        let contentMessage;
-
-        if (action === 'view') {
-            teams = await Team.find({ guildId: guild.id }).sort({ name: 1 }).lean();
-            baseCustomId = 'view_team_roster_select';
-            contentMessage = 'Elige un equipo para ver su plantilla:';
-        } else if (action === 'apply') {
-            teams = await Team.find({ guildId: guild.id, recruitmentOpen: true }).sort({ name: 1 }).lean();
-            baseCustomId = 'apply_to_team_select';
-            contentMessage = 'Selecciona el equipo al que quieres aplicar:';
-        } else if (action === 'manage') {
-            teams = await Team.find({ guildId: interaction.guildId }).sort({ name: 1 }).lean();
-            baseCustomId = 'admin_select_team_to_manage';
-            contentMessage = 'Selecciona el equipo que deseas gestionar:';
-        } else {
-            return;
-        }
-
-        if (teams && teams.length > 0) {
-            await sendPaginatedTeamMenu(interaction, teams, baseCustomId, action, newPage, contentMessage);
-        } else {
-            await interaction.editReply({ content: 'No se encontraron equipos.', components: [] });
-        }
-        
-        return;
+    // Si la lista de equipos existe...
+    if (teams && teams.length > 0) {
+        // ...volvemos a llamar a la función que crea el menú (del Paso 1),
+        // pero esta vez le pasamos el nuevo número de página.
+        await sendPaginatedTeamMenu(interaction, teams, baseCustomId, action, newPage, contentMessage);
+    } else {
+        // Si por alguna razón la lista ahora está vacía (ej. se borró el último equipo), informamos.
+        await interaction.editReply({ content: 'No se encontraron equipos.', components: [] });
     }
+    
+    // Es CRUCIAL detener la ejecución del código aquí para que no continúe
+    // y entre en otros bloques `if` de este archivo por error.
+    return;
+}
 
+// =================== FINALIZA EL BLOQUE DE CÓDIGO DEL PASO 5 ===================
     if (customId.startsWith('team_submenu_')) {
         await interaction.deferReply({ flags: 64 });
         
@@ -573,27 +540,6 @@ const handler = async (client, interaction) => {
                 break;
         }
         return; 
-    }
-
-    if (customId === 'team_invite_player_button') {
-        await interaction.deferReply({ ephemeral: true });
-        const team = await Team.findOne({ guildId: guild.id, managerId: user.id });
-        if (!team) {
-            return interaction.editReply({ content: 'Solo los mánagers pueden invitar jugadores.' });
-        }
-
-        const allMembers = await guild.members.fetch();
-        const teams = await Team.find({ guildId: guild.id }).select('managerId captains players').lean();
-        const playersInTeams = new Set(teams.flatMap(t => [t.managerId, ...t.captains, ...t.players]));
-
-        const eligibleMembers = allMembers.filter(m => !m.user.bot && !playersInTeams.has(m.id));
-
-        if (eligibleMembers.size === 0) {
-            return interaction.editReply({ content: 'No se encontraron miembros elegibles para invitar.' });
-        }
-
-        await sendPaginatedPlayerMenu(interaction, Array.from(eligibleMembers.values()), 0);
-        return;
     }
 
     if (customId === 'team_manage_offer_button') {
@@ -653,6 +599,7 @@ const handler = async (client, interaction) => {
     }
 
     if (customId.startsWith('edit_team_offer_button_')) {
+        // CORRECCIÓN: Inicia el mismo flujo que "Crear Oferta" para una experiencia unificada.
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
@@ -695,76 +642,87 @@ const handler = async (client, interaction) => {
     if (customId.startsWith('market_')) {
         
         if (customId === 'market_post_agent') {
-			const hasRequiredRole = member.roles.cache.has(process.env.PLAYER_ROLE_ID) || member.roles.cache.has(process.env.CAPTAIN_ROLE_ID);
-			
-			if (hasRequiredRole) {
-				const modal = new ModalBuilder().setCustomId('market_agent_modal').setTitle('Anunciarse como Agente Libre');
-				const experienceInput = new TextInputBuilder().setCustomId('experienceInput').setLabel("Tu experiencia (clubes, logros, etc.)").setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(500);
-				const seekingInput = new TextInputBuilder().setCustomId('seekingInput').setLabel("¿Qué tipo de equipo buscas?").setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(500);
-				const availabilityInput = new TextInputBuilder().setCustomId('availabilityInput').setLabel("Tu disponibilidad horaria").setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(200);
-				modal.addComponents(new ActionRowBuilder().addComponents(experienceInput), new ActionRowBuilder().addComponents(seekingInput), new ActionRowBuilder().addComponents(availabilityInput));
-				return interaction.showModal(modal);
-			}
+    const hasRequiredRole = member.roles.cache.has(process.env.PLAYER_ROLE_ID) || member.roles.cache.has(process.env.CAPTAIN_ROLE_ID);
+    
+    // Si el usuario SÍ tiene el rol, todo funciona como antes.
+    if (hasRequiredRole) {
+        const modal = new ModalBuilder().setCustomId('market_agent_modal').setTitle('Anunciarse como Agente Libre');
+        const experienceInput = new TextInputBuilder().setCustomId('experienceInput').setLabel("Tu experiencia (clubes, logros, etc.)").setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(500);
+        const seekingInput = new TextInputBuilder().setCustomId('seekingInput').setLabel("¿Qué tipo de equipo buscas?").setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(500);
+        const availabilityInput = new TextInputBuilder().setCustomId('availabilityInput').setLabel("Tu disponibilidad horaria").setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(200);
+        modal.addComponents(new ActionRowBuilder().addComponents(experienceInput), new ActionRowBuilder().addComponents(seekingInput), new ActionRowBuilder().addComponents(availabilityInput));
+        return interaction.showModal(modal);
+    }
 
-			if (recentlyNotifiedAgentAd.has(user.id)) {
-				return interaction.reply({
-					content: '❌ Ya te he enviado las instrucciones por MD hace poco. Por favor, revísalas antes de volver a intentarlo.',
-					ephemeral: true
-				});
-			}
+    // --- NUEVA LÓGICA PARA USUARIOS SIN ROL ---
 
-			const targetChannelId = '1396815232122228827';
-			
-			const guideEmbed = new EmbedBuilder()
-				.setTitle('📝 Completa tu perfil para ser Agente Libre')
-				.setColor('Orange')
-				.setDescription('He visto que intentas anunciarte como Agente Libre. ¡Genial! Para poder hacerlo, primero necesitas tener el rol de "Jugador", que se te asigna automáticamente al completar tu perfil.')
-				.addFields(
-					{ name: 'Paso 1: Ve al canal de control', value: `Haz clic aquí para ir al canal <#${targetChannelId}>.` },
-					{ name: 'Paso 2: Abre el menú de jugador', value: 'Pulsa el botón **"Acciones de Jugador"**.' },
-					{ name: 'Paso 3: Completa tu perfil', value: 'En el menú que aparecerá, pulsa **"Actualizar Perfil"** y rellena todos tus datos.' }
-				)
-				.setFooter({ text: 'Una vez completado, recibirás el rol y podrás anunciarte sin problemas.' });
+    // 1. Comprobar si el usuario está en cooldown para evitar spam.
+    if (recentlyNotifiedAgentAd.has(user.id)) {
+        return interaction.reply({
+            content: '❌ Ya te he enviado las instrucciones por MD hace poco. Por favor, revísalas antes de volver a intentarlo.',
+            ephemeral: true
+        });
+    }
 
-			try {
-				await user.send({ embeds: [guideEmbed] });
+    // 2. Si no está en cooldown, preparamos y enviamos la guía por MD.
+    // !! IMPORTANTE: Asegúrate de que este ID de canal es el correcto para tu servidor !!
+    const targetChannelId = '1396815232122228827';
+    
+    const guideEmbed = new EmbedBuilder()
+        .setTitle('📝 Completa tu perfil para ser Agente Libre')
+        .setColor('Orange')
+        .setDescription('He visto que intentas anunciarte como Agente Libre. ¡Genial! Para poder hacerlo, primero necesitas tener el rol de "Jugador", que se te asigna automáticamente al completar tu perfil.')
+        .addFields(
+            { name: 'Paso 1: Ve al canal de control', value: `Haz clic aquí para ir al canal <#${targetChannelId}>.` },
+            { name: 'Paso 2: Abre el menú de jugador', value: 'Pulsa el botón **"Acciones de Jugador"**.' },
+            { name: 'Paso 3: Completa tu perfil', value: 'En el menú que aparecerá, pulsa **"Actualizar Perfil"** y rellena todos tus datos.' }
+        )
+        .setFooter({ text: 'Una vez completado, recibirás el rol y podrás anunciarte sin problemas.' });
 
-				recentlyNotifiedAgentAd.add(user.id);
-				setTimeout(() => {
-					recentlyNotifiedAgentAd.delete(user.id);
-				}, AGENT_AD_COOLDOWN);
+    try {
+        await user.send({ embeds: [guideEmbed] });
 
-				return interaction.reply({
-					content: 'ℹ️ Para anunciarte, primero debes tener el rol de "Jugador". ¡Te acabo de enviar un Mensaje Directo con las instrucciones para conseguirlo!',
-					ephemeral: true
-				});
+        // 3. Añadir al usuario al cooldown y responder en el canal.
+        recentlyNotifiedAgentAd.add(user.id);
+        setTimeout(() => {
+            recentlyNotifiedAgentAd.delete(user.id);
+        }, AGENT_AD_COOLDOWN); // Se eliminará del cooldown después de 5 minutos.
 
-			} catch (error) {
-				return interaction.reply({
-					content: '❌ Necesitas el rol de "Jugador" para anunciarte. Intenté enviarte una guía por MD pero los tienes desactivados. Por favor, busca el canal de control y completa tu perfil.',
-					ephemeral: true
-				});
-			}
-		}
-		else if (customId === 'market_post_offer') {
-			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        return interaction.reply({
+            content: 'ℹ️ Para anunciarte, primero debes tener el rol de "Jugador". ¡Te acabo de enviar un Mensaje Directo con las instrucciones para conseguirlo!',
+            ephemeral: true
+        });
 
-			const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
-			if (!team) return interaction.editReply({ content: '❌ Solo los Mánagers o Capitanes pueden publicar ofertas.' });
-			
-			const positionOptions = POSITIONS.map(p => ({ label: p, value: p }));
-			const positionMenu = new StringSelectMenuBuilder()
-				.setCustomId(`offer_select_positions_${team._id}`)
-				.setPlaceholder('Selecciona las posiciones que buscas')
-				.addOptions(positionOptions)
-				.setMinValues(1)
-				.setMaxValues(positionOptions.length);
+    } catch (error) {
+        // Manejar el caso en que el usuario tenga los MDs cerrados.
+        return interaction.reply({
+            content: '❌ Necesitas el rol de "Jugador" para anunciarte. Intenté enviarte una guía por MD pero los tienes desactivados. Por favor, busca el canal de control y completa tu perfil.',
+            ephemeral: true
+        });
+    }
+}
+        // ESTE ES EL NUEVO BLOQUE QUE DEBES PEGAR EN SU LUGAR
+else if (customId === 'market_post_offer') {
+    // CORRECCIÓN: Se aplaza la respuesta ANTES de la consulta a la base de datos.
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-			await interaction.editReply({
-				content: '**Paso 1 de 2:** Selecciona del menú todas las posiciones que tu equipo necesita cubrir.',
-				components: [new ActionRowBuilder().addComponents(positionMenu)],
-			});
-		}
+    const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
+    if (!team) return interaction.editReply({ content: '❌ Solo los Mánagers o Capitanes pueden publicar ofertas.' });
+    
+    const positionOptions = POSITIONS.map(p => ({ label: p, value: p }));
+    const positionMenu = new StringSelectMenuBuilder()
+        .setCustomId(`offer_select_positions_${team._id}`)
+        .setPlaceholder('Selecciona las posiciones que buscas')
+        .addOptions(positionOptions)
+        .setMinValues(1)
+        .setMaxValues(positionOptions.length); // Usamos la longitud real de las opciones
+
+    // CORRECCIÓN: Se usa editReply para enviar la respuesta final.
+    await interaction.editReply({
+        content: '**Paso 1 de 2:** Selecciona del menú todas las posiciones que tu equipo necesita cubrir.',
+        components: [new ActionRowBuilder().addComponents(positionMenu)],
+    });
+}
         else if (customId === 'market_search_teams') {
             await interaction.deferReply({ flags: 64 });
             const leagues = await League.find({ guildId: guild.id }).lean();
@@ -1042,7 +1000,7 @@ const handler = async (client, interaction) => {
         uniqueMatches.sort((a,b) => a.time.localeCompare(b.time));
 
         for(const match of uniqueMatches) {
-            description += `**🕕 ${match.time}** vs **${match.opponent.name}**\\n> Contacto: <@${match.opponent.managerId}>\\n\\n`;
+            description += `**🕕 ${match.time}** vs **${match.opponent.name}**\n> Contacto: <@${match.opponent.managerId}>\n\n`;
         }
         
         if (description === '') { description = 'No tienes ningún partido programado.'; }
@@ -1071,7 +1029,7 @@ const handler = async (client, interaction) => {
             const team = await Team.findById(teamId);
             if (!team) return interaction.reply({ content: 'Equipo no encontrado.', flags: 64 });
             const modal = new ModalBuilder().setCustomId(`confirm_dissolve_modal_${teamId}`).setTitle(`Disolver Equipo: ${team.name}`);
-            const confirmationInput = new TextInputBuilder().setCustomId('confirmation_text').setLabel(`Escribe \"${team.name}\" para confirmar`).setStyle(TextInputStyle.Short).setRequired(true).setPlaceholder(team.name);
+            const confirmationInput = new TextInputBuilder().setCustomId('confirmation_text').setLabel(`Escribe "${team.name}" para confirmar`).setStyle(TextInputStyle.Short).setRequired(true).setPlaceholder(team.name);
             modal.addComponents(new ActionRowBuilder().addComponents(confirmationInput));
             return interaction.showModal(modal);
         }
@@ -1093,7 +1051,7 @@ const handler = async (client, interaction) => {
                 const embed = originalMessage.embeds[0];
                 const teamName = embed.fields.find(f => f.name === 'Nombre del Equipo').value;
                 const teamAbbr = embed.fields.find(f => f.name === 'Abreviatura').value;
-                const teamLogoUrl = embed.fields.find(f => f.name === 'URL del Logo').value.match(/\\(([^)]+)\\)/)[1]; // Extrae la URL del formato [Ver Logo](URL)
+                const teamLogoUrl = embed.fields.find(f => f.name === 'URL del Logo').value.match(/\(([^)]+)\)/)[1]; // Extrae la URL del formato [Ver Logo](URL)
                 const twitterValue = embed.fields.find(f => f.name === 'Twitter del Equipo').value;
                 const teamTwitter = (twitterValue && twitterValue !== 'No especificado') ? twitterValue : null;
                 
@@ -1115,14 +1073,14 @@ const handler = async (client, interaction) => {
                 
                 try {
                     const managerGuideEmbed = new EmbedBuilder()
-                        .setTitle(`👑 ¡Felicidades, Mánager! Tu equipo \"${teamName}\" ha sido aprobado.`) 
+                        .setTitle(`👑 ¡Felicidades, Mánager! Tu equipo "${teamName}" ha sido aprobado.`)
                         .setColor('Gold')
                         .setImage('https://i.imgur.com/KjamtCg.jpeg')
                         .setDescription('¡Bienvenido a la élite de la comunidad! Tu centro de mando principal es el panel del canal <#1396815967685705738>.')
                         .addFields(
-                            { name: 'Paso 1: Construye tu Plantilla', value: 'Desde el submenú `Gestionar Plantilla` puedes:\\n• **`Invitar Jugador`**: Añade miembros directamente.\\n• **`Ascender a Capitán`**: Delega responsabilidades en jugadores de confianza.' },
-                            { name: 'Paso 2: Mantén tu Equipo Activo', value: 'Desde los submenús correspondientes puedes:\\n• **`Gestionar Amistosos`**: Anuncia tu disponibilidad o busca rivales.\\n• **`Gestionar Fichajes`**: Publica ofertas para encontrar nuevos talentos.'},
-                            { name: 'Paso 3: Administración y Consejos', value: '• **`Editar Datos del Equipo`**: Mantén actualizados el nombre, logo, etc.\\n• **`Abrir/Cerrar Reclutamiento`**: Controla si tu equipo acepta solicitudes.'}
+                            { name: 'Paso 1: Construye tu Plantilla', value: 'Desde el submenú `Gestionar Plantilla` puedes:\n• **`Invitar Jugador`**: Añade miembros directamente.\n• **`Ascender a Capitán`**: Delega responsabilidades en jugadores de confianza.' },
+                            { name: 'Paso 2: Mantén tu Equipo Activo', value: 'Desde los submenús correspondientes puedes:\n• **`Gestionar Amistosos`**: Anuncia tu disponibilidad o busca rivales.\n• **`Gestionar Fichajes`**: Publica ofertas para encontrar nuevos talentos.'},
+                            { name: 'Paso 3: Administración y Consejos', value: '• **`Editar Datos del Equipo`**: Mantén actualizados el nombre, logo, etc.\n• **`Abrir/Cerrar Reclutamiento`**: Controla si tu equipo acepta solicitudes.'}
                         );
                     await applicantMember.send({ embeds: [managerGuideEmbed] });
                 } catch (dmError) {
@@ -1226,20 +1184,20 @@ if (customId.startsWith('admin_change_data_') || customId === 'team_edit_data_bu
                 // --- INICIO DEL CÓDIGO AÑADIDO: MD de bienvenida al Capitán ---
                 try {
                     const captainGuideEmbed = new EmbedBuilder()
-                        .setTitle(`🛡️ ¡Enhorabuena! Has sido ascendido a Capitán de \"${team.name}\".`) 
+                        .setTitle(`🛡️ ¡Enhorabuena! Has sido ascendido a Capitán de "${team.name}".`)
                         .setColor('Blue')
-                        .setDescription(`El Mánager confía en ti para ser su mano derecha. Has obtenido acceso a nuevas herramientas en el panel de equipo de <#1396815967685705738> para ayudar en la gestión.`) 
+                        .setDescription(`El Mánager confía en ti para ser su mano derecha. Has obtenido acceso a nuevas herramientas en el panel de equipo de <#1396815967685705738> para ayudar en la gestión.`)
                         .addFields(
                             { 
                                 name: '✅ Tus Nuevas Responsabilidades', 
-                                value: '• **Gestionar Amistosos**: Eres clave para mantener al equipo en forma. Puedes programar y buscar partidos.\\n' + 
-                                       '• **Gestionar Fichajes**: Ayuda a buscar nuevos talentos creando y actualizando las ofertas del equipo.\\n' + 
+                                value: '• **Gestionar Amistosos**: Eres clave para mantener al equipo en forma. Puedes programar y buscar partidos.\n' +
+                                       '• **Gestionar Fichajes**: Ayuda a buscar nuevos talentos creando y actualizando las ofertas del equipo.\n' +
                                        '• **Gestionar Miembros**: Mantén el orden. Puedes expulsar jugadores (excepto a otros capitanes) y usar la función de mutear en el chat de equipo.'
                             },
-                            {
+                            { 
                                 name: '❌ Límites de tu Rol (Reservado al Mánager)', 
-                                value: '• No puedes editar los datos principales del equipo (nombre, logo).\\n' + 
-                                       '• No puedes invitar jugadores directamente.\\n' + 
+                                value: '• No puedes editar los datos principales del equipo (nombre, logo).\n' +
+                                       '• No puedes invitar jugadores directamente.\n' +
                                        '• No puedes ascender o degradar a otros miembros.'
                             },
                             {
@@ -1281,7 +1239,7 @@ if (customId.startsWith('admin_change_data_') || customId === 'team_edit_data_bu
     if (customId === 'request_manager_role_button') {
         await interaction.deferReply({ flags: 64 });
         const existingTeam = await Team.findOne({ $or: [{ managerId: user.id }, { captains: user.id }, { players: user.id }], guildId: guild.id });
-        if (existingTeam) return interaction.editReply({ content: `Ya perteneces al equipo **${existingTeam.name}**. ` });
+        if (existingTeam) return interaction.editReply({ content: `Ya perteneces al equipo **${existingTeam.name}**.` });
         const leagues = await League.find({ guildId: guild.id });
         if(leagues.length === 0) return interaction.editReply({ content: 'No hay ligas configuradas.' });
         const leagueOptions = leagues.map(l => ({ label: l.name, value: l.name }));
@@ -1310,13 +1268,13 @@ if (customId === 'team_view_roster_button') {
      let rosterString = '';
      const fetchMemberInfo = async (ids, roleName) => {
          if (!ids || ids.length === 0) return;
-         rosterString += `\\n**${roleName}**\\n`;
+         rosterString += `\n**${roleName}**\n`;
          for (const memberId of ids) {
              try {
                 const memberData = await guild.members.fetch(memberId);
                 const vpgUser = memberMap.get(memberId)?.vpgUsername || 'N/A';
-                rosterString += `> ${memberData.user.username} (${vpgUser})\\n`;
-             } catch (error) { rosterString += `> *Usuario no encontrado (ID: ${memberId})*\\n`; }
+                rosterString += `> ${memberData.user.username} (${vpgUser})\n`;
+             } catch (error) { rosterString += `> *Usuario no encontrado (ID: ${memberId})*\n`; }
          }
      };
      await fetchMemberInfo([teamToView.managerId].filter(Boolean), '👑 Mánager');
@@ -1355,7 +1313,7 @@ if (customId === 'team_view_roster_button') {
         await teamToLeave.save();
         await member.roles.remove([process.env.CAPTAIN_ROLE_ID, process.env.MUTED_ROLE_ID]).catch(() => {});
         if (member.id !== guild.ownerId) await member.setNickname(user.username).catch(()=>{});
-        await interaction.editReply({ content: `Has abandonado el equipo **${teamToLeave.name}**. ` });
+        await interaction.editReply({ content: `Has abandonado el equipo **${teamToLeave.name}**.` });
         const manager = await client.users.fetch(teamToLeave.managerId).catch(() => null);
         if (manager) await manager.send(`El jugador **${user.tag}** ha abandonado tu equipo.`);
         return;
@@ -1441,10 +1399,10 @@ if (customId === 'admin_manage_team_button') {
             const teamName = m.embeds[0].fields.find(f => f.name === 'Nombre del Equipo')?.value || 'N/A';
             const userTag = m.embeds[0].author.name || 'N/A';
             return `> **${teamName}** por ${userTag} - [Ir a la solicitud](${m.url})`;
-        }).join('\\n');
+        }).join('\n');
 
         const embed = new EmbedBuilder()
-            .setTitle(`⏳ ${pendingRequests.size} Solicitud(es) Pendiente(s)`) 
+            .setTitle(`⏳ ${pendingRequests.size} Solicitud(es) Pendiente(s)`)
             .setDescription(description)
             .setColor('Yellow')
             .setTimestamp();
@@ -1567,12 +1525,12 @@ function getLogoGuideEmbed() {
         .setTitle('Guía para Añadir/Cambiar un Logo')
         .setColor('Blue')
         .setDescription(
-            'Para usar un logo personalizado, necesitas un enlace directo a la imagen. Sigue estos sencillos pasos:\\n\\n' + 
-            '1. Abre el siguiente enlace en tu navegador:\\n' + 
-            '👉 **https://imgur.com/upload** 👈\\n\\n' + 
-            '2. Arrastra tu imagen a la página de Imgur.\\n\\n' + 
-            '3. Una vez subida, haz **clic derecho** sobre la imagen y selecciona **"Copiar dirección de imagen"**.\\n\\n' + 
-            'Esa URL es la que deberás pegar en el campo \"Nueva URL Del Logo\" del formulario de edición.'
+            'Para usar un logo personalizado, necesitas un enlace directo a la imagen. Sigue estos sencillos pasos:\n\n' +
+            '1. Abre el siguiente enlace en tu navegador:\n' +
+            '👉 **https://imgur.com/upload** 👈\n\n' +
+            '2. Arrastra tu imagen a la página de Imgur.\n\n' +
+            '3. Una vez subida, haz **clic derecho** sobre la imagen y selecciona **"Copiar dirección de imagen"**.\n\n' +
+            'Esa URL es la que deberás pegar en el campo "Nueva URL Del Logo" del formulario de edición.'
         );
 }
 
