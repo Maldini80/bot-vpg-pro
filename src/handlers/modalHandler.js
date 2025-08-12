@@ -239,7 +239,7 @@ module.exports = async (client, interaction) => {
 
                     if (changes.length > 0) {
                         const logEmbed = new EmbedBuilder()
-                            .setTitle(\`📢 Notificación: Datos de \"${team.name}\" Editados​`)
+                            .setTitle(`📢 Notificación: Datos de \"${team.name}\" Editados`)
                             .setColor('Blue')
                             .setAuthor({ name: `Realizado por: ${user.tag}`, iconURL: user.displayAvatarURL() })
                             .setDescription(`El mánager ha actualizado los siguientes datos:
