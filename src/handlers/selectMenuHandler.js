@@ -13,39 +13,6 @@ module.exports = async (client, interaction) => {
     const { customId, values, guild, user } = interaction;
     const selectedValue = values[0];
 
-    if (customId === 'invite_player_select') {
-        await interaction.deferUpdate();
-        const targetId = selectedValue;
-
-        const team = await Team.findOne({ guildId: guild.id, managerId: user.id });
-        if (!team) {
-            return interaction.editReply({ content: 'No se ha encontrado tu equipo o ya no eres el mánager.', components: [] });
-        }
-
-        const targetMember = await guild.members.fetch(targetId).catch(() => null);
-        if (!targetMember) {
-            return interaction.editReply({ content: 'El miembro seleccionado ya no se encuentra en el servidor.', components: [] });
-        }
-
-        const isManager = await Team.findOne({ managerId: targetMember.id });
-        if (isManager) {
-            return interaction.editReply({ content: `❌ No puedes invitar a **${targetMember.user.tag}** porque ya es Mánager del equipo **${isManager.name}**.` });
-        }
-
-        const embed = new EmbedBuilder().setTitle(`📩 Invitación de Equipo`).setDescription(`Has sido invitado a unirte a **${team.name}**.`).setColor('Green').setThumbnail(team.logoUrl);
-        const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId(`accept_invite_${team._id}_${targetMember.id}`).setLabel('Aceptar').setStyle(ButtonStyle.Success),
-            new ButtonBuilder().setCustomId(`reject_invite_${team._id}_${targetMember.id}`).setLabel('Rechazar').setStyle(ButtonStyle.Danger)
-        );
-        
-        try {
-            await targetMember.send({ embeds: [embed], components: [row] });
-            return interaction.editReply({ content: `✅ Invitación enviada a **${targetMember.user.tag}**.`, components: [] });
-        } catch (error) {
-            return interaction.editReply({ content: `❌ No se pudo enviar la invitación a ${targetMember.user.tag}. Es posible que tenga los MDs cerrados.`, components: [] });
-        }
-    }
-
     // --- LÓGICA CORREGIDA PARA ACTUALIZAR PERFIL ---
     if (customId === 'update_select_primary_position') {
         // CORRECCIÓN: Usar deferUpdate para asegurar la respuesta a tiempo.
@@ -111,7 +78,7 @@ module.exports = async (client, interaction) => {
                 .setThumbnail(offer.teamId.logoUrl && offer.teamId.logoUrl.startsWith('http') ? offer.teamId.logoUrl : null)
                 .setColor('Green')
                 .addFields(
-                    { name: 'Posiciones Buscadas', value: ``${offer.positions.join(', ')}`` },
+                    { name: 'Posiciones Buscadas', value: `\`${offer.positions.join(', ')}\`` },
                     { name: 'Requisitos', value: offer.requirements }
                 );
             await interaction.followUp({ content: `**Contacto:** <@${offer.postedById}>`, embeds: [offerEmbed], ephemeral: true });
@@ -206,7 +173,7 @@ module.exports = async (client, interaction) => {
                 .setLabel('Continuar con la Creación del Panel')
                 .setStyle(ButtonStyle.Success);
             await interaction.editReply({
-                content: `Has seleccionado las ligas: **${selectedLeagues.length > 0 ? selectedLeagues.join(', ') : 'Ninguna'}**. Pulsa continuar.`, 
+                content: `Has seleccionado las ligas: **${selectedLeagues.length > 0 ? selectedLeagues.join(', ') : 'Ninguna'}**. Pulsa continuar.`,
                 components: [new ActionRowBuilder().addComponents(continueButton)]
             });
         } else if (customId === 'admin_select_team_to_manage') {
@@ -318,21 +285,21 @@ try {
         .addFields(
             {
                 name: '➡️ ¿Ya tienes equipo pero necesitas unirte en Discord?',
-                value: 'Tienes dos formas de hacerlo:\n' + 
-                       '1. **La más recomendada:** Habla con tu **Mánager o Capitán**. Ellos pueden usar la función `Invitar Jugador` desde su panel para añadirte al instante.\n' + 
+                value: 'Tienes dos formas de hacerlo:\n' +
+                       '1. **La más recomendada:** Habla con tu **Mánager o Capitán**. Ellos pueden usar la función `Invitar Jugador` desde su panel para añadirte al instante.\n' +
                        '2. **Si prefieres tomar la iniciativa:** Puedes ir al panel de <#1396815232122228827>, pulsar `Acciones de Jugador` -> `Aplicar a un Equipo`, buscar tu club en la lista y enviarles una solicitud formal.'
             },
-            {
+            { 
                 name: '🔎 ¿Buscas un nuevo reto? Guía Completa del Mercado de Fichajes', 
-                value: 'El canal <#1402608609724072040> es tu centro de operaciones.\n' + 
-                       '• **Para anunciarte**: Usa `Anunciarse como Agente Libre`. Si ya tenías un anuncio publicado, **este será reemplazado automáticamente por el nuevo**, nunca tendrás duplicados. Esta acción de publicar/reemplazar tu anuncio solo se puede realizar **una vez cada 3 días**.\n' + 
-                       '• **Para buscar**: Usa `Buscar Ofertas de Equipo` para ver qué equipos han publicado vacantes y qué perfiles necesitan.\n' + 
+                value: 'El canal <#1402608609724072040> es tu centro de operaciones.\n' +
+                       '• **Para anunciarte**: Usa `Anunciarse como Agente Libre`. Si ya tenías un anuncio publicado, **este será reemplazado automáticamente por el nuevo**, nunca tendrás duplicados. Esta acción de publicar/reemplazar tu anuncio solo se puede realizar **una vez cada 3 días**.\n' +
+                       '• **Para buscar**: Usa `Buscar Ofertas de Equipo` para ver qué equipos han publicado vacantes y qué perfiles necesitan.\n' +
                        '• **Para administrar tu anuncio**: Usa `Gestionar mi Anuncio` en cualquier momento para **editar** los detalles o **borrarlo** definitivamente si encuentras equipo.'
             },
             {
                 name: '⚙️ Herramientas Clave de tu Carrera',
-                value: 'Desde el panel principal de <#1396815232122228827> (`Acciones de Jugador`) tienes control total:\n' + 
-                       '• **`Actualizar Perfil`**: Es crucial que mantengas tus IDs de juego (PSN, EA) actualizados.\n' + 
+                value: 'Desde el panel principal de <#1396815232122228827> (`Acciones de Jugador`) tienes control total:\n' +
+                       '• **`Actualizar Perfil`**: Es crucial que mantengas tus IDs de juego (PSN, EA) actualizados.\n' +
                        '• **`Abandonar Equipo`**: Si en el futuro decides dejar tu equipo actual, esta opción te dará total independencia para hacerlo.'
             }
         );
@@ -345,14 +312,14 @@ try {
 // --- FIN DEL CÓDIGO AÑADIDO ---
                 }
                 
-                await interaction.editReply({
+                await interaction.editReply({ 
                     content: '✅ **¡Registro completado!** Has recibido el rol de Jugador en el servidor. ¡Bienvenido!',
                     components: [] 
                 });
 
             } catch (err) {
                 console.error("Error al finalizar registro y asignar rol:", err);
-                await interaction.editReply({
+                await interaction.editReply({ 
                     content: 'Tu perfil se ha guardado, pero hubo un error al asignarte el rol en el servidor. Por favor, contacta a un administrador.',
                     components: []
                 });
