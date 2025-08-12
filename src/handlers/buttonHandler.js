@@ -1238,7 +1238,18 @@ if (customId.startsWith('admin_change_data_') || customId === 'team_edit_data_bu
             const isManagerAction = team.managerId === user.id;
             if(customId.startsWith('kick_player_')) {
                 const isTargetCaptain = team.captains.includes(targetId);
-                if(isTargetCaptain && !isManagerAction) return interaction.editReply({content: 'Un capitán no puede expulsar a otro capitán.', components: []});
+                const isTargetManager = team.managerId === targetId;
+
+                // Prevent captain from kicking manager
+                if (isTargetManager) {
+                    return interaction.editReply({ content: 'No puedes expulsar al mánager del equipo.', components: [] });
+                }
+
+                // Existing check: Prevent captain from kicking another captain
+                if(isTargetCaptain && !isManagerAction) {
+                    return interaction.editReply({content: 'Un capitán no puede expulsar a otro capitán.', components: []});
+                }
+
                 team.players = team.players.filter(p => p !== targetId);
                 team.captains = team.captains.filter(c => c !== targetId);
                 await targetMember.roles.remove([process.env.CAPTAIN_ROLE_ID, process.env.MUTED_ROLE_ID]).catch(() => {});
