@@ -497,7 +497,8 @@ const handler = async (client, interaction) => {
 
         const eligibleMembers = allMembers.filter(m => !m.user.bot && !playersInTeams.has(m.id));
         
-        await sendPaginatedPlayerMenu(interaction, Array.from(eligibleMembers.values()), newPage);
+        const sortedMembers = Array.from(eligibleMembers.values()).sort((a, b) => a.user.username.localeCompare(b.user.username));
+        await sendPaginatedPlayerMenu(interaction, sortedMembers, newPage);
         return;
     }
 // =================== COMIENZA EL BLOQUE DE CÓDIGO DEL PASO 5 ===================
