@@ -1254,6 +1254,14 @@ if (customId.startsWith('admin_change_data_') || customId === 'team_edit_data_bu
                 team.captains = team.captains.filter(c => c !== targetId);
                 await targetMember.roles.remove([process.env.CAPTAIN_ROLE_ID, process.env.MUTED_ROLE_ID]).catch(() => {});
                 if (targetMember.id !== interaction.guild.ownerId) await targetMember.setNickname(targetMember.user.username).catch(()=>{});
+
+                // NEW: Send DM to the kicked player
+                try {
+                    await targetMember.send(`Has sido expulsado del equipo **${team.name}**.`);
+                } catch (dmError) {
+                    console.log(`AVISO: No se pudo enviar MD de expulsión a ${targetMember.user.tag}.`);
+                }
+
                 await interaction.editReply({ content: `✅ **${targetMember.user.username}** ha sido expulsado.`, components: [] });
             } else if (customId.startsWith('promote_player_')) {
                 if(!isManagerAction) return interaction.editReply({content: 'Solo el Mánager puede ascender.', components: []});
