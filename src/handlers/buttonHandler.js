@@ -11,6 +11,48 @@ const recentlyNotifiedAgentAd = new Set();
 const AGENT_AD_COOLDOWN = 5 * 60 * 1000; // 5 minutos en milisegundos
 
 const POSITIONS = ['POR', 'DFC', 'CARR', 'MCD', 'MV', 'MCO', 'DC'];
+async function sendPaginatedPlayerMenu(interaction, members, page) {
+    const ITEMS_PER_PAGE = 25;
+    const totalPages = Math.ceil(members.length / ITEMS_PER_PAGE);
+    const startIndex = page * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    const currentMembers = members.slice(startIndex, endIndex);
+
+    if (currentMembers.length === 0) {
+        return interaction.editReply({ content: 'No se encontraron jugadores elegibles en esta página.', components: [] });
+    }
+
+    const memberOptions = currentMembers.map(m => ({
+        label: m.user.username,
+        description: m.nickname || m.user.id,
+        value: m.id,
+    }));
+
+    const selectMenu = new StringSelectMenuBuilder()
+        .setCustomId('invite_player_select')
+        .setPlaceholder(`Página ${page + 1} de ${totalPages} - Selecciona un jugador a invitar`)
+        .addOptions(memberOptions);
+
+    const navigationRow = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+            .setCustomId(`paginate_invite_player_${page - 1}`)
+            .setLabel('◀️ Anterior')
+            .setStyle(ButtonStyle.Secondary)
+            .setDisabled(page === 0),
+        new ButtonBuilder()
+            .setCustomId(`paginate_invite_player_${page + 1}`)
+            .setLabel('Siguiente ▶️')
+            .setStyle(ButtonStyle.Secondary)
+            .setDisabled(page >= totalPages - 1)
+    );
+
+    const components = [new ActionRowBuilder().addComponents(selectMenu)];
+    if (totalPages > 1) {
+        components.push(navigationRow);
+    }
+    
+    await interaction.editReply({ content: 'Selecciona un jugador del menú para enviarle una invitación:', components });
+}
 
 // ======================= PEGA LA NUEVA FUNCIÓN AQUÍ =======================
 async function sendPaginatedTeamMenu(interaction, teams, baseCustomId, paginationId, page, contentMessage) {
@@ -442,6 +484,20 @@ const handler = async (client, interaction) => {
                 await interaction.editReply({ content: 'Has rechazado la invitación al equipo.', components: [], embeds: [] });
             }
         }
+        return;
+    }
+
+    if (customId.startsWith('paginate_invite_player_')) {
+        await interaction.deferUpdate();
+        const newPage = parseInt(customId.split('_')[3], 10);
+
+        const allMembers = await guild.members.fetch();
+        const teams = await Team.find({ guildId: guild.id }).select('managerId captains players').lean();
+        const playersInTeams = new Set(teams.flatMap(t => [t.managerId, ...t.captains, ...t.players]));
+
+        const eligibleMembers = allMembers.filter(m => !m.user.bot && !playersInTeams.has(m.id));
+        
+        await sendPaginatedPlayerMenu(interaction, Array.from(eligibleMembers.values()), newPage);
         return;
     }
 // =================== COMIENZA EL BLOQUE DE CÓDIGO DEL PASO 5 ===================
@@ -1139,14 +1195,26 @@ if (customId.startsWith('admin_change_data_') || customId === 'team_edit_data_bu
 
 // --- FIN DEL BLOQUE DE EDICIÓN ---
         
-        if (customId === 'team_invite_player_button') {
-            const team = await Team.findOne({ guildId: guild.id, managerId: user.id });
-            if (!team) return interaction.reply({ content: 'Solo los mánagers pueden invitar.', flags: 64 });
-            const modal = new ModalBuilder().setCustomId(`invite_player_modal_${team._id}`).setTitle(`Invitar Jugador a ${team.name}`);
-            const playerNameInput = new TextInputBuilder().setCustomId('playerName').setLabel("Nombre de usuario (o parte) del jugador").setStyle(TextInputStyle.Short).setRequired(true);
-            modal.addComponents(new ActionRowBuilder().addComponents(playerNameInput));
-            return interaction.showModal(modal);
+         if (customId === 'team_invite_player_button') {
+        await interaction.deferReply({ ephemeral: true });
+        const team = await Team.findOne({ guildId: guild.id, managerId: user.id });
+        if (!team) {
+            return interaction.editReply({ content: 'Solo los mánagers pueden invitar jugadores.' });
         }
+
+        const allMembers = await guild.members.fetch();
+        const teams = await Team.find({ guildId: guild.id }).select('managerId captains players').lean();
+        const playersInTeams = new Set(teams.flatMap(t => [t.managerId, ...t.captains, ...t.players]));
+
+        const eligibleMembers = allMembers.filter(m => !m.user.bot && !playersInTeams.has(m.id));
+
+        if (eligibleMembers.size === 0) {
+            return interaction.editReply({ content: 'No se encontraron miembros elegibles para invitar.' });
+        }
+
+        await sendPaginatedPlayerMenu(interaction, Array.from(eligibleMembers.values()), 0);
+        return;
+    }
     }
     
     if (customId.startsWith('reject_request_') || customId.startsWith('promote_player_') || customId.startsWith('demote_captain_') || customId.startsWith('kick_player_') || customId.startsWith('toggle_mute_player_')) {
