@@ -14,13 +14,30 @@ module.exports = {
         .addRoleOption(option =>
             option.setName('rol_soporte')
                 .setDescription('El rol que podrá gestionar los tickets (ej: Árbitro, Admin).')
-                .setRequired(true)),
+                .setRequired(false)),
 
     async execute(interaction) {
         await interaction.deferReply({ ephemeral: true });
 
         const logChannel = interaction.options.getChannel('canal_logs');
-        const supportRole = interaction.options.getRole('rol_soporte');
+        let supportRole = interaction.options.getRole('rol_soporte');
+
+        if (!supportRole) {
+            const arbiterRoleId = process.env.ARBITER_ROLE_ID;
+            if (!arbiterRoleId) {
+                return interaction.editReply({ content: '❌ No se proporcionó un rol de soporte y la variable de entorno `ARBITER_ROLE_ID` no está configurada.' });
+            }
+            try {
+                supportRole = await interaction.guild.roles.fetch(arbiterRoleId);
+                if (!supportRole) {
+                    return interaction.editReply({ content: `❌ El rol con ID \`${arbiterRoleId}\` configurado en 
+`ARBITER_ROLE_ID` no se encontró en este servidor.` });
+                }
+            } catch (error) {
+                console.error(`Error al obtener el rol de ARBITER_ROLE_ID (${arbiterRoleId}):`, error);
+                return interaction.editReply({ content: '❌ Hubo un error al intentar obtener el rol de soporte desde `ARBITER_ROLE_ID`.' });
+            }
+        }
 
         try {
             await TicketConfig.findOneAndUpdate(
@@ -29,12 +46,13 @@ module.exports = {
                     logChannelId: logChannel.id,
                     supportRoleId: supportRole.id,
                 },
-                { upsert: true, new: true } // Crea si no existe, devuelve el nuevo documento
+                { upsert: true, new: true }
             );
 
             await interaction.editReply({
-                content: `✅ Sistema de tickets configurado:\n` +
-                         `Canal de logs: <#${logChannel.id}>\n` +
+                content: `✅ Sistema de tickets configurado:\n` + 
+                         `Canal de logs: <#${logChannel.id}>
+` + 
                          `Rol de soporte: <@&${supportRole.id}>`
             });
         } catch (error) {
