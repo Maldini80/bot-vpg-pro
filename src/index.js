@@ -10,6 +10,8 @@ const axios = require('axios');
 const AvailabilityPanel = require('./models/availabilityPanel.js');
 const TeamChatChannel = require('./models/teamChatChannel.js');
 const Team = require('./models/team.js');
+const Ticket = require('./models/ticket.js'); // Nuevo modelo para tickets
+const TicketConfig = require('./models/ticketConfig.js'); // Nuevo modelo para configuración de tickets
 
 mongoose.connect(process.env.DATABASE_URL)
     .then(() => console.log('Conectado a MongoDB.'))

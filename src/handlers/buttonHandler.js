@@ -7,6 +7,8 @@ const AvailabilityPanel = require('../models/availabilityPanel.js');
 const VPGUser = require('../models/user.js');
 const FreeAgent = require('../models/freeAgent.js');
 const TeamOffer = require('../models/teamOffer.js');
+const Ticket = require('../models/ticket.js'); // Nuevo modelo
+const TicketConfig = require('../models/ticketConfig.js'); // Nuevo modelo
 const recentlyNotifiedAgentAd = new Set();
 const AGENT_AD_COOLDOWN = 5 * 60 * 1000; // 5 minutos en milisegundos
 
@@ -1405,6 +1407,107 @@ if (customId === 'team_view_roster_button') {
         await interaction.editReply({ content: `Has abandonado el equipo **${teamToLeave.name}**.` });
         const manager = await client.users.fetch(teamToLeave.managerId).catch(() => null);
         if (manager) await manager.send(`El jugador **${user.tag}** ha abandonado tu equipo.`);
+        return;
+    }
+
+    if (customId === 'create_ticket_button') {
+        await interaction.deferReply({ ephemeral: true });
+
+        const ticketConfig = await TicketConfig.findOne({ guildId: guild.id });
+        if (!ticketConfig) {
+            return interaction.editReply({ content: '❌ El sistema de tickets no ha sido configurado. Por favor, contacta a un administrador.' });
+        }
+
+        const existingTicket = await Ticket.findOne({ userId: user.id, status: { $in: ['open', 'claimed'] } });
+        if (existingTicket) {
+            return interaction.editReply({ content: `❌ Ya tienes un ticket abierto o en proceso: <#${existingTicket.channelId}>` });
+        }
+
+        try {
+            // Create a new private channel for the ticket
+            const ticketChannel = await guild.channels.create({
+                name: `ticket-${user.username.toLowerCase().replace(/[^a-z0-9-]/g, '')}-${Date.now().toString().slice(-5)}`,
+                type: ChannelType.GuildText,
+                parent: process.env.TICKET_CATEGORY_ID || null, // Optional: set a category ID in .env
+                permissionOverwrites: [
+                    {
+                        id: guild.id, // @everyone role
+                        deny: [PermissionFlagsBits.ViewChannel],
+                    },
+                    {
+                        id: user.id, // User who opened the ticket
+                        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
+                    },
+                    {
+                        id: ticketConfig.supportRoleId, // Support role
+                        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
+                    },
+                    // Add bot's own permissions if needed
+                ],
+            });
+
+            const newTicket = new Ticket({
+                userId: user.id,
+                channelId: ticketChannel.id,
+                guildId: guild.id,
+                status: 'open',
+            });
+            await newTicket.save();
+
+            const ticketEmbed = new EmbedBuilder()
+                .setTitle(`Ticket de Soporte #${newTicket._id.toString().slice(-5)}`)
+                .setDescription(`¡Hola <@${user.id}>! Tu ticket ha sido creado. Por favor, describe tu problema o duda aquí.`)
+                .addFields(
+                    { name: 'Usuario', value: `<@${user.id}>`, inline: true },
+                    { name: 'Estado', value: 'Abierto', inline: true }
+                )
+                .setColor('Blue')
+                .setFooter({ text: 'Un miembro del staff te atenderá pronto.' });
+
+            const ticketButtons = new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`attend_ticket_${newTicket._id}`)
+                    .setLabel('Atender Ticket')
+                    .setStyle(ButtonStyle.Primary)
+                    .setEmoji('✅'),
+                new ButtonBuilder()
+                    .setCustomId(`close_ticket_${newTicket._id}`)
+                    .setLabel('Cerrar Ticket')
+                    .setStyle(ButtonStyle.Danger)
+                    .setEmoji('🔒')
+            );
+
+            await ticketChannel.send({ embeds: [ticketEmbed], components: [ticketButtons] });
+
+            // Notify staff
+            const logChannel = await guild.channels.fetch(ticketConfig.logChannelId);
+            if (logChannel) {
+                const staffNotificationEmbed = new EmbedBuilder()
+                    .setTitle('🔔 Nuevo Ticket Abierto')
+                    .setDescription(`Un nuevo ticket ha sido abierto por <@${user.id}>.`)
+                    .addFields(
+                        { name: 'Ticket', value: `<#${ticketChannel.id}>`, inline: true },
+                        { name: 'ID de Usuario', value: user.id, inline: true },
+                        { name: 'Estado', value: 'Abierto', inline: true }
+                    )
+                    .setColor('Green')
+                    .setTimestamp();
+
+                const staffNotificationButtons = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder()
+                        .setLabel('Ir al Ticket')
+                        .setStyle(ButtonStyle.Link)
+                        .setURL(ticketChannel.url)
+                );
+                await logChannel.send({ embeds: [staffNotificationEmbed], components: [staffNotificationButtons] });
+            }
+
+            await interaction.editReply({ content: `✅ Tu ticket ha sido creado: <#${ticketChannel.id}>` });
+
+        } catch (error) {
+            console.error('Error al crear el ticket:', error);
+            await interaction.editReply({ content: '❌ Hubo un error al intentar crear tu ticket. Por favor, inténtalo de nuevo más tarde.' });
+        }
         return;
     }
 
