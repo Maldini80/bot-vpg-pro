@@ -1456,9 +1456,8 @@ if (customId === 'team_view_roster_button') {
 
             const ticketEmbed = new EmbedBuilder()
                 .setTitle(`Ticket de Soporte #${newTicket._id.toString().slice(-5)}`)
-                .setDescription(`¡Hola <@${user.id}>! Tu ticket ha sido creado. Por favor, describe tu problema o duda aquí.`)
+                .setDescription(`Tu ticket ha sido creado. Por favor, describe tu problema o duda aquí.`)
                 .addFields(
-                    { name: 'Usuario', value: `<@${user.id}>`, inline: true },
                     { name: 'Estado', value: 'Abierto', inline: true }
                 )
                 .setColor('Blue')
@@ -1477,7 +1476,7 @@ if (customId === 'team_view_roster_button') {
                     .setEmoji('🔒')
             );
 
-            await ticketChannel.send({ embeds: [ticketEmbed], components: [ticketButtons] });
+            await ticketChannel.send({ content: `¡Hola <@${user.id}>!`, embeds: [ticketEmbed], components: [ticketButtons] });
 
             // Notify staff
             const logChannel = await guild.channels.fetch(ticketConfig.logChannelId);
@@ -1511,258 +1510,95 @@ if (customId === 'team_view_roster_button') {
         return;
     }
 
-    if (customId === 'admin_delete_league_button') {
-        await interaction.deferReply({ flags: 64 });
-        if (!isAdmin) return interaction.editReply({content: 'Acción restringida.'});
-        const leagues = await League.find({ guildId: guild.id });
-        if (leagues.length === 0) return interaction.editReply({ content: 'No hay ligas para borrar.' });
-        const leagueOptions = leagues.map(l => ({ label: l.name, value: l.name }));
-        const selectMenu = new StringSelectMenuBuilder().setCustomId('delete_league_select_menu').setPlaceholder('Selecciona las ligas a eliminar').addOptions(leagueOptions).setMinValues(1).setMaxValues(leagues.length);
-        return interaction.editReply({ content: 'Selecciona del menú las ligas que quieres borrar:', components: [new ActionRowBuilder().addComponents(selectMenu)] });
-    }
+    if (customId.startsWith('attend_ticket_')) {
+        await interaction.deferReply({ ephemeral: true });
+        const ticketId = customId.split('_')[2];
+        const ticket = await Ticket.findById(ticketId);
+        const ticketConfig = await TicketConfig.findOne({ guildId: guild.id });
 
-    // ESTE ES EL BLOQUE CORREGIDO PARA EL BOTÓN DE "GESTIONAR EQUIPO" DEL ADMIN
-if (customId === 'admin_manage_team_button') {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    
-    // Comprobamos si es admin
-    const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
-    if (!isAdmin) {
-        return interaction.editReply({content: 'Acción restringida.'});
-    }
-    
-    const teams = await Team.find({ guildId: interaction.guildId }).sort({ name: 1 }).lean();
-    if (teams.length === 0) {
-        return interaction.editReply({ content: 'No hay equipos registrados para gestionar.' });
-    }
-    
-    // Llama a la nueva función de paginación
-    await sendPaginatedTeamMenu(interaction, teams, 'admin_select_team_to_manage', 'manage', 0, 'Selecciona el equipo que deseas gestionar:');
-}
-
-    if (customId.startsWith('admin_manage_members_') || customId === 'team_manage_roster_button') {
-        await interaction.deferReply({ flags: 64 });
-        let teamToManage;
-        if (customId.startsWith('admin_manage_members_')) {
-            if (!isAdmin) return interaction.editReply({ content: 'Acción restringida.' });
-            const teamId = customId.split('_')[3];
-            teamToManage = await Team.findById(teamId);
-        } else {
-            teamToManage = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
+        if (!ticket) {
+            return interaction.editReply({ content: '❌ Este ticket no existe.' });
         }
-        if (!teamToManage) return interaction.editReply({ content: 'No se encontró el equipo o no tienes permisos.' });
-        const memberIds = [teamToManage.managerId, ...teamToManage.captains, ...teamToManage.players].filter(id => id);
-        if (memberIds.length === 0) return interaction.editReply({ content: 'Este equipo no tiene miembros.' });
-        const membersCollection = await guild.members.fetch({ user: memberIds });
-        const memberOptions = membersCollection.map(member => {
-            let description = 'Jugador';
-            if (teamToManage.managerId === member.id) description = 'Mánager';
-            else if (teamToManage.captains.includes(member.id)) description = 'Capitán';
-            return { label: member.user.username, description: description, value: member.id, };
-        });
-        if (memberOptions.length === 0) return interaction.editReply({ content: 'No se encontraron miembros válidos.' });
-        const selectMenu = new StringSelectMenuBuilder().setCustomId('roster_management_menu').setPlaceholder('Selecciona un miembro').addOptions(memberOptions);
-        return interaction.editReply({ content: 'Gestionando miembros de **' + teamToManage.name + '**:', components: [new ActionRowBuilder().addComponents(selectMenu)] });
-    }
 
-    if (customId === 'admin_view_pending_requests') {
-        await interaction.deferReply({ flags: 64 });
-        if (!isAdmin) return interaction.editReply({content: 'Acción restringida.'});
-        const approvalChannelId = process.env.APPROVAL_CHANNEL_ID;
-        if (!approvalChannelId) return interaction.editReply({ content: 'El canal de aprobaciones no está configurado.' });
-        
-        const channel = await guild.channels.fetch(approvalChannelId).catch(() => null);
-        if (!channel) return interaction.editReply({ content: 'No se pudo encontrar el canal de aprobaciones.' });
+        if (ticket.status !== 'open') {
+            return interaction.editReply({ content: `❌ Este ticket ya está ${ticket.status === 'claimed' ? 'siendo atendido' : 'cerrado'}.` });
+        }
 
-        const messages = await channel.messages.fetch({ limit: 50 });
-        const pendingRequests = messages.filter(m => 
-            m.author.id === client.user.id &&
-            m.embeds.length > 0 &&
-            m.embeds[0].title === '📝 Nueva Solicitud de Registro' &&
-            m.components.length > 0 &&
-            !m.components[0].components[0].disabled 
+        if (!member.roles.cache.has(ticketConfig.supportRoleId) && !member.permissions.has(PermissionFlagsBits.Administrator)) {
+            return interaction.editReply({ content: '❌ No tienes permiso para atender tickets.' });
+        }
+
+        ticket.status = 'claimed';
+        ticket.claimedBy = user.id;
+        await ticket.save();
+
+        const ticketEmbed = new EmbedBuilder()
+            .setTitle(`Ticket de Soporte #${ticket._id.toString().slice(-5)}`)
+            .setDescription(`Tu ticket ha sido creado. Por favor, describe tu problema o duda aquí.`)
+            .addFields(
+                { name: 'Estado', value: 'Atendido', inline: true },
+                { name: 'Atendido por', value: `<@${user.id}>`, inline: true }
+            )
+            .setColor('Orange')
+            .setFooter({ text: 'Un miembro del staff te atenderá pronto.' });
+
+        const ticketButtons = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId(`attend_ticket_${ticket._id}`)
+                .setLabel('Atender Ticket')
+                .setStyle(ButtonStyle.Primary)
+                .setEmoji('✅')
+                .setDisabled(true),
+            new ButtonBuilder()
+                .setCustomId(`close_ticket_${ticket._id}`)
+                .setLabel('Cerrar Ticket')
+                .setStyle(ButtonStyle.Danger)
+                .setEmoji('🔒')
         );
 
-        if (pendingRequests.size === 0) {
-            return interaction.editReply({ content: '✅ No hay solicitudes de registro pendientes.' });
+        await interaction.message.edit({ embeds: [ticketEmbed], components: [ticketButtons] });
+        await interaction.editReply({ content: `✅ Has tomado el ticket <#${ticket.channelId}>.` });
+
+        // Notify log channel
+        const logChannel = await guild.channels.fetch(ticketConfig.logChannelId);
+        if (logChannel) {
+            const staffNotificationEmbed = new EmbedBuilder()
+                .setTitle('📝 Ticket Atendido')
+                .setDescription(`El ticket <#${ticket.channelId}> ha sido atendido por <@${user.id}>.`)
+                .addFields(
+                    { name: 'Ticket', value: `<#${ticket.channelId}>`, inline: true },
+                    { name: 'Atendido por', value: `<@${user.id}>`, inline: true }
+                )
+                .setColor('Orange')
+                .setTimestamp();
+            await logChannel.send({ embeds: [staffNotificationEmbed] });
         }
-
-        const description = pendingRequests.map(m => {
-            const teamName = m.embeds[0].fields.find(f => f.name === 'Nombre del Equipo')?.value || 'N/A';
-            const userTag = m.embeds[0].author.name || 'N/A';
-            return `> **${teamName}** por ${userTag} - [Ir a la solicitud](${m.url})`;
-        }).join('\n');
-
-        const embed = new EmbedBuilder()
-            .setTitle(`⏳ ${pendingRequests.size} Solicitud(es) Pendiente(s)`)
-            .setDescription(description)
-            .setColor('Yellow')
-            .setTimestamp();
-            
-        return interaction.editReply({ embeds: [embed] });
-    }
-    
-   
-    
-    // REEMPLAZA CON ESTE BLOQUE
-if (customId === 'team_toggle_recruitment_button') {
-    await interaction.deferReply({ flags: 64 });
-    // Se busca el equipo del usuario que interactúa con el botón
-    const team = await Team.findOne({ guildId: interaction.guild.id, managerId: user.id });
-    
-    if (!team) {
-        return interaction.editReply({ content: 'Solo los mánagers de un equipo pueden hacer esto.' });
+        return;
     }
 
-    team.recruitmentOpen = !team.recruitmentOpen;
-    await team.save();
-    return interaction.editReply({ content: `El reclutamiento está ahora **${team.recruitmentOpen ? 'ABIERTO' : 'CERRADO'}**.` });
-}
+    if (customId.startsWith('close_ticket_')) {
+        await interaction.deferReply({ ephemeral: true });
+        const ticketId = customId.split('_')[2];
+        const ticket = await Ticket.findById(ticketId);
+        const ticketConfig = await TicketConfig.findOne({ guildId: guild.id });
 
-// Lógica para el botón de BORRAR
-
-
-// Lógica para el botón de EDITAR (abre un formulario)
-
-    // REEMPLAZA CON ESTE BLOQUE
-if (customId === 'post_scheduled_panel' || customId === 'post_instant_panel') {
-    await interaction.deferReply({ flags: 64 });
-
-    const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
-    if (!team) return interaction.editReply({ content: 'Debes ser mánager o capitán para crear un panel.' });
-
-    const panelType = customId === 'post_scheduled_panel' ? 'SCHEDULED' : 'INSTANT';
-    const existingPanel = await AvailabilityPanel.findOne({ teamId: team._id, panelType });
-    if (existingPanel) return interaction.editReply({ content: `Tu equipo ya tiene un panel de amistosos de tipo ${panelType} activo. Bórralo primero.` });
-        const leagues = await League.find({ guildId: guild.id });
-        const components = [];
-        if (leagues.length > 0) {
-            const leagueOptions = leagues.map(l => ({ label: l.name, value: l.name }));
-            const selectMenu = new StringSelectMenuBuilder().setCustomId(`select_league_filter_${panelType}`).setPlaceholder('Filtrar por ligas (opcional)').addOptions(leagueOptions).setMinValues(0).setMaxValues(leagues.length);
-            components.push(new ActionRowBuilder().addComponents(selectMenu));
+        if (!ticket) {
+            return interaction.editReply({ content: '❌ Este ticket no existe.' });
         }
-        const button = new ButtonBuilder().setCustomId(`continue_panel_creation_${panelType}_all`).setLabel('Buscar en TODAS las Ligas').setStyle(ButtonStyle.Primary);
-        if (components.length === 0) {
-            return interaction.editReply({ content: 'Pulsa el botón para continuar.', components: [new ActionRowBuilder().addComponents(button)] });
+
+        if (ticket.status === 'closed') {
+            return interaction.editReply({ content: '❌ Este ticket ya está cerrado.' });
         }
-        components.push(new ActionRowBuilder().addComponents(button));
-        return interaction.editReply({ content: 'Selecciona las ligas para las que quieres buscar rival, o busca en todas.', components: components });
-    }
 
-    if (customId.startsWith('continue_panel_creation_')) {
-        await interaction.deferReply({ flags: 64 });
-        const parts = customId.split('_');
-        const panelType = parts[3];
-        const leaguesString = parts.slice(4).join('_');
-        const leagues = leaguesString === 'all' || leaguesString === 'none' || !leaguesString ? [] : leaguesString.split(',');
-        const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
-        if (!team) return interaction.editReply({ content: 'No se ha podido encontrar tu equipo.' });
-        if (panelType === 'SCHEDULED') {
-            const timeSlots = ['22:00', '22:20', '22:40', '23:00', '23:20', '23:40'];
-            const timeOptions = timeSlots.map(time => ({ label: time, value: time }));
-            const selectMenu = new StringSelectMenuBuilder().setCustomId(`select_available_times_${leagues.join(',') || 'all'}`).setPlaceholder('Selecciona tus horarios disponibles').addOptions(timeOptions).setMinValues(1).setMaxValues(timeSlots.length);
-            return interaction.editReply({ content: 'Elige los horarios en los que tu equipo está disponible:', components: [new ActionRowBuilder().addComponents(selectMenu)] });
-        } else {
-            const channelId = process.env.INSTANT_FRIENDLY_CHANNEL_ID;
-            if (!channelId) return interaction.editReply({ content: 'Error: El ID del canal de amistosos instantáneos no está configurado.' });
-            const channel = await client.channels.fetch(channelId).catch(()=>null);
-            if (!channel) return interaction.editReply({ content: 'Error: No se encontró el canal de amistosos instantáneos.' });
-            
-            const initialEmbed = new EmbedBuilder().setTitle(`Buscando Rival - ${team.name} (Disponible)`).setColor("Greyple");
-            const webhook = await getOrCreateWebhook(channel, client);
-            const message = await webhook.send({ embeds: [initialEmbed], username: team.name, avatarURL: team.logoUrl });
-            
-            const panel = new AvailabilityPanel({ 
-                guildId: guild.id, channelId, messageId: message.id, teamId: team._id, postedById: user.id, panelType: 'INSTANT', leagues,
-                timeSlots: [{ time: 'INSTANT', status: 'AVAILABLE' }] 
-            });
-            await panel.save();
-            await updatePanelMessage(client, panel._id);
-            return interaction.editReply({ content: '​' });
+        // Only support role or original ticket creator can close
+        const canClose = member.roles.cache.has(ticketConfig.supportRoleId) || member.permissions.has(PermissionFlagsBits.Administrator) || ticket.userId === user.id;
+        if (!canClose) {
+            return interaction.editReply({ content: '❌ No tienes permiso para cerrar este ticket.' });
         }
-    }
 
-    if (customId === 'delete_friendly_panel') {
-        await interaction.deferReply({ flags: 64 });
-        const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId(`confirm_delete_panel_SCHEDULED`).setLabel('Borrar Panel Programado').setStyle(ButtonStyle.Danger),
-            new ButtonBuilder().setCustomId(`confirm_delete_panel_INSTANT`).setLabel('Borrar Panel Instantáneo').setStyle(ButtonStyle.Danger)
-        );
-        return interaction.editReply({ content: '¿Qué tipo de búsqueda de amistoso quieres borrar?', components: [row] });
-    }
-    
-    if (customId.startsWith('confirm_delete_panel_')) {
-        await interaction.deferReply({ flags: 64 });
-        const [, , , panelType] = customId.split('_');
-        const teamToDeleteFrom = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
-        if (!teamToDeleteFrom) {
-            return interaction.editReply({ content: "No se pudo encontrar tu equipo para realizar esta acción." });
-        }
-        const existingPanel = await AvailabilityPanel.findOneAndDelete({ teamId: teamToDeleteFrom._id, panelType: panelType });
-        if (!existingPanel) {
-            return interaction.editReply({ content: `No se encontró un panel de tipo **${panelType}** activo que pertenezca a tu equipo.` });
-        }
-        try {
-            const channel = await client.channels.fetch(existingPanel.channelId);
-            const webhook = await getOrCreateWebhook(channel, client);
-            await webhook.deleteMessage(existingPanel.messageId);
-        } catch(e) {
-            console.log(`No se pudo borrar el mensaje del panel (ID: ${existingPanel.messageId}) porque probablemente ya no existía.`);
-        }
-        return interaction.editReply({ content: `✅ Tu panel de amistosos de tipo **${panelType}** ha sido eliminado.` });
-    }
-};
-function getLogoGuideEmbed() {
-    return new EmbedBuilder()
-        .setTitle('Guía para Añadir/Cambiar un Logo')
-        .setColor('Blue')
-        .setDescription(
-            'Para usar un logo personalizado, necesitas un enlace directo a la imagen. Sigue estos sencillos pasos:\n\n' +
-            '1. Abre el siguiente enlace en tu navegador:\n' +
-            '👉 **https://imgur.com/upload** 👈\n\n' +
-            '2. Arrastra tu imagen a la página de Imgur.\n\n' +
-            '3. Una vez subida, haz **clic derecho** sobre la imagen y selecciona **"Copiar dirección de imagen"**.\n\n' +
-            'Esa URL es la que deberás pegar en el campo "Nueva URL Del Logo" del formulario de edición.'
-        );
-}
+        ticket.status = 'closed';
+        ticket.closedAt = new Date();
+        await ticket.save();
 
-function parseTeamData(dataString) {
-    const data = {};
-    dataString.split('|||').forEach(part => {
-        const [key, value] = part.split(':', 2); // El 2 asegura que solo divida en el primer ':'
-        data[key] = value === 'none' ? null : value;
-    });
-    return data;
-}
-
-async function sendApprovalRequest(interaction, client, { vpg, name, abbr, twitter, leagueName, logoUrl }) {
-    const approvalChannelId = process.env.APPROVAL_CHANNEL_ID;
-    if (!approvalChannelId) return;
-    const approvalChannel = await client.channels.fetch(approvalChannelId).catch(() => null);
-    if(!approvalChannel) return;
-
-    const embed = new EmbedBuilder()
-        .setTitle('📝 Nueva Solicitud de Registro')
-        .setColor('Orange')
-        .setAuthor({ name: interaction.user.tag, iconURL: interaction.user.displayAvatarURL() })
-        .setThumbnail(logoUrl && logoUrl.startsWith('http') ? logoUrl : null)
-        .addFields(
-            { name: 'Usuario VPG', value: vpg }, 
-            { name: 'Nombre del Equipo', value: name }, 
-            { name: 'Abreviatura', value: abbr }, 
-            { name: 'Twitter del Equipo', value: twitter || 'No especificado' },
-            { name: 'URL del Logo', value: `[Ver Logo](${logoUrl})` },
-            { name: 'Liga Seleccionada', value: leagueName }
-        )
-        .setTimestamp();
-        
-    const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId(`approve_request_${interaction.user.id}_${leagueName}`).setLabel('Aprobar').setStyle(ButtonStyle.Success), 
-        new ButtonBuilder().setCustomId(`reject_request_${interaction.user.id}`).setLabel('Rechazar').setStyle(ButtonStyle.Danger)
-    );
-    await approvalChannel.send({ content: `**Solicitante:** <@${interaction.user.id}>`, embeds: [embed], components: [row] });
-}
-
-handler.updatePanelMessage = updatePanelMessage;
-handler.getOrCreateWebhook = getOrCreateWebhook;
-module.exports = handler;
+        const ticketEmbed = new EmbedBuilder()
+            .setTitle(`Ticket de Soporte #${ticket._id.toString().slice(-5)} (CERRADO)`)
