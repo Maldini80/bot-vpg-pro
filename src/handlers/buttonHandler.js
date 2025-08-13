@@ -1602,3 +1602,54 @@ if (customId === 'team_view_roster_button') {
 
         const ticketEmbed = new EmbedBuilder()
             .setTitle(`Ticket de Soporte #${ticket._id.toString().slice(-5)} (CERRADO)`)
+            .setDescription(`Este ticket ha sido cerrado por <@${user.id}>.`)
+            .addFields(
+                { name: 'Estado', value: 'Cerrado', inline: true },
+                { name: 'Cerrado por', value: `<@${user.id}>`, inline: true }
+            )
+            .setColor('Red')
+            .setFooter({ text: 'Este canal se eliminará en breve.' });
+
+        const ticketButtons = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId(`attend_ticket_${ticket._id}`)
+                .setLabel('Atender Ticket')
+                .setStyle(ButtonStyle.Primary)
+                .setEmoji('✅')
+                .setDisabled(true),
+            new ButtonBuilder()
+                .setCustomId(`close_ticket_${ticket._id}`)
+                .setLabel('Cerrar Ticket')
+                .setStyle(ButtonStyle.Danger)
+                .setEmoji('🔒')
+                .setDisabled(true)
+        );
+
+        await interaction.message.edit({ embeds: [ticketEmbed], components: [ticketButtons] });
+        await interaction.editReply({ content: `✅ Has cerrado el ticket <#${ticket.channelId}>.` });
+
+        // Notify log channel
+        const logChannel = await guild.channels.fetch(ticketConfig.logChannelId);
+        if (logChannel) {
+            const staffNotificationEmbed = new EmbedBuilder()
+                .setTitle('🔒 Ticket Cerrado')
+                .setDescription(`El ticket <#${ticket.channelId}> ha sido cerrado por <@${user.id}>.`)
+                .addFields(
+                    { name: 'Ticket', value: `<#${ticket.channelId}>`, inline: true },
+                    { name: 'Cerrado por', value: `<@${user.id}>`, inline: true }
+                )
+                .setColor('Red')
+                .setTimestamp();
+            await logChannel.send({ embeds: [staffNotificationEmbed] });
+        }
+
+        // Delete the channel after a delay
+        setTimeout(async () => {
+            try {
+                await guild.channels.cache.get(ticket.channelId).delete();
+            } catch (err) {
+                console.error(`Error al eliminar el canal del ticket ${ticket.channelId}:`, err);
+            }
+        }, 5000); // Delete after 5 seconds
+        return;
+    }
