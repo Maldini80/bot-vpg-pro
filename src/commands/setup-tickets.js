@@ -30,8 +30,7 @@ module.exports = {
             try {
                 supportRole = await interaction.guild.roles.fetch(arbiterRoleId);
                 if (!supportRole) {
-                    return interaction.editReply({ content: `❌ El rol con ID \`${arbiterRoleId}\` configurado en 
-`ARBITER_ROLE_ID` no se encontró en este servidor.` });
+                    return interaction.editReply({ content: '❌ El rol con ID `' + arbiterRoleId + '` configurado en `ARBITER_ROLE_ID` no se encontró en este servidor.' });
                 }
             } catch (error) {
                 console.error(`Error al obtener el rol de ARBITER_ROLE_ID (${arbiterRoleId}):`, error);
