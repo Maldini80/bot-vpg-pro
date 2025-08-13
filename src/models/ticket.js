@@ -1,3 +1,5 @@
+// src/models/ticket.js
+
 const mongoose = require('mongoose');
 
 const ticketSchema = new mongoose.Schema({
@@ -8,6 +10,9 @@ const ticketSchema = new mongoose.Schema({
     claimedBy: { type: String, default: null },
     createdAt: { type: Date, default: Date.now },
     closedAt: { type: Date, default: null },
+    
+    // --- LÍNEA AÑADIDA ---
+    logMessageId: { type: String, default: null },
 });
 
 module.exports = mongoose.model('Ticket', ticketSchema);
