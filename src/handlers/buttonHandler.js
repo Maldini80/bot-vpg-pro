@@ -1498,7 +1498,12 @@ if (customId === 'team_view_roster_button') {
                         .setStyle(ButtonStyle.Link)
                         .setURL(ticketChannel.url)
                 );
-                await logChannel.send({ embeds: [staffNotificationEmbed], components: [staffNotificationButtons] });
+                // CÓDIGO NUEVO (DESPUÉS)
+                const logMessage = await logChannel.send({ embeds: [staffNotificationEmbed], components: [staffNotificationButtons] });
+
+               // Guardamos el ID del mensaje del log en el ticket
+               newTicket.logMessageId = logMessage.id;
+               await newTicket.save();
             }
 
             await interaction.editReply({ content: `✅ Tu ticket ha sido creado: <#${ticketChannel.id}>` });
@@ -1510,7 +1515,8 @@ if (customId === 'team_view_roster_button') {
         return;
     }
 
-    if (customId.startsWith('attend_ticket_')) {
+    // === NUEVO BLOQUE PARA ATENDER TICKET ===
+if (customId.startsWith('attend_ticket_')) {
     await interaction.deferReply({ ephemeral: true });
     const ticketId = customId.split('_')[2];
     const ticket = await Ticket.findById(ticketId);
@@ -1519,11 +1525,9 @@ if (customId === 'team_view_roster_button') {
     if (!ticket) {
         return interaction.editReply({ content: '❌ Este ticket no existe.' });
     }
-
     if (ticket.status !== 'open') {
         return interaction.editReply({ content: `❌ Este ticket ya está ${ticket.status === 'claimed' ? 'siendo atendido' : 'cerrado'}.` });
     }
-
     if (!member.roles.cache.has(ticketConfig.supportRoleId) && !member.permissions.has(PermissionFlagsBits.Administrator)) {
         return interaction.editReply({ content: '❌ No tienes permiso para atender tickets.' });
     }
@@ -1532,132 +1536,97 @@ if (customId === 'team_view_roster_button') {
     ticket.claimedBy = user.id;
     await ticket.save();
 
-    const ticketEmbed = new EmbedBuilder()
-        .setTitle(`Ticket de Soporte #${ticket._id.toString().slice(-5)}`)
-        .setDescription(`Tu ticket ha sido creado. Por favor, describe tu problema o duda aquí.`)
-        .addFields(
-            { name: 'Estado', value: 'Atendido', inline: true },
-            { name: 'Atendido por', value: `<@${user.id}>`, inline: true }
-        )
-        .setColor('Orange') // Color correcto para "Atendido"
-        .setFooter({ text: 'Un miembro del staff te atenderá pronto.' });
-
-    const ticketButtons = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-            .setCustomId(`attend_ticket_${ticket._id}`)
-            .setLabel('Atender Ticket')
-            .setStyle(ButtonStyle.Primary)
-            .setEmoji('✅')
-            .setDisabled(true),
-        new ButtonBuilder()
-            .setCustomId(`close_ticket_${ticket._id}`)
-            .setLabel('Cerrar Ticket')
-            .setStyle(ButtonStyle.Danger)
-            .setEmoji('🔒')
-    );
-
-    // Esta parte actualiza el canal del usuario (y ya funcionaba bien)
+    const ticketEmbed = new EmbedBuilder().setTitle(`Ticket de Soporte #${ticket._id.toString().slice(-5)}`).setDescription(`Tu ticket ha sido creado. Por favor, describe tu problema o duda aquí.`).addFields({ name: 'Estado', value: 'Atendido', inline: true }, { name: 'Atendido por', value: `<@${user.id}>`, inline: true }).setColor('Orange').setFooter({ text: 'Un miembro del staff te atenderá pronto.' });
+    const ticketButtons = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`attend_ticket_${ticket._id}`).setLabel('Atender Ticket').setStyle(ButtonStyle.Primary).setEmoji('✅').setDisabled(true), new ButtonBuilder().setCustomId(`close_ticket_${ticket._id}`).setLabel('Cerrar Ticket').setStyle(ButtonStyle.Danger).setEmoji('🔒'));
+    
     const originalMessage = await interaction.channel.messages.fetch(interaction.message.id);
     await originalMessage.edit({ embeds: [ticketEmbed], components: [ticketButtons] });
     await interaction.editReply({ content: `✅ Has tomado el ticket <#${ticket.channelId}>.` });
 
-    // Notify log channel (ESTA ES LA PARTE CORREGIDA)
-    const logChannel = await guild.channels.fetch(ticketConfig.logChannelId);
-    if (logChannel) {
-        const ticketChannel = guild.channels.cache.get(ticket.channelId);
-        const channelNameForLog = ticketChannel ? ticketChannel.name : `ID-${ticket.channelId}`;
+    // Lógica mejorada para editar el log
+    if (ticket.logMessageId) {
+        try {
+            const logChannel = await guild.channels.fetch(ticketConfig.logChannelId);
+            const logMessage = await logChannel.messages.fetch(ticket.logMessageId);
+            const ticketChannel = guild.channels.cache.get(ticket.channelId);
 
-        const staffNotificationEmbed = new EmbedBuilder()
-            .setTitle('📝 Ticket Atendido') // <-- TÍTULO CORREGIDO
-            .setDescription(`El ticket del canal \`${channelNameForLog}\` ha sido atendido por <@${user.id}>.`) // <-- TEXTO CORREGIDO
-            .addFields(
-                { name: 'Canal del Ticket', value: `\`${channelNameForLog}\``, inline: true },
-                { name: 'Atendido por', value: `<@${user.id}>`, inline: true }
-            )
-            .setColor('Orange') // <-- COLOR CORREGIDO
-            .setTimestamp();
-        await logChannel.send({ embeds: [staffNotificationEmbed] });
+            const updatedEmbed = new EmbedBuilder()
+                .setTitle('📝 Ticket Atendido')
+                .setDescription(`El ticket de <@${ticket.userId}> ha sido atendido por <@${user.id}>.`)
+                .addFields(
+                    { name: 'Ticket', value: ticketChannel ? `<#${ticket.channelId}>` : `\`${ticket.channelId}\``, inline: true },
+                    { name: 'ID de Usuario', value: ticket.userId, inline: true },
+                    { name: 'Estado', value: 'Atendido', inline: true }
+                )
+                .setColor('Orange')
+                .setTimestamp();
+            
+            await logMessage.edit({ embeds: [updatedEmbed] });
+        } catch (error) {
+            console.error("Error al editar el mensaje de log (atender):", error);
+        }
     }
     return;
 }
 
-    if (customId.startsWith('close_ticket_')) {
-        await interaction.deferReply({ ephemeral: true });
-        const ticketId = customId.split('_')[2];
-        const ticket = await Ticket.findById(ticketId);
-        const ticketConfig = await TicketConfig.findOne({ guildId: guild.id });
+    // === NUEVO BLOQUE PARA CERRAR TICKET ===
+if (customId.startsWith('close_ticket_')) {
+    await interaction.deferReply({ ephemeral: true });
+    const ticketId = customId.split('_')[2];
+    const ticket = await Ticket.findById(ticketId);
+    const ticketConfig = await TicketConfig.findOne({ guildId: guild.id });
+    
+    if (!ticket) { return interaction.editReply({ content: '❌ Este ticket no existe.' }); }
+    if (ticket.status === 'closed') { return interaction.editReply({ content: '❌ Este ticket ya está cerrado.' }); }
+    const canClose = member.roles.cache.has(ticketConfig.supportRoleId) || member.permissions.has(PermissionFlagsBits.Administrator) || ticket.userId === user.id;
+    if (!canClose) { return interaction.editReply({ content: '❌ No tienes permiso para cerrar este ticket.' }); }
 
-        if (!ticket) {
-            return interaction.editReply({ content: '❌ Este ticket no existe.' });
-        }
+    const ticketChannelName = guild.channels.cache.get(ticket.channelId)?.name || `ID-${ticket.channelId}`;
+    
+    ticket.status = 'closed';
+    ticket.closedAt = new Date();
+    await ticket.save();
+    
+    const ticketEmbed = new EmbedBuilder().setTitle(`Ticket de Soporte #${ticket._id.toString().slice(-5)} (CERRADO)`).setDescription(`Este ticket ha sido cerrado por <@${user.id}>.`).addFields({ name: 'Estado', value: 'Cerrado', inline: true }, { name: 'Cerrado por', value: `<@${user.id}>`, inline: true }).setColor('Red').setFooter({ text: 'Este canal se eliminará en breve.' });
+    const ticketButtons = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`attend_ticket_${ticket._id}`).setLabel('Atender Ticket').setStyle(ButtonStyle.Primary).setEmoji('✅').setDisabled(true), new ButtonBuilder().setCustomId(`close_ticket_${ticket._id}`).setLabel('Cerrar Ticket').setStyle(ButtonStyle.Danger).setEmoji('🔒').setDisabled(true));
+    
+    const originalMessage = await interaction.channel.messages.fetch(interaction.message.id);
+    await originalMessage.edit({ embeds: [ticketEmbed], components: [ticketButtons] });
+    await interaction.editReply({ content: `✅ Has cerrado el ticket.` });
 
-        if (ticket.status === 'closed') {
-            return interaction.editReply({ content: '❌ Este ticket ya está cerrado.' });
-        }
+    // Lógica mejorada para editar el log
+    if (ticket.logMessageId) {
+        try {
+            const logChannel = await guild.channels.fetch(ticketConfig.logChannelId);
+            const logMessage = await logChannel.messages.fetch(ticket.logMessageId);
 
-        // Only support role or original ticket creator can close
-        const canClose = member.roles.cache.has(ticketConfig.supportRoleId) || member.permissions.has(PermissionFlagsBits.Administrator) || ticket.userId === user.id;
-        if (!canClose) {
-            return interaction.editReply({ content: '❌ No tienes permiso para cerrar este ticket.' });
-        }
-
-        ticket.status = 'closed';
-        ticket.closedAt = new Date();
-        await ticket.save();
-
-        const ticketEmbed = new EmbedBuilder()
-            .setTitle(`Ticket de Soporte #${ticket._id.toString().slice(-5)} (CERRADO)`)
-            .setDescription(`Este ticket ha sido cerrado por <@${user.id}>.`)
-            .addFields(
-                { name: 'Estado', value: 'Cerrado', inline: true },
-                { name: 'Cerrado por', value: `<@${user.id}>`, inline: true }
-            )
-            .setColor('Red')
-            .setFooter({ text: 'Este canal se eliminará en breve.' });
-
-        const ticketButtons = new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                .setCustomId(`attend_ticket_${ticket._id}`)
-                .setLabel('Atender Ticket')
-                .setStyle(ButtonStyle.Primary)
-                .setEmoji('✅')
-                .setDisabled(true),
-            new ButtonBuilder()
-                .setCustomId(`close_ticket_${ticket._id}`)
-                .setLabel('Cerrar Ticket')
-                .setStyle(ButtonStyle.Danger)
-                .setEmoji('🔒')
-                .setDisabled(true)
-        );
-
-        await interaction.message.edit({ embeds: [ticketEmbed], components: [ticketButtons] });
-        await interaction.editReply({ content: `✅ Has cerrado el ticket <#${ticket.channelId}>.` });
-
-        // Notify log channel
-        const logChannel = await guild.channels.fetch(ticketConfig.logChannelId);
-        if (logChannel) {
-            const staffNotificationEmbed = new EmbedBuilder()
+            const updatedEmbed = new EmbedBuilder()
                 .setTitle('🔒 Ticket Cerrado')
-                .setDescription(`El ticket <#${ticket.channelId}> ha sido cerrado por <@${user.id}>.`)
+                .setDescription(`El ticket de <@${ticket.userId}> fue cerrado por <@${user.id}>.`)
                 .addFields(
-                    { name: 'Ticket', value: `<#${ticket.channelId}>`, inline: true },
-                    { name: 'Cerrado por', value: `<@${user.id}>`, inline: true }
+                    { name: 'Canal del Ticket', value: `\`${ticketChannelName}\``, inline: true },
+                    { name: 'ID de Usuario', value: ticket.userId, inline: true },
+                    { name: 'Estado', value: 'Cerrado', inline: true }
                 )
                 .setColor('Red')
                 .setTimestamp();
-            await logChannel.send({ embeds: [staffNotificationEmbed] });
+            
+            await logMessage.edit({ embeds: [updatedEmbed], components: [] }); // <-- Se quitan los botones
+        } catch (error) {
+            console.error("Error al editar el mensaje de log (cerrar):", error);
         }
-
-        // Delete the channel after a delay
-        setTimeout(async () => {
-            try {
-                await guild.channels.cache.get(ticket.channelId).delete();
-            } catch (err) {
-                console.error(`Error al eliminar el canal del ticket ${ticket.channelId}:`, err);
-            }
-        }, 5000); // Delete after 5 seconds
-        return;
     }
+
+    setTimeout(async () => {
+        try {
+            const channelToDelete = guild.channels.cache.get(ticket.channelId);
+            if (channelToDelete) await channelToDelete.delete();
+        } catch (err) {
+            console.error(`Error al eliminar el canal del ticket ${ticket.channelId}:`, err);
+        }
+    }, 5000);
+    return;
+}
     }; // <--- AÑADE ESTA LLAVE DE CIERRE
 
 module.exports = handler; // <--- AÑADE ESTA LÍNEA DE EXPORTACIÓN
