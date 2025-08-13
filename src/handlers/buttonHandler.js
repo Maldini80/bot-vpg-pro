@@ -1511,76 +1511,75 @@ if (customId === 'team_view_roster_button') {
     }
 
     if (customId.startsWith('attend_ticket_')) {
-        await interaction.deferReply({ ephemeral: true });
-        const ticketId = customId.split('_')[2];
-        const ticket = await Ticket.findById(ticketId);
-        const ticketConfig = await TicketConfig.findOne({ guildId: guild.id });
+    await interaction.deferReply({ ephemeral: true });
+    const ticketId = customId.split('_')[2];
+    const ticket = await Ticket.findById(ticketId);
+    const ticketConfig = await TicketConfig.findOne({ guildId: guild.id });
 
-        if (!ticket) {
-            return interaction.editReply({ content: '❌ Este ticket no existe.' });
-        }
+    if (!ticket) {
+        return interaction.editReply({ content: '❌ Este ticket no existe.' });
+    }
 
-        if (ticket.status !== 'open') {
-            return interaction.editReply({ content: `❌ Este ticket ya está ${ticket.status === 'claimed' ? 'siendo atendido' : 'cerrado'}.` });
-        }
+    if (ticket.status !== 'open') {
+        return interaction.editReply({ content: `❌ Este ticket ya está ${ticket.status === 'claimed' ? 'siendo atendido' : 'cerrado'}.` });
+    }
 
-        if (!member.roles.cache.has(ticketConfig.supportRoleId) && !member.permissions.has(PermissionFlagsBits.Administrator)) {
-            return interaction.editReply({ content: '❌ No tienes permiso para atender tickets.' });
-        }
+    if (!member.roles.cache.has(ticketConfig.supportRoleId) && !member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.editReply({ content: '❌ No tienes permiso para atender tickets.' });
+    }
 
-        ticket.status = 'claimed';
-        ticket.claimedBy = user.id;
-        await ticket.save();
+    ticket.status = 'claimed';
+    ticket.claimedBy = user.id;
+    await ticket.save();
 
-        const ticketEmbed = new EmbedBuilder()
-            .setTitle(`Ticket de Soporte #${ticket._id.toString().slice(-5)}`)
-            .setDescription(`Tu ticket ha sido creado. Por favor, describe tu problema o duda aquí.`)
+    const ticketEmbed = new EmbedBuilder()
+        .setTitle(`Ticket de Soporte #${ticket._id.toString().slice(-5)}`)
+        .setDescription(`Tu ticket ha sido creado. Por favor, describe tu problema o duda aquí.`)
+        .addFields(
+            { name: 'Estado', value: 'Atendido', inline: true },
+            { name: 'Atendido por', value: `<@${user.id}>`, inline: true }
+        )
+        .setColor('Orange') // Color correcto para "Atendido"
+        .setFooter({ text: 'Un miembro del staff te atenderá pronto.' });
+
+    const ticketButtons = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+            .setCustomId(`attend_ticket_${ticket._id}`)
+            .setLabel('Atender Ticket')
+            .setStyle(ButtonStyle.Primary)
+            .setEmoji('✅')
+            .setDisabled(true),
+        new ButtonBuilder()
+            .setCustomId(`close_ticket_${ticket._id}`)
+            .setLabel('Cerrar Ticket')
+            .setStyle(ButtonStyle.Danger)
+            .setEmoji('🔒')
+    );
+
+    // Esta parte actualiza el canal del usuario (y ya funcionaba bien)
+    const originalMessage = await interaction.channel.messages.fetch(interaction.message.id);
+    await originalMessage.edit({ embeds: [ticketEmbed], components: [ticketButtons] });
+    await interaction.editReply({ content: `✅ Has tomado el ticket <#${ticket.channelId}>.` });
+
+    // Notify log channel (ESTA ES LA PARTE CORREGIDA)
+    const logChannel = await guild.channels.fetch(ticketConfig.logChannelId);
+    if (logChannel) {
+        const ticketChannel = guild.channels.cache.get(ticket.channelId);
+        const channelNameForLog = ticketChannel ? ticketChannel.name : `ID-${ticket.channelId}`;
+
+        const staffNotificationEmbed = new EmbedBuilder()
+            .setTitle('📝 Ticket Atendido') // <-- TÍTULO CORREGIDO
+            .setDescription(`El ticket del canal \`${channelNameForLog}\` ha sido atendido por <@${user.id}>.`) // <-- TEXTO CORREGIDO
             .addFields(
-                { name: 'Estado', value: 'Atendido', inline: true },
+                { name: 'Canal del Ticket', value: `\`${channelNameForLog}\``, inline: true },
                 { name: 'Atendido por', value: `<@${user.id}>`, inline: true }
             )
-            .setColor('Orange')
-            .setFooter({ text: 'Un miembro del staff te atenderá pronto.' });
-
-        const ticketButtons = new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                .setCustomId(`attend_ticket_${ticket._id}`)
-                .setLabel('Atender Ticket')
-                .setStyle(ButtonStyle.Primary)
-                .setEmoji('✅')
-                .setDisabled(true),
-            new ButtonBuilder()
-                .setCustomId(`close_ticket_${ticket._id}`)
-                .setLabel('Cerrar Ticket')
-                .setStyle(ButtonStyle.Danger)
-                .setEmoji('🔒')
-        );
-
-        await interaction.message.edit({ embeds: [ticketEmbed], components: [ticketButtons] });
-        await interaction.editReply({ content: `✅ Has tomado el ticket <#${ticket.channelId}>.` });
-
-        // Notify log channel
-        const logChannel = await guild.channels.fetch(ticketConfig.logChannelId);
-        if (logChannel) {
-            // SOLUCIÓN: Obtenemos el nombre del canal antes de que se borre.
-            const ticketChannel = guild.channels.cache.get(ticket.channelId);
-            const channelNameForLog = ticketChannel ? ticketChannel.name : `ID-${ticket.channelId}`;
-
-            const staffNotificationEmbed = new EmbedBuilder()
-                .setTitle('🔒 Ticket Cerrado')
-                // Usamos el nombre del canal para un registro permanente.
-                .setDescription(`El ticket del canal \`${channelNameForLog}\` ha sido cerrado por <@${user.id}>.`)
-                .addFields(
-                    // Mostramos el nombre en lugar del enlace roto.
-                    { name: 'Canal del Ticket', value: `\`${channelNameForLog}\``, inline: true },
-                    { name: 'Cerrado por', value: `<@${user.id}>`, inline: true }
-                )
-                .setColor('Red')
-                .setTimestamp();
-            await logChannel.send({ embeds: [staffNotificationEmbed] });
-        }
-        return;
+            .setColor('Orange') // <-- COLOR CORREGIDO
+            .setTimestamp();
+        await logChannel.send({ embeds: [staffNotificationEmbed] });
     }
+    return;
+}
 
     if (customId.startsWith('close_ticket_')) {
         await interaction.deferReply({ ephemeral: true });
