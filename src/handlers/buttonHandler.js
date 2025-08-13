@@ -1562,14 +1562,20 @@ if (customId === 'team_view_roster_button') {
         // Notify log channel
         const logChannel = await guild.channels.fetch(ticketConfig.logChannelId);
         if (logChannel) {
+            // SOLUCIÓN: Obtenemos el nombre del canal antes de que se borre.
+            const ticketChannel = guild.channels.cache.get(ticket.channelId);
+            const channelNameForLog = ticketChannel ? ticketChannel.name : `ID-${ticket.channelId}`;
+
             const staffNotificationEmbed = new EmbedBuilder()
-                .setTitle('📝 Ticket Atendido')
-                .setDescription(`El ticket <#${ticket.channelId}> ha sido atendido por <@${user.id}>.`)
+                .setTitle('🔒 Ticket Cerrado')
+                // Usamos el nombre del canal para un registro permanente.
+                .setDescription(`El ticket del canal \`${channelNameForLog}\` ha sido cerrado por <@${user.id}>.`)
                 .addFields(
-                    { name: 'Ticket', value: `<#${ticket.channelId}>`, inline: true },
-                    { name: 'Atendido por', value: `<@${user.id}>`, inline: true }
+                    // Mostramos el nombre en lugar del enlace roto.
+                    { name: 'Canal del Ticket', value: `\`${channelNameForLog}\``, inline: true },
+                    { name: 'Cerrado por', value: `<@${user.id}>`, inline: true }
                 )
-                .setColor('Orange')
+                .setColor('Red')
                 .setTimestamp();
             await logChannel.send({ embeds: [staffNotificationEmbed] });
         }
