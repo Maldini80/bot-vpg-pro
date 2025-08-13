@@ -1653,3 +1653,6 @@ if (customId === 'team_view_roster_button') {
         }, 5000); // Delete after 5 seconds
         return;
     }
+    }; // <--- AÑADE ESTA LLAVE DE CIERRE
+
+module.exports = handler; // <--- AÑADE ESTA LÍNEA DE EXPORTACIÓN
