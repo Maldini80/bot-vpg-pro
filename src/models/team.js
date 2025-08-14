@@ -11,7 +11,8 @@ const teamSchema = new mongoose.Schema({
     managerId: { type: String, unique: true, sparse: true },
     captains: [{ type: String }],
     players: [{ type: String }],
-    recruitmentOpen: { type: Boolean, default: true } // <-- NUEVO CAMPO
+    // AÑADE LA SIGUIENTE LÍNEA AQUÍ
+    recruitmentOpen: { type: Boolean, default: true } 
 });
 
 module.exports = mongoose.model('Team', teamSchema, 'teams');
