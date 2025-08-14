@@ -6,6 +6,8 @@ const League = require('../models/league.js');
 const AvailabilityPanel = require('../models/availabilityPanel.js');
 const FreeAgent = require('../models/freeAgent.js');
 const TeamOffer = require('../models/teamOffer.js');
+const { updatePanelMessage, getOrCreateWebhook } = require('./buttonHandler.js');
+
 
 const POSITIONS = ['POR', 'DFC', 'CARR', 'MCD', 'MV', 'MCO', 'DC'];
 
@@ -48,7 +50,6 @@ module.exports = async (client, interaction) => {
 
     if (customId === 'update_select_primary_position') {
         await interaction.deferUpdate();
-
         const selectedPosition = values[0];
         await VPGUser.findOneAndUpdate({ discordId: user.id }, { primaryPosition: selectedPosition }, { upsert: true });
 
@@ -63,8 +64,9 @@ module.exports = async (client, interaction) => {
             components: [new ActionRowBuilder().addComponents(secondaryMenu)]
         });
         return;
-
-    } else if (customId === 'update_select_secondary_position') {
+    }
+    
+    if (customId === 'update_select_secondary_position') {
         const selectedPosition = values[0];
         await VPGUser.findOneAndUpdate({ discordId: user.id }, { secondaryPosition: selectedPosition === 'NINGUNA' ? null : selectedPosition }, { upsert: true });
 
@@ -87,7 +89,7 @@ module.exports = async (client, interaction) => {
         return;
     }
     
-    else if (customId === 'search_team_pos_filter' || customId === 'search_team_league_filter') {
+    if (customId === 'search_team_pos_filter' || customId === 'search_team_league_filter') {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const filter = { guildId: guild.id, status: 'ACTIVE' };
         if (selectedValue !== 'ANY') {
@@ -103,16 +105,19 @@ module.exports = async (client, interaction) => {
         for (const offer of offers) {
             const offerEmbed = new EmbedBuilder()
                 .setAuthor({ name: offer.teamId.name, iconURL: offer.teamId.logoUrl })
-                .setThumbnail(offer.teamId.logoUrl && offer.teamId.logoUrl.startsWith('http') ? offer.teamId.logoUrl : null)
+                .setThumbnail(offer.teamId.logoUrl)
                 .setColor('Green')
                 .addFields(
                     { name: 'Posiciones Buscadas', value: `\`${offer.positions.join(', ')}\`` },
-                    { name: 'Requisitos', value: offer.requirements }
+                    { name: 'Requisitos', value: offer.requirements },
+                    { name: 'Contacto', value: `<@${offer.postedById}>` }
                 );
-            await interaction.followUp({ content: `**Contacto:** <@${offer.postedById}>`, embeds: [offerEmbed], flags: MessageFlags.Ephemeral });
+            await interaction.followUp({ embeds: [offerEmbed], flags: MessageFlags.Ephemeral });
         }
-
-    } else if (customId === 'search_player_pos_filter') {
+        return;
+    }
+    
+    if (customId === 'search_player_pos_filter') {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const selectedPositions = values;
         const profiles = await VPGUser.find({ 'primaryPosition': { $in: selectedPositions } }).lean();
@@ -149,8 +154,10 @@ module.exports = async (client, interaction) => {
                 .setFooter({ text: `Puedes contactar directamente con este jugador.` });
             await interaction.followUp({ embeds: [playerEmbed], flags: MessageFlags.Ephemeral });
         }
-
-    } else if (customId.startsWith('offer_select_positions_')) {
+        return;
+    }
+    
+    if (customId.startsWith('offer_select_positions_')) {
         const teamId = customId.split('_')[3];
         const selectedPositions = values;
         const modal = new ModalBuilder()
@@ -164,94 +171,136 @@ module.exports = async (client, interaction) => {
             .setPlaceholder('Ej: Buscamos jugadores comprometidos, con micro, disponibilidad L-J de 22 a 23h CET...');
         modal.addComponents(new ActionRowBuilder().addComponents(requirementsInput));
         await interaction.showModal(modal);
-
-    } else if (customId === 'apply_to_team_select') {
+        return;
+    }
+    
+    if (customId === 'apply_to_team_select') {
         const teamId = selectedValue;
         const modal = new ModalBuilder().setCustomId(`application_modal_${teamId}`).setTitle('Aplicar a Equipo');
         const presentationInput = new TextInputBuilder().setCustomId('presentation').setLabel('Escribe una breve presentación').setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(200);
         modal.addComponents(new ActionRowBuilder().addComponents(presentationInput));
         await interaction.showModal(modal);
-
-    } else if (customId === 'select_league_for_registration') {
-    const leagueName = selectedValue;
-    const modal = new ModalBuilder()
-        .setCustomId(`manager_request_modal_${leagueName}`)
-        .setTitle(`Registrar Equipo en ${leagueName}`);
+        return;
+    }
     
-    const vpgUsernameInput = new TextInputBuilder().setCustomId('vpgUsername').setLabel("Tu nombre de usuario en VPG").setStyle(TextInputStyle.Short).setRequired(true);
-    const teamNameInput = new TextInputBuilder().setCustomId('teamName').setLabel("Nombre de tu equipo").setStyle(TextInputStyle.Short).setRequired(true);
-    const teamAbbrInput = new TextInputBuilder().setCustomId('teamAbbr').setLabel("Abreviatura (3 letras)").setStyle(TextInputStyle.Short).setRequired(true).setMinLength(3).setMaxLength(3);
-    const teamTwitterInput = new TextInputBuilder().setCustomId('teamTwitterInput').setLabel("Twitter del equipo (usuario sin @, opcional)").setStyle(TextInputStyle.Short).setRequired(false);
-
-    modal.addComponents(
-        new ActionRowBuilder().addComponents(vpgUsernameInput), 
-        new ActionRowBuilder().addComponents(teamNameInput), 
-        new ActionRowBuilder().addComponents(teamAbbrInput),
-        new ActionRowBuilder().addComponents(teamTwitterInput)
-    );
-    await interaction.showModal(modal);
-} else if (customId.startsWith('select_league_filter_') || customId === 'admin_select_team_to_manage' || customId === 'roster_management_menu' || customId === 'admin_change_league_menu') {
+    if (customId === 'select_league_for_registration') {
+        const leagueName = selectedValue;
+        const modal = new ModalBuilder().setCustomId(`manager_request_modal_${leagueName}`).setTitle(`Registrar Equipo en ${leagueName}`);
+        const vpgUsernameInput = new TextInputBuilder().setCustomId('vpgUsername').setLabel("Tu nombre de usuario en VPG").setStyle(TextInputStyle.Short).setRequired(true);
+        const teamNameInput = new TextInputBuilder().setCustomId('teamName').setLabel("Nombre de tu equipo").setStyle(TextInputStyle.Short).setRequired(true);
+        const teamAbbrInput = new TextInputBuilder().setCustomId('teamAbbr').setLabel("Abreviatura (3 letras)").setStyle(TextInputStyle.Short).setRequired(true).setMinLength(3).setMaxLength(3);
+        modal.addComponents(new ActionRowBuilder().addComponents(vpgUsernameInput), new ActionRowBuilder().addComponents(teamNameInput), new ActionRowBuilder().addComponents(teamAbbrInput));
+        await interaction.showModal(modal);
+        return;
+    }
+    
+    if (customId.startsWith('select_league_filter_')) {
         await interaction.deferUpdate();
-        if (customId.startsWith('select_league_filter_')) {
-            const panelType = customId.split('_')[3];
-            const selectedLeagues = values;
-            const leaguesString = selectedLeagues.length > 0 ? selectedLeagues.join(',') : 'none';
-            const continueButton = new ButtonBuilder()
-                .setCustomId(`continue_panel_creation_${panelType}_${leaguesString}`)
-                .setLabel('Continuar con la Creación del Panel')
-                .setStyle(ButtonStyle.Success);
-            await interaction.editReply({
-                content: `Has seleccionado las ligas: **${selectedLeagues.length > 0 ? selectedLeagues.join(', ') : 'Ninguna'}**. Pulsa continuar.`,
-                components: [new ActionRowBuilder().addComponents(continueButton)]
-            });
-        } else if (customId === 'admin_select_team_to_manage') {
-            const teamId = selectedValue;
-            const team = await Team.findById(teamId).lean();
-            if (!team) return interaction.editReply({ content: 'Este equipo ya no existe.', components: [], embeds: [] });
-            const leagues = await League.find({ guildId: guild.id }).sort({ name: 1 });
-            const leagueOptions = leagues.map(l => ({ label: l.name, value: `admin_set_league_${teamId}_${l._id}`, default: team.league === l.name }));
-            const leagueMenu = new StringSelectMenuBuilder().setCustomId('admin_change_league_menu').setPlaceholder('Cambiar la liga del equipo').addOptions(leagueOptions);
-            const embed = new EmbedBuilder().setTitle(`Gestión: ${team.name}`).setColor('DarkRed').setThumbnail(team.logoUrl && team.logoUrl.startsWith('http') ? team.logoUrl : null);
-            const row1 = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`admin_change_data_${teamId}`).setLabel('Cambiar Datos').setStyle(ButtonStyle.Secondary), new ButtonBuilder().setCustomId(`admin_manage_members_${teamId}`).setLabel('Gestionar Miembros').setStyle(ButtonStyle.Primary));
-            const row2 = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`admin_dissolve_team_${teamId}`).setLabel('DISOLVER EQUIPO').setStyle(ButtonStyle.Danger));
-            const row3 = new ActionRowBuilder().addComponents(leagueMenu);
-            await interaction.editReply({ content: '', embeds: [embed], components: [row1, row2, row3] });
-        } else if (customId === 'roster_management_menu') {
-            const targetId = selectedValue;
-            const managerTeam = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
-            if (!managerTeam) return interaction.editReply({content: "Ya no tienes permisos sobre este equipo.", components: []});
-            const isManager = managerTeam.managerId === user.id;
-            const targetMember = await guild.members.fetch(targetId).catch(()=>null);
-            if(!targetMember) return interaction.editReply({ content: "El miembro seleccionado ya no está en el servidor.", components: []});
-            const isTargetCaptain = managerTeam.captains.includes(targetId);
-            const row = new ActionRowBuilder();
-            if (isManager) {
-                if (isTargetCaptain) { row.addComponents(new ButtonBuilder().setCustomId(`demote_captain_${targetId}`).setLabel('Degradar a Jugador').setStyle(ButtonStyle.Secondary)); }
-                else { row.addComponents(new ButtonBuilder().setCustomId(`promote_player_${targetId}`).setLabel('Ascender a Capitán').setStyle(ButtonStyle.Success)); }
-            }
-            row.addComponents(new ButtonBuilder().setCustomId(`kick_player_${targetId}`).setLabel('Expulsar del Equipo').setStyle(ButtonStyle.Danger));
-            row.addComponents(new ButtonBuilder().setCustomId(`toggle_mute_player_${targetId}`).setLabel('Mutear/Desmutear Chat').setStyle(ButtonStyle.Secondary));
-            await interaction.editReply({ content: `Acciones para **${targetMember.user.username}**:`, components: [row] });
-        } else if (customId === 'admin_change_league_menu') {
-            const parts = selectedValue.split('_');
-            const teamId = parts[3];
-            const leagueId = parts[4];
-            const team = await Team.findById(teamId);
-            const league = await League.findById(leagueId);
-            if (!team || !league) return interaction.followUp({ content: 'El equipo o la liga ya no existen.', flags: MessageFlags.Ephemeral });
-            team.league = league.name;
-            await team.save();
-            await interaction.followUp({ content: `✅ La liga del equipo **${team.name}** ha sido cambiada a **${league.name}**.`, flags: MessageFlags.Ephemeral });
-        }
+        const panelType = customId.split('_')[3];
+        const selectedLeagues = values;
+        const leaguesString = selectedLeagues.length > 0 ? selectedLeagues.join(',') : 'none';
+        
+        const continueButton = new ButtonBuilder()
+            .setCustomId(`continue_panel_creation_${panelType}_${leaguesString}`)
+            .setLabel('Continuar con la Creación del Panel')
+            .setStyle(ButtonStyle.Success);
+            
+        await interaction.editReply({
+            content: `Has seleccionado las ligas: **${selectedLeagues.length > 0 ? selectedLeagues.join(', ') : 'Ninguna'}**. Pulsa continuar.`,
+            components: [new ActionRowBuilder().addComponents(continueButton)]
+        });
+        return;
+    }
+    
+    if (customId === 'admin_select_team_to_manage') {
+        await interaction.deferUpdate();
+        const teamId = selectedValue;
+        const team = await Team.findById(teamId).lean();
+        if (!team) return interaction.editReply({ content: 'Este equipo ya no existe.', components: [], embeds: [] });
+        
+        const leagues = await League.find({ guildId: guild.id }).sort({ name: 1 });
+        const leagueOptions = leagues.map(l => ({ label: l.name, value: `admin_set_league_${teamId}_${l._id}`, default: team.league === l.name }));
+        
+        const leagueMenu = new StringSelectMenuBuilder()
+            .setCustomId('admin_change_league_menu')
+            .setPlaceholder('Cambiar la liga del equipo')
+            .addOptions(leagueOptions);
 
-    } else if (customId === 'view_team_roster_select') {
-        await interaction.deferReply({ flags: 64 });
+        const embed = new EmbedBuilder().setTitle(`Gestión: ${team.name}`).setColor('DarkRed').setThumbnail(team.logoUrl);
+        const row1 = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId(`admin_change_data_${teamId}`).setLabel('Cambiar Datos').setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder().setCustomId(`admin_manage_members_${teamId}`).setLabel('Gestionar Miembros').setStyle(ButtonStyle.Primary)
+        );
+        const row2 = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`admin_dissolve_team_${teamId}`).setLabel('DISOLVER EQUIPO').setStyle(ButtonStyle.Danger));
+        const row3 = new ActionRowBuilder().addComponents(leagueMenu);
+        
+        await interaction.editReply({ content: '', embeds: [embed], components: [row1, row2, row3] });
+        return;
+    }
+    
+    if (customId === 'roster_management_menu') {
+        await interaction.deferUpdate();
+        const targetId = selectedValue;
+        const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
+        
+        if(!team) {
+            const adminTeam = await Team.findOne({ 'players': targetId });
+            if (!adminTeam || !interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+                return interaction.editReply({content: "No tienes permisos sobre este equipo.", components: []});
+            }
+        }
+        const managerTeam = team || await Team.findOne({ players: { $in: [targetId] }, guildId: guild.id });
+        
+        const isManagerAction = managerTeam.managerId === user.id || interaction.member.permissions.has(PermissionFlagsBits.Administrator);
+        const targetMember = await guild.members.fetch(targetId).catch(()=>null);
+        if(!targetMember) return interaction.editReply({ content: "El miembro seleccionado ya no está en el servidor.", components: []});
+        
+        const isTargetCaptain = managerTeam.captains.includes(targetId);
+        const row = new ActionRowBuilder();
+        
+        if (isManagerAction) {
+            if (isTargetCaptain) {
+                row.addComponents(new ButtonBuilder().setCustomId(`demote_captain_${targetId}`).setLabel('Degradar a Jugador').setStyle(ButtonStyle.Secondary));
+            } else if (managerTeam.players.includes(targetId)) {
+                row.addComponents(new ButtonBuilder().setCustomId(`promote_player_${targetId}`).setLabel('Ascender a Capitán').setStyle(ButtonStyle.Success));
+            }
+        }
+        
+        if (managerTeam.managerId !== targetId) {
+             row.addComponents(new ButtonBuilder().setCustomId(`kick_player_${targetId}`).setLabel('Expulsar del Equipo').setStyle(ButtonStyle.Danger));
+        }
+        
+        row.addComponents(new ButtonBuilder().setCustomId(`toggle_mute_player_${targetId}`).setLabel('Mutear/Desmutear Chat').setStyle(ButtonStyle.Secondary));
+        
+        await interaction.editReply({ content: `Acciones para **${targetMember.user.username}**:`, components: [row] });
+        return;
+    }
+    
+    if (customId === 'admin_change_league_menu') {
+        await interaction.deferUpdate();
+        const parts = selectedValue.split('_');
+        const teamId = parts[3];
+        const leagueId = parts[4];
+        const team = await Team.findById(teamId);
+        const league = await League.findById(leagueId);
+        if (!team || !league) return interaction.followUp({ content: 'El equipo o la liga ya no existen.', flags: MessageFlags.Ephemeral });
+        team.league = league.name;
+        await team.save();
+        await interaction.followUp({ content: `✅ La liga del equipo **${team.name}** ha sido cambiada a **${league.name}**.`, flags: MessageFlags.Ephemeral });
+        return;
+    }
+    
+    if (customId === 'view_team_roster_select') {
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const team = await Team.findById(selectedValue).lean();
         if (!team) return interaction.editReply({ content: 'Este equipo ya no existe.' });
+        
         const allMemberIds = [team.managerId, ...team.captains, ...team.players].filter(id => id);
         if (allMemberIds.length === 0) return interaction.editReply({ content: 'Este equipo no tiene miembros.' });
+        
         const memberProfiles = await VPGUser.find({ discordId: { $in: allMemberIds } }).lean();
         const memberMap = new Map(memberProfiles.map(p => [p.discordId, p]));
+        
         let rosterString = '';
         const fetchMemberInfo = async (ids, roleName) => {
             if (!ids || ids.length === 0) return;
@@ -268,19 +317,23 @@ module.exports = async (client, interaction) => {
                 } catch (error) { rosterString += `> *Usuario no encontrado (ID: ${memberId})*\n`; }
             }
         };
+        
         await fetchMemberInfo([team.managerId].filter(Boolean), '👑 Mánager');
         await fetchMemberInfo(team.captains, '🛡️ Capitanes');
         await fetchMemberInfo(team.players, 'Jugadores');
-        const embed = new EmbedBuilder().setTitle(`Plantilla de ${team.name} (${team.abbreviation})`).setDescription(rosterString.trim() || 'Este equipo no tiene miembros.').setColor('#3498db').setThumbnail(team.logoUrl && team.logoUrl.startsWith('http') ? team.logoUrl : null).setFooter({ text: `Liga: ${team.league}` });
+        
+        const embed = new EmbedBuilder().setTitle(`Plantilla de ${team.name} (${team.abbreviation})`).setDescription(rosterString.trim() || 'Este equipo no tiene miembros.').setColor('#3498db').setThumbnail(team.logoUrl).setFooter({ text: `Liga: ${team.league}` });
         return interaction.editReply({ embeds: [embed] });
-
-    } else if (customId === 'delete_league_select_menu') {
-        await interaction.deferReply({ flags: 64 });
+    }
+    
+    if (customId === 'delete_league_select_menu') {
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const leaguesToDelete = values;
         const result = await League.deleteMany({ guildId: guild.id, name: { $in: leaguesToDelete } });
         return interaction.editReply({ content: `✅ Se han eliminado ${result.deletedCount} ligas.` });
+    }
     
-    } else if (customId === 'register_select_primary_position' || customId === 'register_select_secondary_position') {
+    if (customId === 'register_select_primary_position' || customId === 'register_select_secondary_position') {
         await interaction.deferUpdate();
         const isPrimary = customId === 'register_select_primary_position';
         const position = values[0];
@@ -288,54 +341,17 @@ module.exports = async (client, interaction) => {
         const update = isPrimary 
             ? { primaryPosition: position } 
             : { secondaryPosition: position === 'NINGUNA' ? null : position };
-        await VPGUser.findOneAndUpdate({ discordId: user.id }, update);
+        
+        const userProfile = await VPGUser.findOneAndUpdate({ discordId: user.id }, update, { new: true, upsert: true });
 
-        const userProfile = await VPGUser.findOne({ discordId: user.id });
-
-        if (userProfile && userProfile.primaryPosition) {
-            try {
-                const guild = await client.guilds.fetch(process.env.GUILD_ID);
-                if (!guild) throw new Error('No se pudo encontrar el servidor principal.');
-                
-                const member = await guild.members.fetch(user.id);
+        if (userProfile && userProfile.primaryPosition && userProfile.secondaryPosition !== undefined) {
+             try {
+                const member = interaction.member;
                 if (!member) throw new Error('No se pudo encontrar al miembro en el servidor.');
 
                 const playerRole = await guild.roles.fetch(process.env.PLAYER_ROLE_ID);
                 if (playerRole) {
                     await member.roles.add(playerRole);
-                    try {
-						const playerGuideEmbed = new EmbedBuilder()
-							.setTitle('✅ ¡Perfil Completado y Rol de Jugador Desbloqueado!')
-							.setColor('Green')
-							.setImage('https://i.imgur.com/7sB0gaa.jpg')
-							.setDescription(`¡Felicidades, ${member.user.username}! Has completado tu perfil. Ahora tienes acceso a las herramientas de jugador. A continuación, te explicamos en detalle todo lo que puedes hacer:`)
-							.addFields(
-								{
-									name: '➡️ ¿Ya tienes equipo pero necesitas unirte en Discord?',
-									value: 'Tienes dos formas de hacerlo:\n' +
-										   '1. **La más recomendada:** Habla con tu **Mánager o Capitán**. Ellos pueden usar la función `Invitar Jugador` desde su panel para añadirte al instante.\n' +
-										   '2. **Si prefieres tomar la iniciativa:** Puedes ir al panel de <#1396815232122228827>, pulsar `Acciones de Jugador` -> `Aplicar a un Equipo`, buscar tu club en la lista y enviarles una solicitud formal.'
-								},
-								{ 
-									name: '🔎 ¿Buscas un nuevo reto? Guía Completa del Mercado de Fichajes', 
-									value: 'El canal <#1402608609724072040> es tu centro de operaciones.\n' +
-										   '• **Para anunciarte**: Usa `Anunciarse como Agente Libre`. Si ya tenías un anuncio publicado, **este será reemplazado automáticamente por el nuevo**, nunca tendrás duplicados. Esta acción de publicar/reemplazar tu anuncio solo se puede realizar **una vez cada 3 días**.\n' +
-										   '• **Para buscar**: Usa `Buscar Ofertas de Equipo` para ver qué equipos han publicado vacantes y qué perfiles necesitan.\n' +
-										   '• **Para administrar tu anuncio**: Usa `Gestionar mi Anuncio` en cualquier momento para **editar** los detalles o **borrarlo** definitivamente si encuentras equipo.'
-								},
-								{
-									name: '⚙️ Herramientas Clave de tu Carrera',
-									value: 'Desde el panel principal de <#1396815232122228827> (`Acciones de Jugador`) tienes control total:\n' +
-										   '• **`Actualizar Perfil`**: Es crucial que mantengas tus IDs de juego (PSN, EA) actualizados.\n' +
-										   '• **`Abandonar Equipo`**: Si en el futuro decides dejar tu equipo actual, esta opción te dará total independencia para hacerlo.'
-								}
-							);
-
-						await member.send({ embeds: [playerGuideEmbed] });
-
-					} catch (dmError) {
-						console.log(`AVISO: No se pudo enviar el MD de guía al nuevo jugador ${member.user.tag}.`);
-					}
                 }
                 
                 await interaction.editReply({ 
@@ -351,11 +367,11 @@ module.exports = async (client, interaction) => {
                 });
             }
         }
+        return;
     }
-    else if (customId.startsWith('select_available_times_')) {
-        await interaction.deferReply({ flags: 64 });
-
-        const { updatePanelMessage, getOrCreateWebhook } = require('./buttonHandler.js');
+    
+    if (customId.startsWith('select_available_times_')) {
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const selectedTimes = values;
         const leaguesString = customId.split('_').slice(3).join('_');
         const leagues = leaguesString === 'all' ? [] : leaguesString.split(',');
@@ -374,19 +390,13 @@ module.exports = async (client, interaction) => {
         const message = await webhook.send({ embeds: [initialEmbed], username: team.name, avatarURL: team.logoUrl });
 
         const timeSlots = selectedTimes.map(time => ({
-            time: time,
+            time,
             status: 'AVAILABLE'
         }));
 
         const panel = new AvailabilityPanel({
-            guildId: guild.id,
-            channelId,
-            messageId: message.id,
-            teamId: team._id,
-            postedById: user.id,
-            panelType: 'SCHEDULED',
-            leagues,
-            timeSlots
+            guildId: guild.id, channelId, messageId: message.id, teamId: team._id,
+            postedById: user.id, panelType: 'SCHEDULED', leagues, timeSlots
         });
 
         await panel.save();
