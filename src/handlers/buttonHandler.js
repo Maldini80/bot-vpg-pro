@@ -9,6 +9,7 @@ const FreeAgent = require('../models/freeAgent.js');
 const TeamOffer = require('../models/teamOffer.js');
 const Ticket = require('../models/ticket.js');
 const TicketConfig = require('../models/ticketConfig.js');
+const PendingTeam = require('../models/pendingTeam.js'); // <-- IMPORTANTE: Añadir el nuevo modelo
 
 const POSITIONS = ['POR', 'DFC', 'CARR', 'MCD', 'MV', 'MCO', 'DC'];
 
@@ -467,6 +468,38 @@ const handler = async (client, interaction) => {
         return interaction.editReply({ content: 'El primer paso es seleccionar la liga para tu equipo:', components: [new ActionRowBuilder().addComponents(selectMenu)]});
     }
 
+    // ===========================================================================
+    // ================ LÓGICA CORREGIDA PARA EL LOGO DEL EQUIPO =================
+    // ===========================================================================
+    if (customId.startsWith('ask_logo_yes_')) {
+        const pendingTeamId = customId.split('_')[3];
+        const modal = new ModalBuilder()
+            .setCustomId(`final_logo_submit_${pendingTeamId}`)
+            .setTitle('Paso Final: Añadir Logo');
+        const teamLogoUrlInput = new TextInputBuilder()
+            .setCustomId('teamLogoUrlInput')
+            .setLabel("URL de la imagen de tu logo")
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setPlaceholder('https://i.imgur.com/logo.png');
+        modal.addComponents(new ActionRowBuilder().addComponents(teamLogoUrlInput));
+        return interaction.showModal(modal);
+    }
+    
+    if (customId.startsWith('ask_logo_no_')) {
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        const pendingTeamId = customId.split('_')[3];
+
+        const pendingTeam = await PendingTeam.findById(pendingTeamId);
+        if (!pendingTeam || pendingTeam.userId !== user.id) {
+            return interaction.editReply({ content: 'Esta solicitud ha expirado o no es tuya.', components: [] });
+        }
+
+        const defaultLogo = 'https://i.imgur.com/V4J2Fcf.png';
+        await sendApprovalRequest(interaction, client, { ...pendingTeam.toObject(), logoUrl: defaultLogo });
+        return interaction.editReply({ content: '✅ ¡Perfecto! Tu solicitud ha sido enviada con un logo por defecto. Un administrador la revisará.', components: [] });
+    }
+
     if (customId === 'view_teams_button') {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const teams = await Team.find({ guildId: guild.id }).sort({ name: 1 }).lean();
@@ -531,43 +564,7 @@ const handler = async (client, interaction) => {
         return; 
     }
 
-    // ===========================================================================
-    // ================== ESTE BLOQUE ES EL QUE SE HA CORREGIDO ==================
-    // ===========================================================================
-    if (customId.startsWith('admin_change_data_')) {
-        if (!isAdmin) return interaction.reply({ content: 'Acción restringida.', flags: MessageFlags.Ephemeral });
-        const teamId = customId.split('_')[3];
-        const team = await Team.findById(teamId);
-        if (!team) return interaction.reply({ content: 'No se encontró el equipo.', flags: MessageFlags.Ephemeral });
-
-        const modal = new ModalBuilder().setCustomId(`edit_data_modal_${team._id}`).setTitle(`Editar Datos de ${team.name}`);
-        const newNameInput = new TextInputBuilder().setCustomId('newName').setLabel("Nuevo Nombre (opcional)").setStyle(TextInputStyle.Short).setRequired(false).setValue(team.name);
-        const newAbbrInput = new TextInputBuilder().setCustomId('newAbbr').setLabel("Nueva Abreviatura (opcional)").setStyle(TextInputStyle.Short).setRequired(false).setValue(team.abbreviation).setMinLength(3).setMaxLength(3);
-        const newLogoInput = new TextInputBuilder().setCustomId('newLogo').setLabel("Nueva URL del Logo (opcional)").setStyle(TextInputStyle.Short).setRequired(false).setValue(team.logoUrl);
-        const newTwitterInput = new TextInputBuilder().setCustomId('newTwitter').setLabel("Twitter del equipo (sin @)").setStyle(TextInputStyle.Short).setRequired(false).setValue(team.twitterHandle || '');
-        
-        modal.addComponents(
-            new ActionRowBuilder().addComponents(newNameInput),
-            new ActionRowBuilder().addComponents(newAbbrInput),
-            new ActionRowBuilder().addComponents(newLogoInput),
-            new ActionRowBuilder().addComponents(newTwitterInput)
-        );
-        return interaction.showModal(modal);
-    }
-    
-    if (customId.startsWith('admin_dissolve_team_')) {
-        if (!isAdmin) return interaction.reply({ content: 'Acción restringida.', flags: MessageFlags.Ephemeral });
-        const teamId = customId.split('_')[3];
-        const team = await Team.findById(teamId);
-        if (!team) return interaction.reply({ content: 'Equipo no encontrado.', flags: MessageFlags.Ephemeral });
-        
-        const modal = new ModalBuilder().setCustomId(`confirm_dissolve_modal_${teamId}`).setTitle(`Disolver Equipo: ${team.name}`);
-        const confirmationInput = new TextInputBuilder().setCustomId('confirmation_text').setLabel(`Escribe "${team.name}" para confirmar`).setStyle(TextInputStyle.Short).setRequired(true).setPlaceholder(team.name);
-        modal.addComponents(new ActionRowBuilder().addComponents(confirmationInput));
-        return interaction.showModal(modal);
-    }
-    
-    // Lógica para los botones del panel de Administración (el resto)
+    // Lógica para los botones del panel de Administración
     if (customId === 'admin_create_league_button') {
         if (!isAdmin) return interaction.reply({ content: 'Acción restringida.', flags: MessageFlags.Ephemeral });
         const modal = new ModalBuilder().setCustomId('create_league_modal').setTitle('Crear Nueva Liga');
@@ -635,6 +632,39 @@ const handler = async (client, interaction) => {
         
         await interaction.editReply({ content: `Gestionando miembros de **${team.name}**. Selecciona uno:`, components: [new ActionRowBuilder().addComponents(selectMenu)] });
         return;
+    }
+    
+    if (customId.startsWith('admin_change_data_')) {
+        if (!isAdmin) return interaction.reply({ content: 'Acción restringida.', flags: MessageFlags.Ephemeral });
+        const teamId = customId.split('_')[3];
+        const team = await Team.findById(teamId);
+        if (!team) return interaction.reply({ content: 'No se encontró el equipo.', flags: MessageFlags.Ephemeral });
+
+        const modal = new ModalBuilder().setCustomId(`edit_data_modal_${team._id}`).setTitle(`Editar Datos de ${team.name}`);
+        const newNameInput = new TextInputBuilder().setCustomId('newName').setLabel("Nuevo Nombre (opcional)").setStyle(TextInputStyle.Short).setRequired(false).setValue(team.name);
+        const newAbbrInput = new TextInputBuilder().setCustomId('newAbbr').setLabel("Nueva Abreviatura (opcional)").setStyle(TextInputStyle.Short).setRequired(false).setValue(team.abbreviation).setMinLength(3).setMaxLength(3);
+        const newLogoInput = new TextInputBuilder().setCustomId('newLogo').setLabel("Nueva URL del Logo (opcional)").setStyle(TextInputStyle.Short).setRequired(false).setValue(team.logoUrl);
+        const newTwitterInput = new TextInputBuilder().setCustomId('newTwitter').setLabel("Twitter del equipo (sin @)").setStyle(TextInputStyle.Short).setRequired(false).setValue(team.twitterHandle || '');
+        
+        modal.addComponents(
+            new ActionRowBuilder().addComponents(newNameInput),
+            new ActionRowBuilder().addComponents(newAbbrInput),
+            new ActionRowBuilder().addComponents(newLogoInput),
+            new ActionRowBuilder().addComponents(newTwitterInput)
+        );
+        return interaction.showModal(modal);
+    }
+    
+    if (customId.startsWith('admin_dissolve_team_')) {
+        if (!isAdmin) return interaction.reply({ content: 'Acción restringida.', flags: MessageFlags.Ephemeral });
+        const teamId = customId.split('_')[3];
+        const team = await Team.findById(teamId);
+        if (!team) return interaction.reply({ content: 'Equipo no encontrado.', flags: MessageFlags.Ephemeral });
+        
+        const modal = new ModalBuilder().setCustomId(`confirm_dissolve_modal_${teamId}`).setTitle(`Disolver Equipo: ${team.name}`);
+        const confirmationInput = new TextInputBuilder().setCustomId('confirmation_text').setLabel(`Escribe "${team.name}" para confirmar`).setStyle(TextInputStyle.Short).setRequired(true).setPlaceholder(team.name);
+        modal.addComponents(new ActionRowBuilder().addComponents(confirmationInput));
+        return interaction.showModal(modal);
     }
 
     if (customId === 'admin_view_pending_requests') {
@@ -1165,7 +1195,7 @@ const handler = async (client, interaction) => {
         teamToLeave.captains = teamToLeave.captains.filter(c => c !== user.id);
         await teamToLeave.save();
         await member.roles.remove([process.env.PLAYER_ROLE_ID, process.env.CAPTAIN_ROLE_ID, process.env.MUTED_ROLE_ID]).catch(() => {});
-        if (member.id !== guild.ownerId) await member.setNickname(user.username).catch(()=>{});
+        if (member.id !== guild.ownerId) await member.setNickname(member.user.username).catch(()=>{});
         await interaction.editReply({ content: `Has abandonado el equipo **${teamToLeave.name}**.` });
         const manager = await client.users.fetch(teamToLeave.managerId).catch(() => null);
         if (manager) await manager.send(`El jugador **${user.tag}** ha abandonado tu equipo.`);
