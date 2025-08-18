@@ -1,5 +1,5 @@
 // src/handlers/selectMenuHandler.js
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, StringSelectMenuBuilder, MessageFlags } = require('discord.js');
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, StringSelectMenuBuilder, MessageFlags, PermissionFlagsBits } = require('discord.js');
 const Team = require('../models/team.js');
 const VPGUser = require('../models/user.js');
 const League = require('../models/league.js');
@@ -183,13 +183,27 @@ module.exports = async (client, interaction) => {
         return;
     }
     
+    // ===========================================================================
+    // ================== ESTE BLOQUE ES EL QUE SE HA CORREGIDO ==================
+    // ===========================================================================
     if (customId === 'select_league_for_registration') {
         const leagueName = selectedValue;
         const modal = new ModalBuilder().setCustomId(`manager_request_modal_${leagueName}`).setTitle(`Registrar Equipo en ${leagueName}`);
+        
         const vpgUsernameInput = new TextInputBuilder().setCustomId('vpgUsername').setLabel("Tu nombre de usuario en VPG").setStyle(TextInputStyle.Short).setRequired(true);
         const teamNameInput = new TextInputBuilder().setCustomId('teamName').setLabel("Nombre de tu equipo").setStyle(TextInputStyle.Short).setRequired(true);
         const teamAbbrInput = new TextInputBuilder().setCustomId('teamAbbr').setLabel("Abreviatura (3 letras)").setStyle(TextInputStyle.Short).setRequired(true).setMinLength(3).setMaxLength(3);
-        modal.addComponents(new ActionRowBuilder().addComponents(vpgUsernameInput), new ActionRowBuilder().addComponents(teamNameInput), new ActionRowBuilder().addComponents(teamAbbrInput));
+        
+        // El campo que faltaba ahora se añade al formulario
+        const teamTwitterInput = new TextInputBuilder().setCustomId('teamTwitterInput').setLabel("Twitter del equipo (opcional, sin @)").setStyle(TextInputStyle.Short).setRequired(false);
+
+        modal.addComponents(
+            new ActionRowBuilder().addComponents(vpgUsernameInput), 
+            new ActionRowBuilder().addComponents(teamNameInput), 
+            new ActionRowBuilder().addComponents(teamAbbrInput),
+            new ActionRowBuilder().addComponents(teamTwitterInput) // Añadido aquí
+        );
+        
         await interaction.showModal(modal);
         return;
     }
