@@ -227,6 +227,8 @@ async function sendApprovalRequest(interaction, client, { vpgUsername, teamName,
     const approvalChannel = await client.channels.fetch(approvalChannelId).catch(() => null);
     if (!approvalChannel) return;
 
+    const safeLeagueName = leagueName.replace(/\s/g, '_');
+
     const embed = new EmbedBuilder()
         .setTitle('📝 Nueva Solicitud de Registro')
         .setColor('Orange')
@@ -243,7 +245,7 @@ async function sendApprovalRequest(interaction, client, { vpgUsername, teamName,
         .setTimestamp();
 
     const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId(`approve_request_${interaction.user.id}_${leagueName}`).setLabel('Aprobar').setStyle(ButtonStyle.Success),
+        new ButtonBuilder().setCustomId(`approve_request_${interaction.user.id}_${safeLeagueName}`).setLabel('Aprobar').setStyle(ButtonStyle.Success),
         new ButtonBuilder().setCustomId(`reject_request_${interaction.user.id}`).setLabel('Rechazar').setStyle(ButtonStyle.Danger)
     );
     await approvalChannel.send({ content: `**Solicitante:** <@${interaction.user.id}>`, embeds: [embed], components: [row] });
@@ -496,9 +498,6 @@ const handler = async (client, interaction) => {
         return interaction.editReply({ content: 'El primer paso es seleccionar la liga para tu equipo:', components: [new ActionRowBuilder().addComponents(selectMenu)]});
     }
 
-    // ===========================================================================
-    // ================ LÓGICA CORREGIDA PARA EL LOGO DEL EQUIPO =================
-    // ===========================================================================
     if (customId.startsWith('ask_logo_yes_')) {
         const pendingTeamId = customId.split('_')[3];
         const modal = new ModalBuilder()
@@ -525,7 +524,92 @@ const handler = async (client, interaction) => {
 
         const defaultLogo = 'https://i.imgur.com/V4J2Fcf.png';
         await sendApprovalRequest(interaction, client, { ...pendingTeam.toObject(), logoUrl: defaultLogo });
+        await PendingTeam.findByIdAndDelete(pendingTeamId);
+
         return interaction.editReply({ content: '✅ ¡Perfecto! Tu solicitud ha sido enviada con un logo por defecto. Un administrador la revisará.', components: [] });
+    }
+    
+    // ===========================================================================
+    // =================== BLOQUE DE APROBACIÓN/RECHAZO CORREGIDO =================
+    // ===========================================================================
+    if (customId.startsWith('approve_request_')) {
+        await interaction.deferUpdate();
+        const esAprobador = member.permissions.has(PermissionFlagsBits.Administrator) || member.roles.cache.has(process.env.APPROVER_ROLE_ID);
+        if (!esAprobador) return interaction.followUp({ content: 'No tienes permisos para esta acción.', flags: MessageFlags.Ephemeral });
+
+        const parts = customId.split('_');
+        const applicantId = parts[2];
+        const leagueName = parts.slice(3).join('_').replace(/_/g, ' '); 
+
+        const originalEmbed = interaction.message.embeds[0];
+        if (!originalEmbed) return interaction.followUp({ content: 'Error: No se pudo encontrar el embed de la solicitud original.', flags: MessageFlags.Ephemeral });
+        
+        const teamName = originalEmbed.fields.find(f => f.name === 'Nombre del Equipo').value;
+        const teamAbbr = originalEmbed.fields.find(f => f.name === 'Abreviatura').value;
+        const teamTwitter = originalEmbed.fields.find(f => f.name === 'Twitter del Equipo').value;
+        const logoUrl = originalEmbed.thumbnail.url;
+
+        const applicantMember = await guild.members.fetch(applicantId).catch(() => null);
+        if (!applicantMember) return interaction.followUp({ content: `El usuario solicitante ya no está en el servidor.`, flags: MessageFlags.Ephemeral });
+
+        const existingTeam = await Team.findOne({ $or: [{ name: teamName }, { managerId: applicantId }], guildId: guild.id });
+        if (existingTeam) return interaction.followUp({ content: `Error: Ya existe un equipo con el nombre "${teamName}" o el usuario ya es mánager.`, flags: MessageFlags.Ephemeral });
+
+        const newTeam = new Team({
+            name: teamName,
+            abbreviation: teamAbbr,
+            guildId: guild.id,
+            league: leagueName,
+            logoUrl: logoUrl,
+            twitterHandle: teamTwitter === 'No especificado' ? null : teamTwitter,
+            managerId: applicantId,
+        });
+        await newTeam.save();
+
+        await applicantMember.roles.add(process.env.MANAGER_ROLE_ID);
+        await applicantMember.roles.add(process.env.PLAYER_ROLE_ID);
+        await applicantMember.setNickname(`|MG| ${teamAbbr} ${applicantMember.user.username}`).catch(err => console.log(`No se pudo cambiar apodo: ${err.message}`));
+
+        const disabledRow = ActionRowBuilder.from(interaction.message.components[0]);
+        disabledRow.components.forEach(c => c.setDisabled(true));
+        await interaction.message.edit({ components: [disabledRow] });
+
+        try {
+            const managerGuideEmbed = new EmbedBuilder()
+                .setTitle(`👑 ¡Felicidades, Mánager! Tu equipo "${teamName}" ha sido aprobado.`)
+                .setColor('Gold')
+                .setImage('https://i.imgur.com/KjamtCg.jpeg')
+                .setDescription('¡Bienvenido a la élite de la comunidad! Aquí tienes una guía detallada de tus nuevas responsabilidades y herramientas. Tu centro de mando principal es el panel del canal de gestión de equipo.')
+                .addFields(
+                    { name: 'Paso 1: Construye tu Plantilla', value: 'Tu prioridad es formar tu equipo. Desde el submenú `Gestionar Plantilla` puedes:\n• **`Invitar Jugador`**: Añade miembros directamente a tu plantilla.\n• **`Ascender a Capitán`**: Delega responsabilidades en jugadores de confianza para que te ayuden con la gestión diaria (amistosos, fichajes).' },
+                    { name: 'Paso 2: Mantén tu Equipo Activo', value: 'La actividad es clave para el éxito. Desde los submenús correspondientes puedes:\n• **`Gestionar Amistosos`**: Usa `Programar Búsqueda` para anunciar tu disponibilidad con antelación o `Buscar Rival (Ahora)` para un partido inmediato.\n• **`Gestionar Fichajes`**: Usa `Crear / Editar Oferta` para publicar que buscas jugadores. Tu oferta será visible para todos los agentes libres.' },
+                    { name: 'Paso 3: Administración y Consejos', value: '• **`Editar Datos del Equipo`**: Mantén actualizados el nombre, abreviatura, logo y Twitter de tu equipo.\n• **`Abrir/Cerrar Reclutamiento`**: Controla si tu equipo acepta solicitudes de nuevos miembros.\n• **Tienes el control total**: Eres el máximo responsable de tu equipo.' }
+                );
+            await applicantMember.send({ embeds: [managerGuideEmbed] });
+        } catch (dmError) {
+            console.log(`AVISO: No se pudo enviar el MD de guía al nuevo mánager ${applicantMember.user.tag}.`);
+        }
+        
+        return interaction.followUp({ content: `✅ Equipo **${teamName}** creado. ${applicantMember.user.tag} es ahora Mánager.`, flags: MessageFlags.Ephemeral });
+    }
+
+    if (customId.startsWith('reject_request_')) {
+        await interaction.deferUpdate();
+        const esAprobador = member.permissions.has(PermissionFlagsBits.Administrator) || member.roles.cache.has(process.env.APPROVER_ROLE_ID);
+        if (!esAprobador) return interaction.followUp({ content: 'No tienes permisos para esta acción.', flags: MessageFlags.Ephemeral });
+
+        const applicantId = customId.split('_')[2];
+        const applicant = await guild.members.fetch(applicantId).catch(() => null);
+
+        const disabledRow = ActionRowBuilder.from(interaction.message.components[0]);
+        disabledRow.components.forEach(c => c.setDisabled(true));
+        await interaction.message.edit({ components: [disabledRow] });
+
+        if (applicant) {
+            await applicant.send('Lo sentimos, tu solicitud para registrar un equipo ha sido rechazada por un administrador.').catch(() => {});
+        }
+        
+        return interaction.followUp({ content: `Solicitud de ${applicant ? applicant.user.tag : 'un usuario'} rechazada.`, flags: MessageFlags.Ephemeral });
     }
 
     if (customId === 'view_teams_button') {
@@ -549,7 +633,6 @@ const handler = async (client, interaction) => {
         return interaction.reply({ embeds: [subMenuEmbed], components: [subMenuRow], flags: MessageFlags.Ephemeral });
     }
 
-    // Panel de Equipo (Mánagers/Capitanes)
     if (customId.startsWith('team_submenu_')) {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
@@ -592,7 +675,6 @@ const handler = async (client, interaction) => {
         return; 
     }
 
-    // Lógica para los botones del panel de Administración
     if (customId === 'admin_create_league_button') {
         if (!isAdmin) return interaction.reply({ content: 'Acción restringida.', flags: MessageFlags.Ephemeral });
         const modal = new ModalBuilder().setCustomId('create_league_modal').setTitle('Crear Nueva Liga');
