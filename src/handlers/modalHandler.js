@@ -16,6 +16,9 @@ async function sendApprovalRequest(interaction, client, { vpgUsername, teamName,
     const approvalChannel = await client.channels.fetch(approvalChannelId).catch(() => null);
     if (!approvalChannel) return;
 
+    // SOLUCIÓN: Reemplazamos los espacios en el nombre de la liga por guiones bajos
+    const safeLeagueName = leagueName.replace(/\s/g, '_');
+
     const embed = new EmbedBuilder()
         .setTitle('📝 Nueva Solicitud de Registro')
         .setColor('Orange')
@@ -27,12 +30,13 @@ async function sendApprovalRequest(interaction, client, { vpgUsername, teamName,
             { name: 'Abreviatura', value: teamAbbr },
             { name: 'Twitter del Equipo', value: teamTwitter || 'No especificado' },
             { name: 'URL del Logo', value: `[Ver Logo](${logoUrl})` },
-            { name: 'Liga Seleccionada', value: leagueName }
+            { name: 'Liga Seleccionada', value: leagueName } // El texto visible sigue siendo el original
         )
         .setTimestamp();
 
     const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId(`approve_request_${interaction.user.id}_${leagueName}`).setLabel('Aprobar').setStyle(ButtonStyle.Success),
+        // Usamos el nombre seguro para el ID
+        new ButtonBuilder().setCustomId(`approve_request_${interaction.user.id}_${safeLeagueName}`).setLabel('Aprobar').setStyle(ButtonStyle.Success),
         new ButtonBuilder().setCustomId(`reject_request_${interaction.user.id}`).setLabel('Rechazar').setStyle(ButtonStyle.Danger)
     );
     await approvalChannel.send({ content: `**Solicitante:** <@${interaction.user.id}>`, embeds: [embed], components: [row] });
