@@ -6,11 +6,10 @@ const PlayerApplication = require('../models/playerApplication.js');
 const VPGUser = require('../models/user.js');
 const FreeAgent = require('../models/freeAgent.js');
 const TeamOffer = require('../models/teamOffer.js');
-const PendingTeam = require('../models/pendingTeam.js'); // <-- IMPORTANTE: Añadir el nuevo modelo
+const PendingTeam = require('../models/pendingTeam.js');
 
 const POSITIONS = ['POR', 'DFC', 'CARR', 'MCD', 'MV', 'MCO', 'DC'];
 
-// --- Función de Ayuda para Enviar Solicitud ---
 async function sendApprovalRequest(interaction, client, { vpgUsername, teamName, teamAbbr, teamTwitter, leagueName, logoUrl }) {
     const approvalChannelId = process.env.APPROVAL_CHANNEL_ID;
     if (!approvalChannelId) return;
@@ -143,7 +142,6 @@ module.exports = async (client, interaction) => {
         const teamAbbr = fields.getTextInputValue('teamAbbr').toUpperCase();
         const teamTwitter = fields.getTextInputValue('teamTwitterInput');
 
-        // Guardamos los datos en la base de datos temporal
         const pendingTeam = await new PendingTeam({
             userId: user.id,
             guildId: guild.id,
@@ -161,13 +159,11 @@ module.exports = async (client, interaction) => {
 
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
-                // Usamos el ID corto de la base de datos
                 .setCustomId(`ask_logo_yes_${pendingTeam._id}`)
                 .setLabel('Sí, añadir logo')
                 .setStyle(ButtonStyle.Success)
                 .setEmoji('🖼️'),
             new ButtonBuilder()
-                // Usamos el ID corto de la base de datos
                 .setCustomId(`ask_logo_no_${pendingTeam._id}`)
                 .setLabel('No, usar logo por defecto')
                 .setStyle(ButtonStyle.Secondary)
@@ -182,7 +178,6 @@ module.exports = async (client, interaction) => {
 
         const pendingTeamId = customId.split('_')[3];
         
-        // Buscamos los datos guardados
         const pendingTeam = await PendingTeam.findById(pendingTeamId);
         if (!pendingTeam || pendingTeam.userId !== user.id) {
             return interaction.editReply({ content: 'Esta solicitud ha expirado o no es tuya.', components: [] });
@@ -191,6 +186,7 @@ module.exports = async (client, interaction) => {
         const logoUrl = fields.getTextInputValue('teamLogoUrlInput');
 
         await sendApprovalRequest(interaction, client, { ...pendingTeam.toObject(), logoUrl });
+        await PendingTeam.findByIdAndDelete(pendingTeamId);
         
         await interaction.editReply({ content: '✅ ¡Perfecto! Tu solicitud ha sido enviada con tu logo personalizado. Un administrador la revisará.', components: [] });
     }
