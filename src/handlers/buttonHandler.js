@@ -14,7 +14,7 @@ const PendingTeam = require('../models/pendingTeam.js');
 const POSITIONS = ['POR', 'DFC', 'CARR', 'MCD', 'MV', 'MCO', 'DC'];
 
 // ===========================================================================
-// =================== FUNCIONES DE UTILIDAD (PAGINACIÓN) ====================
+// =================== FUNCIONES DE UTILIDAD (NO CAMBIAN) ====================
 // ===========================================================================
 
 async function sendPaginatedPlayerMenu(interaction, members, page) {
@@ -23,40 +23,15 @@ async function sendPaginatedPlayerMenu(interaction, members, page) {
     const startIndex = page * ITEMS_PER_PAGE;
     const endIndex = startIndex + ITEMS_PER_PAGE;
     const currentMembers = members.slice(startIndex, endIndex);
-
-    if (currentMembers.length === 0) {
-        return interaction.editReply({ content: 'No se encontraron jugadores elegibles en esta página.', components: [] });
-    }
-
-    const memberOptions = currentMembers.map(m => ({
-        label: m.user.username,
-        description: m.nickname || m.user.id,
-        value: m.id,
-    }));
-
-    const selectMenu = new StringSelectMenuBuilder()
-        .setCustomId('invite_player_select')
-        .setPlaceholder(`Página ${page + 1} de ${totalPages} - Selecciona un jugador a invitar`)
-        .addOptions(memberOptions);
-
+    if (currentMembers.length === 0) { return interaction.editReply({ content: 'No se encontraron jugadores elegibles en esta página.', components: [] }); }
+    const memberOptions = currentMembers.map(m => ({ label: m.user.username, description: m.nickname || m.user.id, value: m.id }));
+    const selectMenu = new StringSelectMenuBuilder().setCustomId('invite_player_select').setPlaceholder(`Página ${page + 1} de ${totalPages} - Selecciona un jugador a invitar`).addOptions(memberOptions);
     const navigationRow = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-            .setCustomId(`paginate_invite_player_${page - 1}`)
-            .setLabel('◀️ Anterior')
-            .setStyle(ButtonStyle.Secondary)
-            .setDisabled(page === 0),
-        new ButtonBuilder()
-            .setCustomId(`paginate_invite_player_${page + 1}`)
-            .setLabel('Siguiente ▶️')
-            .setStyle(ButtonStyle.Secondary)
-            .setDisabled(page >= totalPages - 1)
+        new ButtonBuilder().setCustomId(`paginate_invite_player_${page - 1}`).setLabel('◀️ Anterior').setStyle(ButtonStyle.Secondary).setDisabled(page === 0),
+        new ButtonBuilder().setCustomId(`paginate_invite_player_${page + 1}`).setLabel('Siguiente ▶️').setStyle(ButtonStyle.Secondary).setDisabled(page >= totalPages - 1)
     );
-
     const components = [new ActionRowBuilder().addComponents(selectMenu)];
-    if (totalPages > 1) {
-        components.push(navigationRow);
-    }
-    
+    if (totalPages > 1) { components.push(navigationRow); }
     await interaction.editReply({ content: 'Selecciona un jugador del menú para enviarle una invitación:', components });
 }
 
@@ -66,146 +41,65 @@ async function sendPaginatedTeamMenu(interaction, teams, baseCustomId, paginatio
     const startIndex = page * ITEMS_PER_PAGE;
     const endIndex = startIndex + ITEMS_PER_PAGE;
     const currentTeams = teams.slice(startIndex, endIndex);
-
-    if (currentTeams.length === 0) {
-        return interaction.editReply({ content: 'No se encontraron equipos en esta página.', components: [] });
-    }
-
-    const teamOptions = currentTeams.map(t => ({
-        label: `${t.name} (${t.abbreviation})`.substring(0, 100),
-        value: t._id.toString(),
-    }));
-
-    const selectMenu = new StringSelectMenuBuilder()
-        .setCustomId(baseCustomId)
-        .setPlaceholder(`Página ${page + 1} de ${totalPages} - Selecciona un equipo`)
-        .addOptions(teamOptions);
-
+    if (currentTeams.length === 0) { return interaction.editReply({ content: 'No se encontraron equipos en esta página.', components: [] }); }
+    const teamOptions = currentTeams.map(t => ({ label: `${t.name} (${t.abbreviation})`.substring(0, 100), value: t._id.toString() }));
+    const selectMenu = new StringSelectMenuBuilder().setCustomId(baseCustomId).setPlaceholder(`Página ${page + 1} de ${totalPages} - Selecciona un equipo`).addOptions(teamOptions);
     const navigationRow = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-            .setCustomId(`paginate_${paginationId}_${page - 1}`)
-            .setLabel('◀️ Anterior')
-            .setStyle(ButtonStyle.Secondary)
-            .setDisabled(page === 0),
-        new ButtonBuilder()
-            .setCustomId(`paginate_${paginationId}_${page + 1}`)
-            .setLabel('Siguiente ▶️')
-            .setStyle(ButtonStyle.Secondary)
-            .setDisabled(page >= totalPages - 1)
+        new ButtonBuilder().setCustomId(`paginate_${paginationId}_${page - 1}`).setLabel('◀️ Anterior').setStyle(ButtonStyle.Secondary).setDisabled(page === 0),
+        new ButtonBuilder().setCustomId(`paginate_${paginationId}_${page + 1}`).setLabel('Siguiente ▶️').setStyle(ButtonStyle.Secondary).setDisabled(page >= totalPages - 1)
     );
-
     const components = [new ActionRowBuilder().addComponents(selectMenu)];
-    if (totalPages > 1) {
-        components.push(navigationRow);
-    }
-    
-    if (interaction.deferred || interaction.replied) {
-        await interaction.editReply({ content: contentMessage, components });
-    } else {
-        await interaction.reply({ content: contentMessage, components, flags: MessageFlags.Ephemeral });
-    }
+    if (totalPages > 1) { components.push(navigationRow); }
+    if (interaction.deferred || interaction.replied) { await interaction.editReply({ content: contentMessage, components }); }
+    else { await interaction.reply({ content: contentMessage, components, flags: MessageFlags.Ephemeral }); }
 }
-
-
-// ===========================================================================
-// ================== FUNCIONES DE UTILIDAD (PANELES) ========================
-// ===========================================================================
 
 async function updatePanelMessage(client, panelId) {
     try {
         const panel = await AvailabilityPanel.findById(panelId).populate('teamId').lean();
         if (!panel) return;
-        
         const channel = await client.channels.fetch(panel.channelId);
         const webhook = await getOrCreateWebhook(channel, client);
         const hostTeam = panel.teamId;
-
         const hasConfirmedMatch = panel.timeSlots.some(s => s.status === 'CONFIRMED');
         const pendingCount = panel.timeSlots.reduce((acc, slot) => acc + (slot.pendingChallenges?.length || 0), 0);
-        
-        let panelTitle;
-        let panelColor;
-        if (hasConfirmedMatch) {
-            panelTitle = `Panel de Amistosos de ${hostTeam.name}`;
-            panelColor = "Green";
-        } else if (pendingCount > 0) {
-            panelTitle = `Buscando Rival - ${hostTeam.name} (${pendingCount} Petición(es))`;
-            panelColor = "Orange";
-        } else {
-            panelTitle = `Buscando Rival - ${hostTeam.name} (Disponible)`;
-            panelColor = "Greyple";
-        }
-        
+        let panelTitle, panelColor;
+        if (hasConfirmedMatch) { panelTitle = `Panel de Amistosos de ${hostTeam.name}`; panelColor = "Green"; }
+        else if (pendingCount > 0) { panelTitle = `Buscando Rival - ${hostTeam.name} (${pendingCount} Petición(es))`; panelColor = "Orange"; }
+        else { panelTitle = `Buscando Rival - ${hostTeam.name} (Disponible)`; panelColor = "Greyple"; }
         let description = `**Anfitrión:** ${hostTeam.name}\n**Contacto:** <@${panel.postedById}>`;
-        if (panel.leagues && panel.leagues.length > 0) {
-            description += `\n**Filtro de liga:** \`${panel.leagues.join(', ')}\``;
-        }
-
-        const embed = new EmbedBuilder()
-            .setTitle(panelTitle)
-            .setColor(panelColor)
-            .setDescription(description)
-            .setThumbnail(hostTeam.logoUrl);
-
+        if (panel.leagues && panel.leagues.length > 0) { description += `\n**Filtro de liga:** \`${panel.leagues.join(', ')}\``; }
+        const embed = new EmbedBuilder().setTitle(panelTitle).setColor(panelColor).setDescription(description).setThumbnail(hostTeam.logoUrl);
         const components = [];
         let currentRow = new ActionRowBuilder();
         const timeSlots = panel.timeSlots.sort((a, b) => a.time.localeCompare(b.time));
-
         for (const slot of timeSlots) {
             if (slot.status === 'CONFIRMED') {
                 const challengerTeam = await Team.findById(slot.challengerTeamId).lean();
                 if (!challengerTeam) continue;
-                
                 const contactButton = new ButtonBuilder().setCustomId(`contact_opponent_${panel.teamId._id}_${challengerTeam._id}`).setLabel(`Contactar`).setStyle(ButtonStyle.Primary).setEmoji('💬');
                 const abandonButton = new ButtonBuilder().setCustomId(`abandon_challenge_${panel._id}_${slot.time}`).setLabel('Abandonar').setStyle(ButtonStyle.Danger).setEmoji('❌');
                 const matchInfoButton = new ButtonBuilder().setCustomId(`match_info_${slot.time}`).setLabel(`vs ${challengerTeam.name} (${slot.time})`).setStyle(ButtonStyle.Success).setDisabled(true);
-                
-                if (currentRow.components.length > 0) {
-                    components.push(currentRow);
-                    currentRow = new ActionRowBuilder();
-                }
+                if (currentRow.components.length > 0) { components.push(currentRow); currentRow = new ActionRowBuilder(); }
                 currentRow.addComponents(matchInfoButton, contactButton, abandonButton);
                 components.push(currentRow);
                 currentRow = new ActionRowBuilder();
                 continue;
-
             } else { 
                 const label = slot.time === 'INSTANT' ? `⚔️ Desafiar Ahora` : `⚔️ Desafiar (${slot.time})`;
                 const pendingText = slot.pendingChallenges.length > 0 ? ` (${slot.pendingChallenges.length} ⏳)` : '';
                 const challengeButton = new ButtonBuilder().setCustomId(`challenge_slot_${panel._id}_${slot.time}`).setLabel(label + pendingText).setStyle(ButtonStyle.Success);
-                
-                if (currentRow.components.length >= 5) {
-                    components.push(currentRow);
-                    currentRow = new ActionRowBuilder();
-                }
+                if (currentRow.components.length >= 5) { components.push(currentRow); currentRow = new ActionRowBuilder(); }
                 currentRow.addComponents(challengeButton);
             }
         }
-
-        if (currentRow.components.length > 0) {
-            components.push(currentRow);
-        }
-
+        if (currentRow.components.length > 0) { components.push(currentRow); }
         if (pendingCount > 0) {
-            const cancelRow = new ActionRowBuilder().addComponents(
-                new ButtonBuilder().setCustomId(`cancel_all_challenges_${panel._id}`).setLabel('Cancelar Todas las Peticiones').setStyle(ButtonStyle.Danger)
-            );
-            if (components.length < 5) {
-                components.push(cancelRow);
-            }
+            const cancelRow = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`cancel_all_challenges_${panel._id}`).setLabel('Cancelar Todas las Peticiones').setStyle(ButtonStyle.Danger));
+            if (components.length < 5) { components.push(cancelRow); }
         }
-        
-        if (components.length > 5) {
-             console.error(`ERROR CRÍTICO: Se intentaron generar ${components.length} filas de componentes para el panel ${panel._id}. Se truncará a 5 para evitar un crash.`);
-             components.length = 5;
-        }
-
-        await webhook.editMessage(panel.messageId, {
-            username: hostTeam.name,
-            avatarURL: hostTeam.logoUrl,
-            embeds: [embed],
-            components
-        });
+        if (components.length > 5) { components.length = 5; }
+        await webhook.editMessage(panel.messageId, { username: hostTeam.name, avatarURL: hostTeam.logoUrl, embeds: [embed], components });
     } catch (error) {
         if (error.code !== 10008) console.error("Error fatal al actualizar el panel de amistosos:", error);
     }
@@ -215,9 +109,7 @@ async function getOrCreateWebhook(channel, client) {
     const webhookName = 'VPG Bot Amistosos';
     const webhooks = await channel.fetchWebhooks();
     let webhook = webhooks.find(wh => wh.name === webhookName);
-    if (!webhook) {
-        webhook = await channel.createWebhook({ name: webhookName, avatar: client.user.displayAvatarURL() });
-    }
+    if (!webhook) { webhook = await channel.createWebhook({ name: webhookName, avatar: client.user.displayAvatarURL() }); }
     return webhook;
 }
 
@@ -226,24 +118,12 @@ async function sendApprovalRequest(interaction, client, { vpgUsername, teamName,
     if (!approvalChannelId) return;
     const approvalChannel = await client.channels.fetch(approvalChannelId).catch(() => null);
     if (!approvalChannel) return;
-
     const safeLeagueName = leagueName.replace(/\s/g, '_');
-
-    const embed = new EmbedBuilder()
-        .setTitle('📝 Nueva Solicitud de Registro')
-        .setColor('Orange')
-        .setAuthor({ name: interaction.user.tag, iconURL: interaction.user.displayAvatarURL() })
-        .setThumbnail(logoUrl && logoUrl.startsWith('http') ? logoUrl : null)
+    const embed = new EmbedBuilder().setTitle('📝 Nueva Solicitud de Registro').setColor('Orange').setAuthor({ name: interaction.user.tag, iconURL: interaction.user.displayAvatarURL() }).setThumbnail(logoUrl && logoUrl.startsWith('http') ? logoUrl : null)
         .addFields(
-            { name: 'Usuario VPG', value: vpgUsername },
-            { name: 'Nombre del Equipo', value: teamName },
-            { name: 'Abreviatura', value: teamAbbr },
-            { name: 'Twitter del Equipo', value: teamTwitter || 'No especificado' },
-            { name: 'URL del Logo', value: `[Ver Logo](${logoUrl})` },
-            { name: 'Liga Seleccionada', value: leagueName }
-        )
-        .setTimestamp();
-
+            { name: 'Usuario VPG', value: vpgUsername }, { name: 'Nombre del Equipo', value: teamName }, { name: 'Abreviatura', value: teamAbbr },
+            { name: 'Twitter del Equipo', value: teamTwitter || 'No especificado' }, { name: 'URL del Logo', value: `[Ver Logo](${logoUrl})` }, { name: 'Liga Seleccionada', value: leagueName }
+        ).setTimestamp();
     const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId(`approve_request_${interaction.user.id}_${safeLeagueName}`).setLabel('Aprobar').setStyle(ButtonStyle.Success),
         new ButtonBuilder().setCustomId(`reject_request_${interaction.user.id}`).setLabel('Rechazar').setStyle(ButtonStyle.Danger)
@@ -257,8 +137,7 @@ async function sendApprovalRequest(interaction, client, { vpgUsername, teamName,
 // ===========================================================================
 
 const handler = async (client, interaction) => {
-    const { customId, member, guild, user } = interaction;
-    const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
+    const { customId, user } = interaction;
 
     // ===========================================================================
     // =================== LÓGICA DE INTERACCIONES EN MD =========================
@@ -408,15 +287,16 @@ const handler = async (client, interaction) => {
 
 
     // ===========================================================================
-    // ====================== LÓGICA DE PAGINACIÓN ===============================
+    // =================== LÓGICA DE INTERACCIONES EN GUILD ======================
     // ===========================================================================
+    const { member, guild } = interaction;
+    const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
+
     if (customId.startsWith('paginate_')) {
         await interaction.deferUpdate();
-    
         const parts = customId.split('_');
         const paginationId = parts[1];
         const newPage = parseInt(parts.slice(2).join('_'), 10);
-    
         if (paginationId === 'invite_player') {
             const allMembers = await guild.members.fetch();
             const teamsInServer = await Team.find({ guildId: guild.id }).select('managerId captains players').lean();
