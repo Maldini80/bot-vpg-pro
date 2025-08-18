@@ -6,21 +6,12 @@ const PlayerApplication = require('../models/playerApplication.js');
 const VPGUser = require('../models/user.js');
 const FreeAgent = require('../models/freeAgent.js');
 const TeamOffer = require('../models/teamOffer.js');
+const PendingTeam = require('../models/pendingTeam.js'); // <-- IMPORTANTE: Añadir el nuevo modelo
 
 const POSITIONS = ['POR', 'DFC', 'CARR', 'MCD', 'MV', 'MCO', 'DC'];
 
-// --- Función de Ayuda para Parsear Datos ---
-function parseTeamData(dataString) {
-    const data = {};
-    dataString.split('|||').forEach(part => {
-        const [key, value] = part.split(':', 2);
-        data[key] = value === 'none' ? null : value;
-    });
-    return data;
-}
-
 // --- Función de Ayuda para Enviar Solicitud ---
-async function sendApprovalRequest(interaction, client, { vpg, name, abbr, twitter, leagueName, logoUrl }) {
+async function sendApprovalRequest(interaction, client, { vpgUsername, teamName, teamAbbr, teamTwitter, leagueName, logoUrl }) {
     const approvalChannelId = process.env.APPROVAL_CHANNEL_ID;
     if (!approvalChannelId) return;
     const approvalChannel = await client.channels.fetch(approvalChannelId).catch(() => null);
@@ -32,10 +23,10 @@ async function sendApprovalRequest(interaction, client, { vpg, name, abbr, twitt
         .setAuthor({ name: interaction.user.tag, iconURL: interaction.user.displayAvatarURL() })
         .setThumbnail(logoUrl && logoUrl.startsWith('http') ? logoUrl : null)
         .addFields(
-            { name: 'Usuario VPG', value: vpg },
-            { name: 'Nombre del Equipo', value: name },
-            { name: 'Abreviatura', value: abbr },
-            { name: 'Twitter del Equipo', value: twitter || 'No especificado' },
+            { name: 'Usuario VPG', value: vpgUsername },
+            { name: 'Nombre del Equipo', value: teamName },
+            { name: 'Abreviatura', value: teamAbbr },
+            { name: 'Twitter del Equipo', value: teamTwitter || 'No especificado' },
             { name: 'URL del Logo', value: `[Ver Logo](${logoUrl})` },
             { name: 'Liga Seleccionada', value: leagueName }
         )
@@ -50,7 +41,7 @@ async function sendApprovalRequest(interaction, client, { vpg, name, abbr, twitt
 
 
 module.exports = async (client, interaction) => {
-    const { customId, fields, guild, user, member, message } = interaction;
+    const { customId, fields, guild, user, member } = interaction;
 
     if (customId === 'player_registration_modal') {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral }); 
@@ -143,9 +134,6 @@ module.exports = async (client, interaction) => {
         return interaction.editReply({ content: responseMessage });
     }
 
-    // ===========================================================================
-    // ================== ESTE BLOQUE ES EL QUE SE HA CORREGIDO ==================
-    // ===========================================================================
     if (customId.startsWith('manager_request_modal_')) {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         
@@ -153,11 +141,18 @@ module.exports = async (client, interaction) => {
         const vpgUsername = fields.getTextInputValue('vpgUsername');
         const teamName = fields.getTextInputValue('teamName');
         const teamAbbr = fields.getTextInputValue('teamAbbr').toUpperCase();
-        // Leemos el campo de Twitter, que ahora sí existe.
-        // Si el usuario no lo rellenó, será una cadena vacía.
         const teamTwitter = fields.getTextInputValue('teamTwitterInput');
 
-        const teamDataString = `vpg:${vpgUsername}|||name:${teamName}|||abbr:${teamAbbr}|||twitter:${teamTwitter || 'none'}`;
+        // Guardamos los datos en la base de datos temporal
+        const pendingTeam = await new PendingTeam({
+            userId: user.id,
+            guildId: guild.id,
+            leagueName,
+            vpgUsername,
+            teamName,
+            teamAbbr,
+            teamTwitter,
+        }).save();
 
         const embed = new EmbedBuilder()
             .setTitle('✅ Datos guardados. ¿Quieres añadir un logo a tu equipo?')
@@ -166,12 +161,14 @@ module.exports = async (client, interaction) => {
 
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
-                .setCustomId(`ask_logo_yes_${leagueName}_${teamDataString}`)
+                // Usamos el ID corto de la base de datos
+                .setCustomId(`ask_logo_yes_${pendingTeam._id}`)
                 .setLabel('Sí, añadir logo')
                 .setStyle(ButtonStyle.Success)
                 .setEmoji('🖼️'),
             new ButtonBuilder()
-                .setCustomId(`ask_logo_no_${leagueName}_${teamDataString}`)
+                // Usamos el ID corto de la base de datos
+                .setCustomId(`ask_logo_no_${pendingTeam._id}`)
                 .setLabel('No, usar logo por defecto')
                 .setStyle(ButtonStyle.Secondary)
                 .setEmoji('🛡️')
@@ -183,14 +180,17 @@ module.exports = async (client, interaction) => {
     if (customId.startsWith('final_logo_submit_')) {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-        const parts = customId.split('_');
-        const leagueName = parts[3];
-        const teamDataString = parts.slice(4).join('_');
+        const pendingTeamId = customId.split('_')[3];
         
-        const teamData = parseTeamData(teamDataString);
+        // Buscamos los datos guardados
+        const pendingTeam = await PendingTeam.findById(pendingTeamId);
+        if (!pendingTeam || pendingTeam.userId !== user.id) {
+            return interaction.editReply({ content: 'Esta solicitud ha expirado o no es tuya.', components: [] });
+        }
+        
         const logoUrl = fields.getTextInputValue('teamLogoUrlInput');
 
-        await sendApprovalRequest(interaction, client, { ...teamData, vpg: teamData.vpg, name: teamData.name, abbr: teamData.abbr, twitter: teamData.twitter, leagueName, logoUrl });
+        await sendApprovalRequest(interaction, client, { ...pendingTeam.toObject(), logoUrl });
         
         await interaction.editReply({ content: '✅ ¡Perfecto! Tu solicitud ha sido enviada con tu logo personalizado. Un administrador la revisará.', components: [] });
     }
