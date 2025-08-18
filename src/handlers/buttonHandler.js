@@ -491,6 +491,87 @@ const handler = async (client, interaction) => {
         
         return interaction.followUp({ content: `Solicitud de ${applicant ? applicant.user.tag : 'un usuario'} rechazada.`, flags: MessageFlags.Ephemeral });
     }
+    // ===========================================================================
+    // ================== BLOQUE DE CÓDIGO FALTANTE (AHORA PRESENTE) ==============
+    // ===========================================================================
+    if (customId.startsWith('promote_player_') || customId.startsWith('demote_captain_') || customId.startsWith('kick_player_') || customId.startsWith('toggle_mute_player_')) {
+        await interaction.deferUpdate();
+    
+        const targetId = customId.substring(customId.lastIndexOf('_') + 1);
+        
+        let team = await Team.findOne({ guildId: interaction.guildId, $or: [{ managerId: user.id }, { captains: user.id }] });
+        
+        if (!team) {
+            team = await Team.findOne({ guildId: interaction.guildId, $or: [{ managerId: targetId }, { captains: targetId }, { players: targetId }] });
+        }
+    
+        if (!team) return interaction.editReply({ content: 'No se pudo encontrar el equipo del jugador seleccionado.', components: [] });
+    
+        const isManager = team.managerId === user.id;
+        const isCaptain = team.captains.includes(user.id);
+        if (!isAdmin && !isManager && !isCaptain) {
+            return interaction.editReply({ content: 'No tienes permisos para gestionar este equipo.', components: [] });
+        }
+    
+        const targetMember = await interaction.guild.members.fetch(targetId).catch(() => null);
+        if (!targetMember) return interaction.editReply({ content: 'Miembro no encontrado en el servidor.', components: [] });
+    
+        const canManage = isAdmin || isManager;
+        const isTargetCaptain = team.captains.includes(targetId);
+    
+        if (customId.startsWith('kick_player_')) {
+            if (isTargetCaptain && !canManage) return interaction.editReply({ content: 'Un capitán no puede expulsar a otro capitán.', components: [] });
+            if (team.managerId === targetId) return interaction.editReply({ content: 'No puedes expulsar al mánager del equipo.', components: [] });
+    
+            team.players = team.players.filter(p => p !== targetId);
+            team.captains = team.captains.filter(c => c !== targetId);
+            await targetMember.roles.remove([process.env.PLAYER_ROLE_ID, process.env.CAPTAIN_ROLE_ID, process.env.MUTED_ROLE_ID]).catch(() => {});
+            if (targetMember.id !== interaction.guild.ownerId) await targetMember.setNickname(targetMember.user.username).catch(()=>{});
+            await interaction.editReply({ content: `✅ **${targetMember.user.username}** ha sido expulsado.`, components: [] });
+        } else if (customId.startsWith('promote_player_')) {
+            if (!canManage) return interaction.editReply({ content: 'Solo el Mánager o un Administrador pueden ascender jugadores.', components: [] });
+            team.players = team.players.filter(p => p !== targetId);
+            team.captains.push(targetId);
+            await targetMember.roles.remove(process.env.PLAYER_ROLE_ID).catch(()=>{});
+            await targetMember.roles.add(process.env.CAPTAIN_ROLE_ID).catch(()=>{});
+            if (targetMember.id !== interaction.guild.ownerId) await targetMember.setNickname(`|C| ${team.abbreviation} ${targetMember.user.username}`).catch(()=>{});
+    
+            try {
+                const captainGuideEmbed = new EmbedBuilder()
+                    .setTitle(`🛡️ ¡Enhorabuena! Has sido ascendido a Capitán de "${team.name}".`)
+                    .setColor('Blue')
+                    .setDescription(`El Mánager confía en ti para ser su mano derecha. Has obtenido acceso a nuevas herramientas en el panel de equipo para ayudar en la gestión.`)
+                    .addFields(
+                        { name: '✅ Tus Nuevas Responsabilidades', value: '• **Gestionar Amistosos**: Eres clave para mantener al equipo en forma.\n• **Gestionar Fichajes**: Ayuda a buscar nuevos talentos creando ofertas.\n• **Gestionar Miembros**: Mantén el orden. Puedes expulsar jugadores (excepto a otros capitanes) y usar la función de mutear.' },
+                        { name: '❌ Límites de tu Rol', value: 'No puedes editar los datos del equipo, invitar jugadores, ni ascender/degradar miembros.' }
+                    );
+                await targetMember.send({ embeds: [captainGuideEmbed] });
+            } catch (dmError) {
+                console.log(`AVISO: No se pudo enviar el MD de guía al nuevo capitán ${targetMember.user.tag}.`);
+            }
+            await interaction.editReply({ content: `✅ **${targetMember.user.username}** ascendido a Capitán.`, components: [] });
+        } else if (customId.startsWith('demote_captain_')) {
+            if (!canManage) return interaction.editReply({ content: 'Solo el Mánager o un Administrador pueden degradar capitanes.', components: [] });
+            team.captains = team.captains.filter(c => c !== targetId);
+            team.players.push(targetId);
+            await targetMember.roles.remove(process.env.CAPTAIN_ROLE_ID).catch(()=>{});
+            await targetMember.roles.add(process.env.PLAYER_ROLE_ID).catch(()=>{});
+            if (targetMember.id !== interaction.guild.ownerId) await targetMember.setNickname(`${team.abbreviation} ${targetMember.user.username}`).catch(()=>{});
+            await interaction.editReply({ content: `✅ **${targetMember.user.username}** degradado a Jugador.`, components: [] });
+        } else if (customId.startsWith('toggle_mute_player_')) {
+            if (isTargetCaptain && !canManage) return interaction.editReply({ content: 'Un capitán no puede mutear a otro capitán.', components: [] });
+            const hasMutedRole = targetMember.roles.cache.has(process.env.MUTED_ROLE_ID);
+            if (hasMutedRole) {
+                await targetMember.roles.remove(process.env.MUTED_ROLE_ID);
+                await interaction.editReply({ content: `✅ **${targetMember.user.username}** desmuteado.`, components: [] });
+            } else {
+                await targetMember.roles.add(process.env.MUTED_ROLE_ID);
+                await interaction.editReply({ content: `🔇 **${targetMember.user.username}** muteado.`, components: [] });
+            }
+        }
+        await team.save();
+        return;
+    }
 
     if (customId === 'view_teams_button') {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
