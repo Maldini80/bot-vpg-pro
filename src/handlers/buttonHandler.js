@@ -9,7 +9,7 @@ const FreeAgent = require('../models/freeAgent.js');
 const TeamOffer = require('../models/teamOffer.js');
 const Ticket = require('../models/ticket.js');
 const TicketConfig = require('../models/ticketConfig.js');
-const PendingTeam = require('../models/pendingTeam.js'); // <-- IMPORTANTE: Añadir el nuevo modelo
+const PendingTeam = require('../models/pendingTeam.js');
 
 const POSITIONS = ['POR', 'DFC', 'CARR', 'MCD', 'MV', 'MCO', 'DC'];
 
@@ -219,6 +219,34 @@ async function getOrCreateWebhook(channel, client) {
         webhook = await channel.createWebhook({ name: webhookName, avatar: client.user.displayAvatarURL() });
     }
     return webhook;
+}
+
+async function sendApprovalRequest(interaction, client, { vpgUsername, teamName, teamAbbr, teamTwitter, leagueName, logoUrl }) {
+    const approvalChannelId = process.env.APPROVAL_CHANNEL_ID;
+    if (!approvalChannelId) return;
+    const approvalChannel = await client.channels.fetch(approvalChannelId).catch(() => null);
+    if (!approvalChannel) return;
+
+    const embed = new EmbedBuilder()
+        .setTitle('📝 Nueva Solicitud de Registro')
+        .setColor('Orange')
+        .setAuthor({ name: interaction.user.tag, iconURL: interaction.user.displayAvatarURL() })
+        .setThumbnail(logoUrl && logoUrl.startsWith('http') ? logoUrl : null)
+        .addFields(
+            { name: 'Usuario VPG', value: vpgUsername },
+            { name: 'Nombre del Equipo', value: teamName },
+            { name: 'Abreviatura', value: teamAbbr },
+            { name: 'Twitter del Equipo', value: teamTwitter || 'No especificado' },
+            { name: 'URL del Logo', value: `[Ver Logo](${logoUrl})` },
+            { name: 'Liga Seleccionada', value: leagueName }
+        )
+        .setTimestamp();
+
+    const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId(`approve_request_${interaction.user.id}_${leagueName}`).setLabel('Aprobar').setStyle(ButtonStyle.Success),
+        new ButtonBuilder().setCustomId(`reject_request_${interaction.user.id}`).setLabel('Rechazar').setStyle(ButtonStyle.Danger)
+    );
+    await approvalChannel.send({ content: `**Solicitante:** <@${interaction.user.id}>`, embeds: [embed], components: [row] });
 }
 
 
