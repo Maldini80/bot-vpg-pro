@@ -9,7 +9,7 @@ const TeamOffer = require('../models/teamOffer.js');
 
 const POSITIONS = ['POR', 'DFC', 'CARR', 'MCD', 'MV', 'MCO', 'DC'];
 
-// --- Función de Ayuda para Parsear Datos (la necesitamos aquí) ---
+// --- Función de Ayuda para Parsear Datos ---
 function parseTeamData(dataString) {
     const data = {};
     dataString.split('|||').forEach(part => {
@@ -19,7 +19,7 @@ function parseTeamData(dataString) {
     return data;
 }
 
-// --- Función de Ayuda para Enviar Solicitud (la necesitamos aquí) ---
+// --- Función de Ayuda para Enviar Solicitud ---
 async function sendApprovalRequest(interaction, client, { vpg, name, abbr, twitter, leagueName, logoUrl }) {
     const approvalChannelId = process.env.APPROVAL_CHANNEL_ID;
     if (!approvalChannelId) return;
@@ -143,6 +143,9 @@ module.exports = async (client, interaction) => {
         return interaction.editReply({ content: responseMessage });
     }
 
+    // ===========================================================================
+    // ================== ESTE BLOQUE ES EL QUE SE HA CORREGIDO ==================
+    // ===========================================================================
     if (customId.startsWith('manager_request_modal_')) {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         
@@ -150,6 +153,8 @@ module.exports = async (client, interaction) => {
         const vpgUsername = fields.getTextInputValue('vpgUsername');
         const teamName = fields.getTextInputValue('teamName');
         const teamAbbr = fields.getTextInputValue('teamAbbr').toUpperCase();
+        // Leemos el campo de Twitter, que ahora sí existe.
+        // Si el usuario no lo rellenó, será una cadena vacía.
         const teamTwitter = fields.getTextInputValue('teamTwitterInput');
 
         const teamDataString = `vpg:${vpgUsername}|||name:${teamName}|||abbr:${teamAbbr}|||twitter:${teamTwitter || 'none'}`;
@@ -250,8 +255,6 @@ module.exports = async (client, interaction) => {
         return interaction.editReply({ content: `✅ Los datos del equipo **${team.name}** han sido actualizados.` });
     }
 
-    // El resto de los manejadores de modales (market_agent_modal, offer_add_requirements, etc.) van aquí sin cambios...
-    // (Asegúrate de que el resto de tu código original de este archivo esté aquí)
     if (customId === 'market_agent_modal' || customId.startsWith('market_agent_modal_edit')) {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
@@ -390,9 +393,6 @@ module.exports = async (client, interaction) => {
 
         return interaction.editReply({ content: `✅ ¡La oferta de tu equipo ha sido ${responseText} con éxito en el canal ${channel}!` });
     }
-    
-    // El bloque approve_modal_ ya no es necesario, lo hemos eliminado del flujo.
-
    
     if (customId === 'create_league_modal') {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
