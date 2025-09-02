@@ -27,8 +27,10 @@ async function sendPaginatedPlayerMenu(interaction, members, page) {
     const memberOptions = currentMembers.map(m => ({ label: m.user.username, description: m.nickname || m.user.id, value: m.id }));
     const selectMenu = new StringSelectMenuBuilder().setCustomId('invite_player_select').setPlaceholder(`Página ${page + 1} de ${totalPages} - Selecciona un jugador a invitar`).addOptions(memberOptions);
     const navigationRow = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId(`paginate_invite_player_${page - 1}`).setLabel('◀️ Anterior').setStyle(ButtonStyle.Secondary).setDisabled(page === 0),
-        new ButtonBuilder().setCustomId(`paginate_invite_player_${page + 1}`).setLabel('Siguiente ▶️').setStyle(ButtonStyle.Secondary).setDisabled(page >= totalPages - 1)
+        // --- CAMBIO AQUÍ ---
+        new ButtonBuilder().setCustomId(`paginate_invitePlayer_${page - 1}`).setLabel('◀️ Anterior').setStyle(ButtonStyle.Secondary).setDisabled(page === 0),
+        // --- Y CAMBIO AQUÍ ---
+        new ButtonBuilder().setCustomId(`paginate_invitePlayer_${page + 1}`).setLabel('Siguiente ▶️').setStyle(ButtonStyle.Secondary).setDisabled(page >= totalPages - 1)
     );
     const components = [new ActionRowBuilder().addComponents(selectMenu)];
     if (totalPages > 1) { components.push(navigationRow); }
@@ -293,38 +295,42 @@ const handler = async (client, interaction) => {
     const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
 
     if (customId.startsWith('paginate_')) {
-        await interaction.deferUpdate();
-        const parts = customId.split('_');
-        const paginationId = parts[1];
-        const newPage = parseInt(parts.slice(2).join('_'), 10);
-        if (paginationId === 'invite_player') {
-            const allMembers = await guild.members.fetch();
-            const teamsInServer = await Team.find({ guildId: guild.id }).select('managerId captains players').lean();
-            const playersInTeams = new Set(teamsInServer.flatMap(t => [t.managerId, ...t.captains, ...t.players]));
-            const eligibleMembers = allMembers.filter(m => !m.user.bot && !playersInTeams.has(m.id));
-            const sortedMembers = Array.from(eligibleMembers.values()).sort((a, b) => a.user.username.localeCompare(b.user.username));
-            await sendPaginatedPlayerMenu(interaction, sortedMembers, newPage);
-        } else {
-            let teams, baseCustomId, contentMessage;
-            if (paginationId === 'view') {
-                teams = await Team.find({ guildId: guild.id }).sort({ name: 1 }).lean();
-                baseCustomId = 'view_team_roster_select';
-                contentMessage = 'Elige un equipo para ver su plantilla:';
-            } else if (paginationId === 'apply') {
-                teams = await Team.find({ guildId: guild.id, recruitmentOpen: true }).sort({ name: 1 }).lean();
-                baseCustomId = 'apply_to_team_select';
-                contentMessage = 'Selecciona el equipo al que quieres aplicar:';
-            } else if (paginationId === 'manage') {
-                teams = await Team.find({ guildId: interaction.guildId }).sort({ name: 1 }).lean();
-                baseCustomId = 'admin_select_team_to_manage';
-                contentMessage = 'Selecciona el equipo que deseas gestionar:';
-            }
-            if (teams) {
-                await sendPaginatedTeamMenu(interaction, teams, baseCustomId, paginationId, newPage, contentMessage);
-            }
+    await interaction.deferUpdate();
+    const parts = customId.split('_');
+    const paginationId = parts[1];
+    const newPage = parseInt(parts[2], 10);
+
+    // --- LÓGICA AÑADIDA PARA LA PAGINACIÓN DE JUGADORES ---
+    if (paginationId === 'invitePlayer') {
+        const allMembers = await guild.members.fetch();
+        const teamsInServer = await Team.find({ guildId: guild.id }).select('managerId captains players').lean();
+        const playersInTeams = new Set(teamsInServer.flatMap(t => [t.managerId, ...t.captains, ...t.players]));
+        const eligibleMembers = allMembers.filter(m => !m.user.bot && !playersInTeams.has(m.id));
+        const sortedMembers = Array.from(eligibleMembers.values()).sort((a, b) => a.user.username.localeCompare(b.user.username));
+        await sendPaginatedPlayerMenu(interaction, sortedMembers, newPage);
+    } 
+    // --- FIN DE LA LÓGICA AÑADIDA ---
+    else {
+        let teams, baseCustomId, contentMessage;
+        if (paginationId === 'view') {
+            teams = await Team.find({ guildId: guild.id }).sort({ name: 1 }).lean();
+            baseCustomId = 'view_team_roster_select';
+            contentMessage = 'Elige un equipo para ver su plantilla:';
+        } else if (paginationId === 'apply') {
+            teams = await Team.find({ guildId: guild.id, recruitmentOpen: true }).sort({ name: 1 }).lean();
+            baseCustomId = 'apply_to_team_select';
+            contentMessage = 'Selecciona el equipo al que quieres aplicar:';
+        } else if (paginationId === 'manage') {
+            teams = await Team.find({ guildId: interaction.guildId }).sort({ name: 1 }).lean();
+            baseCustomId = 'admin_select_team_to_manage';
+            contentMessage = 'Selecciona el equipo que deseas gestionar:';
         }
-        return;
+        if (teams) {
+            await sendPaginatedTeamMenu(interaction, teams, baseCustomId, paginationId, newPage, contentMessage);
+        }
     }
+    return;
+}
 
     // ===========================================================================
     // =================== LÓGICA DE PANELES Y BOTONES ===========================
