@@ -210,5 +210,62 @@ const selfPingUrl = `https://bot-vpg-pro.onrender.com`;
 setInterval(() => {
     axios.get(selfPingUrl).catch(() => {}); // Simplemente hacemos la petición, ignoramos el error 404
 }, 2 * 60 * 1000); // Cada 2 minutos
+// ==============================================================================
+// == INICIO DEL CÓDIGO NUEVO: VIGILANTE DE ROL DE VERIFICADO ==
+// ==============================================================================
+client.on(Events.GuildMemberUpdate, async (oldMember, newMember) => {
+    const VERIFIED_ROLE_ID = process.env.VERIFIED_ROLE_ID;
 
+    if (!VERIFIED_ROLE_ID) {
+        console.log('[Vigilante de Roles] ADVERTENCIA: La variable VERIFIED_ROLE_ID no está configurada.');
+        return;
+    }
+    
+    const oldHasRole = oldMember.roles.cache.has(VERIFIED_ROLE_ID);
+    const newHasRole = newMember.roles.cache.has(VERIFIED_ROLE_ID);
+
+    // Actuamos solo si el usuario acaba de recibir el rol.
+    if (!oldHasRole && newHasRole) {
+        console.log(`[Vigilante de Roles] ${newMember.user.tag} ha sido verificado. Enviando guía final.`);
+
+        const TORNEOS_STATUS_CHANNEL_ID = process.env.TORNEOS_STATUS_CHANNEL_ID;
+
+        const guideEmbed = new EmbedBuilder()
+            .setTitle('¡AHORA DEBES INSCRIBIRTE AL DRAFT!')
+            .setColor('Green')
+            .setDescription(`¡Hola, ${newMember.displayName}! ahora sigue estos pasos`)
+            .addFields(
+                { 
+                    name: '1️⃣ Ve al Canal de Inscripción', 
+                    value: 'Para ir a ese canal haz clic en el botón de abajo. Te llevará directamente al canal correcto.'
+                },
+                { 
+                    name: '2️⃣ Pulsa el Botón Verde de Nuevo', 
+                    value: 'Una vez allí, busca el panel del draft y pulsa el botón verde de "Inscribirse o verificar cuenta". ¡Ahora el sistema te reconocerá y podrás registrarte al DRAFT!'
+                }
+            )
+            .setImage('https://i.imgur.com/JDxmInz.jpeg');
+
+        const actionRow = new ActionRowBuilder();
+        if (TORNEOS_STATUS_CHANNEL_ID) {
+            actionRow.addComponents(
+                new ButtonBuilder()
+                    .setLabel('Ir al Canal de Inscripción')
+                    .setStyle(ButtonStyle.Link)
+                    .setURL(`https://discord.com/channels/${newMember.guild.id}/${TORNEOS_STATUS_CHANNEL_ID}`)
+                    .setEmoji('➡️')
+            );
+        }
+
+        try {
+            await newMember.send({ embeds: [guideEmbed], components: actionRow.components.length > 0 ? [actionRow] : [] });
+            console.log(`[Vigilante de Roles] MD de guía final enviado a ${newMember.user.tag}.`);
+        } catch (error) {
+            console.error(`[Vigilante de Roles] Fallo al procesar al nuevo verificado ${newMember.user.tag}:`, error);
+        }
+    }
+});
+// ==============================================================================
+// == FIN DEL CÓDIGO NUEVO ======================================================
+// ==============================================================================
 client.login(process.env.DISCORD_TOKEN);
