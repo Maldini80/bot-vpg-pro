@@ -27,9 +27,9 @@ async function sendPaginatedPlayerMenu(interaction, members, page) {
     const memberOptions = currentMembers.map(m => ({ label: m.user.username, description: m.nickname || m.user.id, value: m.id }));
     const selectMenu = new StringSelectMenuBuilder().setCustomId('invite_player_select').setPlaceholder(`Página ${page + 1} de ${totalPages} - Selecciona un jugador a invitar`).addOptions(memberOptions);
     const navigationRow = new ActionRowBuilder().addComponents(
-        // --- CAMBIO AQUÍ ---
+        // --- CORRECCIÓN REALIZADA AQUÍ ---
         new ButtonBuilder().setCustomId(`paginate_invitePlayer_${page - 1}`).setLabel('◀️ Anterior').setStyle(ButtonStyle.Secondary).setDisabled(page === 0),
-        // --- Y CAMBIO AQUÍ ---
+        // --- Y CORRECCIÓN REALIZADA AQUÍ ---
         new ButtonBuilder().setCustomId(`paginate_invitePlayer_${page + 1}`).setLabel('Siguiente ▶️').setStyle(ButtonStyle.Secondary).setDisabled(page >= totalPages - 1)
     );
     const components = [new ActionRowBuilder().addComponents(selectMenu)];
