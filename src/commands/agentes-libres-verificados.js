@@ -14,27 +14,35 @@ module.exports = {
     async execute(interaction) {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-        try {
-            const db = mongoose.connection.db;
-            const draftId = interaction.options.getString('short_id_del_draft');
+        // Creamos una variable para la conexión temporal.
+        let dbA_connection;
 
+        try {
+            // --- INICIO DE LA LÓGICA DE CONEXIÓN TEMPORAL ---
+            // Le decimos a Mongoose que cree una NUEVA conexión, apuntando a la base de datos del Bot A.
+            dbA_connection = await mongoose.createConnection(process.env.DATABASE_URL, {
+                dbName: 'tournamentBotDb' 
+            });
+
+            // Ahora, 'db' apuntará a la base de datos del Bot A para las siguientes operaciones.
+            const db = dbA_connection.db;
+            // --- FIN DE LA LÓGICA DE CONEXIÓN TEMPORAL ---
+
+            const draftId = interaction.options.getString('short_id_del_draft');
             let activeDraft;
             
-            // Si el admin especifica un draft, lo buscamos directamente.
             if (draftId) {
                 activeDraft = await db.collection('drafts').findOne({ shortId: draftId });
                 if (!activeDraft) {
-                    return interaction.editReply({ content: `❌ No se encontró ningún draft con el ID corto: \`${draftId}\`.` });
+                    return interaction.editReply({ content: `❌ No se encontró ningún draft con el ID corto: \`${draftId}\` en la base de datos del Bot A.` });
                 }
             } else {
-                // Si no, buscamos cualquier draft que esté activo.
                 activeDraft = await db.collection('drafts').findOne({ status: { $nin: ['finalizado', 'torneo_generado', 'cancelado'] } });
                 if (!activeDraft) {
-                    return interaction.editReply({ content: '❌ No se encontró ningún draft activo (en inscripción o selección) en este momento.' });
+                    return interaction.editReply({ content: '❌ No se encontró ningún draft activo en la base de datos del Bot A.' });
                 }
             }
 
-            // El resto del código es igual, ya que ahora sí tenemos el draft correcto.
             const draftPlayerIds = new Set(activeDraft.players.map(p => p.userId));
             const allVerifiedUsers = await db.collection('verified_users').find({}).toArray();
             const freeVerifiedAgents = allVerifiedUsers.filter(verifiedUser => !draftPlayerIds.has(verifiedUser.discordId));
@@ -102,7 +110,14 @@ module.exports = {
 
         } catch (error) {
             console.error('Error en el comando /agentes-libres-verificados:', error);
-            await interaction.editReply({ content: '❌ Ocurrió un error al consultar la base de datos.' });
+            await interaction.editReply({ content: '❌ Ocurrió un error al consultar la base de datos del Bot A.' });
+        } finally {
+            // Este bloque se asegura de que la conexión temporal SIEMPRE se cierre,
+            // incluso si hay un error. Es muy importante.
+            if (dbA_connection) {
+                await dbA_connection.close();
+                console.log('[agentes-libres-verificados] Conexión temporal a la DB del Bot A cerrada.');
+            }
         }
     },
 };
