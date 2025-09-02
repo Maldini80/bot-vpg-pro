@@ -4,36 +4,45 @@ const mongoose = require('mongoose');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('agentes-libres-verificados')
-        .setDescription('Muestra una lista de jugadores verificados que no están en el draft activo.')
-        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+        .setDescription('Muestra jugadores verificados que no están inscritos en un draft activo.')
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+        .addStringOption(option =>
+            option.setName('short_id_del_draft')
+                .setDescription('Opcional: El ID corto del draft específico que quieres comprobar.')
+                .setRequired(false)),
 
     async execute(interaction) {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         try {
             const db = mongoose.connection.db;
+            const draftId = interaction.options.getString('short_id_del_draft');
 
-            // 1. Encontrar el draft activo (asumimos que es el que está en "inscripcion")
-            const activeDraft = await db.collection('drafts').findOne({ status: 'inscripcion' });
-
-            if (!activeDraft) {
-                return interaction.editReply({ content: '❌ No se encontró ningún draft con las inscripciones abiertas en este momento.' });
+            let activeDraft;
+            
+            // Si el admin especifica un draft, lo buscamos directamente.
+            if (draftId) {
+                activeDraft = await db.collection('drafts').findOne({ shortId: draftId });
+                if (!activeDraft) {
+                    return interaction.editReply({ content: `❌ No se encontró ningún draft con el ID corto: \`${draftId}\`.` });
+                }
+            } else {
+                // Si no, buscamos cualquier draft que esté activo.
+                activeDraft = await db.collection('drafts').findOne({ status: { $nin: ['finalizado', 'torneo_generado', 'cancelado'] } });
+                if (!activeDraft) {
+                    return interaction.editReply({ content: '❌ No se encontró ningún draft activo (en inscripción o selección) en este momento.' });
+                }
             }
 
-            // 2. Obtener los IDs de todos los jugadores ya inscritos en el draft
+            // El resto del código es igual, ya que ahora sí tenemos el draft correcto.
             const draftPlayerIds = new Set(activeDraft.players.map(p => p.userId));
-
-            // 3. Obtener todos los usuarios verificados de la base de datos
             const allVerifiedUsers = await db.collection('verified_users').find({}).toArray();
-
-            // 4. Filtrar para encontrar los que NO están en el draft
             const freeVerifiedAgents = allVerifiedUsers.filter(verifiedUser => !draftPlayerIds.has(verifiedUser.discordId));
 
             if (freeVerifiedAgents.length === 0) {
                 return interaction.editReply({ content: `✅ ¡Buenas noticias! Todos los jugadores verificados ya están inscritos en el draft **${activeDraft.name}**.` });
             }
 
-            // 5. Paginación y visualización del resultado
             const ITEMS_PER_PAGE = 10;
             const pages = [];
             let currentPageDescription = '';
@@ -53,7 +62,7 @@ module.exports = {
 
             const createEmbed = (pageIndex) => {
                 return new EmbedBuilder()
-                    .setTitle(`🔎 Jugadores Verificados No Inscritos`)
+                    .setTitle(`🔎 Jugadores Verificados No Inscritos en "${activeDraft.name}"`)
                     .setDescription(pages[pageIndex])
                     .setColor('Blue')
                     .setFooter({ text: `Mostrando ${freeVerifiedAgents.length} jugadores en total. Página ${pageIndex + 1} de ${totalPages}` });
@@ -71,16 +80,13 @@ module.exports = {
                 components: [createButtons(currentPage)]
             });
 
-            const collector = message.createMessageComponentCollector({ time: 120000 }); // 2 minutos
+            const collector = message.createMessageComponentCollector({ time: 120000 });
 
             collector.on('collect', async i => {
                 if (i.user.id !== interaction.user.id) return i.reply({ content: 'Esta interacción no es para ti.', flags: MessageFlags.Ephemeral });
 
-                if (i.customId === 'prev_page') {
-                    currentPage--;
-                } else if (i.customId === 'next_page') {
-                    currentPage++;
-                }
+                if (i.customId === 'prev_page') currentPage--;
+                else if (i.customId === 'next_page') currentPage++;
 
                 await i.update({
                     embeds: [createEmbed(currentPage)],
