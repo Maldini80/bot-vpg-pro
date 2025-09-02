@@ -244,7 +244,7 @@ client.on(Events.GuildMemberUpdate, async (oldMember, newMember) => {
                     value: 'Una vez allí, busca el panel del draft y pulsa el botón verde de "Inscribirse o verificar cuenta". ¡Ahora el sistema te reconocerá y podrás registrarte al DRAFT!'
                 }
             )
-            .setImage('https://i.imgur.com/JDxmInz.jpeg');
+            .setImage('https://i.imgur.com/jw4PnKN.jpeg');
 
         const actionRow = new ActionRowBuilder();
         if (TORNEOS_STATUS_CHANNEL_ID) {
