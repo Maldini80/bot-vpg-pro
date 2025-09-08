@@ -408,7 +408,7 @@ const handler = async (client, interaction) => {
             return interaction.editReply({ content: 'Esta solicitud ha expirado o no es tuya.', components: [] });
         }
 
-        const defaultLogo = 'https://i.imgur.com/V4J2Fcf.png';
+        const defaultLogo = 'https://i.imgur.com/X2YIZh4.png';
         await sendApprovalRequest(interaction, client, { ...pendingTeam.toObject(), logoUrl: defaultLogo });
         await PendingTeam.findByIdAndDelete(pendingTeamId);
 
@@ -433,7 +433,7 @@ const handler = async (client, interaction) => {
         const teamName = originalEmbed.fields.find(f => f.name === 'Nombre del Equipo').value;
         const teamAbbr = originalEmbed.fields.find(f => f.name === 'Abreviatura').value;
         const teamTwitter = originalEmbed.fields.find(f => f.name === 'Twitter del Equipo').value;
-        const logoUrl = originalEmbed.thumbnail ? originalEmbed.thumbnail.url : 'https://i.imgur.com/V4J2Fcf.png';
+        const logoUrl = originalEmbed.thumbnail ? originalEmbed.thumbnail.url : 'https://i.imgur.com/X2YIZh4.png';
 
         const applicantMember = await guild.members.fetch(applicantId).catch(() => null);
         if (!applicantMember) return interaction.followUp({ content: `El usuario solicitante ya no está en el servidor.`, flags: MessageFlags.Ephemeral });
