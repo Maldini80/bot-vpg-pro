@@ -32,27 +32,77 @@ module.exports = async (client, interaction) => {
     
     const oldManagerId = team.managerId;
     
-    const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-            .setCustomId(`admin_finalize_manager_change_captain_${teamId}_${oldManagerId}_${newManagerId}`)
-            .setLabel('Degradar a Capitán')
-            .setStyle(ButtonStyle.Primary)
-            .setEmoji('🛡️'),
-        new ButtonBuilder()
-            .setCustomId(`admin_finalize_manager_change_player_${teamId}_${oldManagerId}_${newManagerId}`)
-            .setLabel('Degradar a Jugador')
-            .setStyle(ButtonStyle.Secondary)
-            .setEmoji('👥'),
-        new ButtonBuilder()
-            .setCustomId(`admin_finalize_manager_change_kick_${teamId}_${oldManagerId}_${newManagerId}`)
-            .setLabel('Expulsar del Equipo')
-            .setStyle(ButtonStyle.Danger)
-            .setEmoji('🚪')
-    );
+    // Creamos un menú de selección en lugar de botones
+    const actionMenu = new StringSelectMenuBuilder()
+        .setCustomId(`admin_finalize_manager_action_${teamId}_${oldManagerId}_${newManagerId}`)
+        .setPlaceholder('Elige una acción para el antiguo mánager')
+        .addOptions([
+            { label: 'Degradar a Capitán', value: 'captain', emoji: '🛡️' },
+            { label: 'Degradar a Jugador', value: 'player', emoji: '👥' },
+            { label: 'Expulsar del Equipo', value: 'kick', emoji: '🚪' },
+        ]);
 
     await interaction.editReply({
         content: `Has seleccionado a <@${newManagerId}> como nuevo mánager.\n\n**Paso final: ¿Qué quieres hacer con el mánager actual, <@${oldManagerId}>?**`,
-        components: [row]
+        components: [new ActionRowBuilder().addComponents(actionMenu)]
+    });
+    return;
+}
+    if (customId.startsWith('admin_finalize_manager_action_')) {
+    await interaction.deferUpdate();
+
+    const parts = customId.split('_');
+    const teamId = parts[4];
+    const oldManagerId = parts[5];
+    const newManagerId = parts[6];
+    const action = values[0]; // 'captain', 'player', o 'kick'
+
+    const team = await Team.findById(teamId);
+    if (!team) return interaction.editReply({ content: '❌ El equipo ya no existe.', components: [] });
+
+    const oldManagerMember = await interaction.guild.members.fetch(oldManagerId).catch(() => null);
+    const newManagerMember = await interaction.guild.members.fetch(newManagerId).catch(() => null);
+
+    if (!newManagerMember) return interaction.editReply({ content: '❌ El nuevo mánager seleccionado ya no se encuentra en el servidor.', components: [] });
+    
+    let outcomeMessage = '';
+
+    if (oldManagerMember) {
+        await oldManagerMember.roles.remove(process.env.MANAGER_ROLE_ID);
+        if (action === 'captain') {
+            team.captains.push(oldManagerId);
+            await oldManagerMember.roles.add([process.env.CAPTAIN_ROLE_ID, process.env.PLAYER_ROLE_ID]);
+            await oldManagerMember.setNickname(`|C| ${team.abbreviation} ${oldManagerMember.user.username}`).catch(() => {});
+            outcomeMessage = `<@${oldManagerId}> ha sido degradado a **Capitán**.`;
+        } else if (action === 'player') {
+            team.players.push(oldManagerId);
+            await oldManagerMember.roles.add(process.env.PLAYER_ROLE_ID);
+            await oldManagerMember.setNickname(`${team.abbreviation} ${oldManagerMember.user.username}`).catch(() => {});
+            outcomeMessage = `<@${oldManagerId}> ha sido degradado a **Jugador**.`;
+        } else if (action === 'kick') {
+            await oldManagerMember.roles.remove([process.env.CAPTAIN_ROLE_ID, process.env.PLAYER_ROLE_ID, process.env.MUTED_ROLE_ID]).catch(() => {});
+            if (oldManagerMember.id !== interaction.guild.ownerId) await oldManagerMember.setNickname(oldManagerMember.user.username).catch(()=>{});
+            outcomeMessage = `<@${oldManagerId}> ha sido **expulsado** del equipo.`;
+        }
+        await oldManagerMember.send(`Un administrador ha modificado tu estatus en el equipo **${team.name}**.`).catch(() => {});
+    } else {
+        outcomeMessage = `El antiguo mánager <@${oldManagerId}> no se encontró en el servidor, solo se actualizó la base de datos.`;
+    }
+
+    team.managerId = newManagerId;
+    team.captains = team.captains.filter(id => id !== newManagerId);
+    team.players = team.players.filter(id => id !== newManagerId);
+
+    await newManagerMember.roles.add([process.env.MANAGER_ROLE_ID, process.env.PLAYER_ROLE_ID]);
+    await newManagerMember.roles.remove(process.env.CAPTAIN_ROLE_ID).catch(() => {});
+    await newManagerMember.setNickname(`|MG| ${team.abbreviation} ${newManagerMember.user.username}`).catch(() => {});
+    
+    await team.save();
+    await newManagerMember.send(`¡Enhorabuena! Un administrador te ha asignado como nuevo Mánager de **${team.name}**.`).catch(() => {});
+
+    await interaction.editReply({
+        content: `✅ **¡Cambio de mánager completado!**\n- <@${newManagerId}> es ahora el nuevo mánager de **${team.name}**.\n- ${outcomeMessage}`,
+        components: []
     });
     return;
 }
