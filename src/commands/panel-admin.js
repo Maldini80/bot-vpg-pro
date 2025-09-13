@@ -17,11 +17,12 @@ module.exports = {
             .setColor('#c0392b');
             
         const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('admin_create_league_button').setLabel('➕ Crear Liga').setStyle(ButtonStyle.Success),
-            new ButtonBuilder().setCustomId('admin_delete_league_button').setLabel('🗑️ Borrar Liga').setStyle(ButtonStyle.Danger),
-            new ButtonBuilder().setCustomId('admin_manage_team_button').setLabel('🔍 Gestionar Equipo').setStyle(ButtonStyle.Primary),
-            new ButtonBuilder().setCustomId('admin_view_pending_requests').setLabel('⏳ Ver Solicitudes').setStyle(ButtonStyle.Secondary)
-        );
+    new ButtonBuilder().setCustomId('admin_create_team_button').setLabel('➕ Crear Equipo').setStyle(ButtonStyle.Success),
+    new ButtonBuilder().setCustomId('admin_create_league_button').setLabel('Crear Liga').setStyle(ButtonStyle.Success).setEmoji('🏆'),
+    new ButtonBuilder().setCustomId('admin_delete_league_button').setLabel('Borrar Liga').setStyle(ButtonStyle.Danger).setEmoji('🗑️'),
+    new ButtonBuilder().setCustomId('admin_manage_team_button').setLabel('Gestionar Equipo').setStyle(ButtonStyle.Primary).setEmoji('🔍'),
+    new ButtonBuilder().setCustomId('admin_view_pending_requests').setLabel('Ver Solicitudes').setStyle(ButtonStyle.Secondary).setEmoji('⏳')
+);
         
         // Enviamos el panel al canal
         await interaction.channel.send({ embeds: [embed], components: [row] });
