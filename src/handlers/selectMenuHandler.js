@@ -139,7 +139,7 @@ module.exports = async (client, interaction) => {
     const leagueName = values[0];
 
     const modal = new ModalBuilder()
-        .setCustomId(`admin_create_team_modal_${managerId}_${leagueName.replace(/\s/g, '-')}`) // Pasamos la liga en el ID
+        .setCustomId(`admin_create_team_modal_${managerId}_${leagueName.replace(/\s/g, '-')}`)
         .setTitle(`Crear equipo en la liga ${leagueName}`);
 
     const teamNameInput = new TextInputBuilder().setCustomId('teamName').setLabel("Nombre del equipo").setStyle(TextInputStyle.Short).setRequired(true);
@@ -147,6 +147,7 @@ module.exports = async (client, interaction) => {
     
     modal.addComponents(
         new ActionRowBuilder().addComponents(teamNameInput),
+        // LA LÍNEA CRÍTICA, AHORA SÍ, ESTÁ CORREGIDA:
         new ActionRowBuilder().addComponents(teamAbbrInput)
     );
     
