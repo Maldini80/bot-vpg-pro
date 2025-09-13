@@ -143,13 +143,16 @@ module.exports = async (client, interaction) => {
         .setTitle(`Crear equipo en la liga ${leagueName}`);
 
     const teamNameInput = new TextInputBuilder().setCustomId('teamName').setLabel("Nombre del equipo").setStyle(TextInputStyle.Short).setRequired(true);
-    const teamAbbrInput = new TextInputBuilder().setCustomId('teamAbbr').setLabel("Abreviatura (3 letras)").setStyle(TextInputStyle.Short).setRequired(true).setMinLength(3).setMaxLength(3);
-    
-    modal.addComponents(
-        new ActionRowBuilder().addComponents(teamNameInput),
-        // LA LÍNEA CRÍTICA, AHORA SÍ, ESTÁ CORREGIDA:
-        new ActionRowBuilder().addComponents(teamAbbrInput)
-    );
+const teamAbbrInput = new TextInputBuilder().setCustomId('teamAbbr').setLabel("Abreviatura (3 letras)").setStyle(TextInputStyle.Short).setRequired(true).setMinLength(3).setMaxLength(3);
+// --- NUEVO CAMPO AÑADIDO ---
+const teamTwitterInput = new TextInputBuilder().setCustomId('teamTwitter').setLabel("Twitter del equipo (opcional, sin @)").setStyle(TextInputStyle.Short).setRequired(false);
+
+modal.addComponents(
+    new ActionRowBuilder().addComponents(teamNameInput),
+    new ActionRowBuilder().addComponents(teamAbbrInput),
+    // --- NUEVA FILA AÑADIDA AL FORMULARIO ---
+    new ActionRowBuilder().addComponents(teamTwitterInput)
+);
     
     await interaction.showModal(modal);
     return;
