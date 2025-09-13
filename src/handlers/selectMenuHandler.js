@@ -108,52 +108,49 @@ module.exports = async (client, interaction) => {
 }
     
     if (customId === 'admin_select_manager_for_creation') {
-    console.log('[DEBUG] Se ha detectado la interacción "admin_select_manager_for_creation".');
-    
-    try {
-        const managerId = values[0];
-        console.log(`[DEBUG] Mánager seleccionado - ID: ${managerId}`);
+    const managerId = values[0];
 
-        console.log('[DEBUG] Realizando consulta a la base de datos para verificar si el usuario ya está en un equipo...');
-        const isAlreadyInTeam = await Team.findOne({ guildId: interaction.guild.id, $or: [{ managerId }, { captains: managerId }, { players: managerId }] });
-        
-        if (isAlreadyInTeam) {
-            console.log(`[DEBUG] El usuario ya está en el equipo "${isAlreadyInTeam.name}". Respondiendo con un mensaje de error.`);
-            return interaction.update({ 
-                content: `❌ **Acción cancelada.** El usuario seleccionado ya pertenece al equipo **${isAlreadyInTeam.name}**.`,
-                components: []
-            });
-        }
-
-        console.log('[DEBUG] El usuario está libre. Creando y mostrando el modal para los datos del equipo...');
-        
-        const modal = new ModalBuilder()
-            .setCustomId(`admin_create_team_modal_${managerId}`)
-            .setTitle('Paso 2: Datos del Nuevo Equipo');
-            
-        const teamNameInput = new TextInputBuilder().setCustomId('teamName').setLabel("Nombre del equipo").setStyle(TextInputStyle.Short).setRequired(true);
-        const teamAbbrInput = new TextInputBuilder().setCustomId('teamAbbr').setLabel("Abreviatura (3 letras)").setStyle(TextInputStyle.Short).setRequired(true).setMinLength(3).setMaxLength(3);
-        const leagueNameInput = new TextInputBuilder().setCustomId('leagueName').setLabel("Nombre de la liga (debe existir)").setStyle(TextInputStyle.Short).setRequired(true);
-        const logoUrlInput = new TextInputBuilder().setCustomId('logoUrl').setLabel("URL del logo (opcional)").setStyle(TextInputStyle.Short).setRequired(false);
-        
-        modal.addComponents(
-            new ActionRowBuilder().addComponents(teamNameInput),
-            new ActionRowBuilder().addComponents(teamAbbrInput),
-            new ActionRowBuilder().addComponents(leagueNameInput),
-            new ActionRowBuilder().addComponents(logoUrlInput)
-        );
-        
-        await interaction.showModal(modal);
-        console.log('[DEBUG] Modal mostrado con éxito.');
-
-    } catch (error) {
-        console.error('[DEBUG-ERROR] Ha ocurrido un error crítico en el flujo de selección de mánager:', error);
-        try {
-            await interaction.reply({ content: 'Ha ocurrido un error interno. Por favor, revisa la consola del bot.', ephemeral: true });
-        } catch (replyError) {
-            console.error('[DEBUG-ERROR] No se pudo ni siquiera responder a la interacción con un mensaje de error:', replyError);
-        }
+    const isAlreadyInTeam = await Team.findOne({ guildId: interaction.guild.id, $or: [{ managerId }, { captains: managerId }, { players: managerId }] });
+    if (isAlreadyInTeam) {
+        return interaction.update({ content: `❌ El usuario seleccionado ya pertenece al equipo **${isAlreadyInTeam.name}**.`, components: [] });
     }
+
+    // Buscamos las ligas existentes
+    const leagues = await League.find({ guildId: interaction.guild.id });
+    if (leagues.length === 0) {
+        return interaction.update({ content: '❌ No hay ligas creadas. Por favor, crea una liga antes de crear un equipo.', components: [] });
+    }
+
+    const leagueOptions = leagues.map(l => ({ label: l.name, value: l.name }));
+
+    const leagueMenu = new StringSelectMenuBuilder()
+        .setCustomId(`admin_select_league_for_creation_${managerId}`)
+        .setPlaceholder('Selecciona la liga para el nuevo equipo')
+        .addOptions(leagueOptions);
+
+    await interaction.update({
+        content: `Has seleccionado a <@${managerId}> como Mánager.\n\n**Paso 2 de 3:** Ahora, selecciona la liga en la que competirá el equipo.`,
+        components: [new ActionRowBuilder().addComponents(leagueMenu)]
+    });
+    return;
+}
+    if (customId.startsWith('admin_select_league_for_creation_')) {
+    const managerId = customId.split('_')[5];
+    const leagueName = values[0];
+
+    const modal = new ModalBuilder()
+        .setCustomId(`admin_create_team_modal_${managerId}_${leagueName.replace(/\s/g, '-')}`) // Pasamos la liga en el ID
+        .setTitle(`Crear equipo en la liga ${leagueName}`);
+
+    const teamNameInput = new TextInputBuilder().setCustomId('teamName').setLabel("Nombre del equipo").setStyle(TextInputStyle.Short).setRequired(true);
+    const teamAbbrInput = new TextInputBuilder().setCustomId('teamAbbr').setLabel("Abreviatura (3 letras)").setStyle(TextInputStyle.Short).setRequired(true).setMinLength(3).setMaxLength(3);
+    
+    modal.addComponents(
+        new ActionRowBuilder().addComponents(teamNameInput),
+        new ActionRowRowBuilder().addComponents(teamAbbrInput)
+    );
+    
+    await interaction.showModal(modal);
     return;
 }
 if (customId.startsWith('admin_select_members_')) {
