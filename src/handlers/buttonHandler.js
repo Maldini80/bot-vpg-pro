@@ -1589,6 +1589,26 @@ if (customId === 'admin_create_team_button') {
     return;
 }
 
+if (customId.startsWith('admin_add_captains_') || customId.startsWith('admin_add_players_')) {
+    if (!isAdmin) return interaction.reply({ content: 'Acción restringida.', flags: MessageFlags.Ephemeral });
+
+    const isAddingCaptains = customId.startsWith('admin_add_captains_');
+    const teamId = customId.substring(customId.lastIndexOf('_') + 1);
+    
+    const userSelectMenu = new UserSelectMenuBuilder()
+        .setCustomId(`admin_select_members_${isAddingCaptains ? 'captains' : 'players'}_${teamId}`)
+        .setPlaceholder(`Selecciona los ${isAddingCaptains ? 'capitanes' : 'jugadores'} a añadir`)
+        .setMinValues(1)
+        .setMaxValues(25);
+
+    await interaction.reply({
+        content: `Selecciona los **${isAddingCaptains ? 'capitanes' : 'jugadores'}** que quieres añadir al equipo desde el menú de abajo.`,
+        components: [new ActionRowBuilder().addComponents(userSelectMenu)],
+        flags: MessageFlags.Ephemeral
+    });
+    return;
+}
+
 // Exportamos el handler y las funciones de utilidad para que puedan ser usadas en otros archivos.
 handler.updatePanelMessage = updatePanelMessage;
 handler.getOrCreateWebhook = getOrCreateWebhook;
