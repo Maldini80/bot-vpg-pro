@@ -1582,7 +1582,7 @@ if (customId === 'admin_create_team_button') {
         .setMaxValues(1);
 
     await interaction.reply({
-        content: '**Paso 1 de 2:** Selecciona al miembro del servidor que será el Mánager de este nuevo equipo.',
+        content: '**Paso 1 de 3:** Selecciona al miembro del servidor que será el Mánager de este nuevo equipo.',
         components: [new ActionRowBuilder().addComponents(userSelectMenu)],
         flags: MessageFlags.Ephemeral
     });
