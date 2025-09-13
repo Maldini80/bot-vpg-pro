@@ -147,7 +147,7 @@ module.exports = async (client, interaction) => {
     
     modal.addComponents(
         new ActionRowBuilder().addComponents(teamNameInput),
-        new ActionRowRowBuilder().addComponents(teamAbbrInput)
+        new ActionRowBuilder().addComponents(teamAbbrInput)
     );
     
     await interaction.showModal(modal);
