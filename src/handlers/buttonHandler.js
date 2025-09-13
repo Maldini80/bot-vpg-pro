@@ -350,6 +350,29 @@ if (customId.startsWith('admin_change_manager_')) {
     });
     return;
 }
+    if (customId.startsWith('admin_set_logo_custom_')) {
+    const teamId = customId.split('_')[4];
+    const modal = new ModalBuilder()
+        .setCustomId(`admin_submit_logo_modal_${teamId}`)
+        .setTitle('Añadir Logo Personalizado');
+    const logoUrlInput = new TextInputBuilder().setCustomId('logoUrl').setLabel("URL de la imagen del logo").setStyle(TextInputStyle.Short).setRequired(true).setPlaceholder('https://i.imgur.com/logo.png');
+    modal.addComponents(new ActionRowBuilder().addComponents(logoUrlInput));
+    await interaction.showModal(modal);
+    return;
+}
+
+if (customId.startsWith('admin_continue_no_logo_')) {
+    const teamId = customId.split('_')[4];
+    const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId(`admin_add_captains_${teamId}`).setLabel('Añadir Capitanes').setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId(`admin_add_players_${teamId}`).setLabel('Añadir Jugadores').setStyle(ButtonStyle.Success)
+    );
+    await interaction.update({
+        content: `✅ Logo por defecto asignado. Ahora puedes añadir miembros a la plantilla.`,
+        components: [row]
+    });
+    return;
+}
 
     if (customId.startsWith('paginate_')) {
     await interaction.deferUpdate();
