@@ -46,6 +46,59 @@ async function sendApprovalRequest(interaction, client, { vpgUsername, teamName,
 module.exports = async (client, interaction) => {
     const { customId, fields, guild, user, member } = interaction;
 
+    if (customId.startsWith('admin_create_team_modal_')) {
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+    const managerId = customId.split('_')[4];
+    const teamName = fields.getTextInputValue('teamName');
+    const teamAbbr = fields.getTextInputValue('teamAbbr').toUpperCase();
+    const leagueName = fields.getTextInputValue('leagueName');
+    const logoUrl = fields.getTextInputValue('logoUrl') || 'https://i.imgur.com/V4J2Fcf.png';
+
+    // --- Validaciones ---
+    const league = await League.findOne({ name: leagueName, guildId: interaction.guild.id });
+    if (!league) {
+        return interaction.editReply({ content: `❌ La liga "${leagueName}" no existe. Créala primero desde el panel de admin.` });
+    }
+    const existingTeam = await Team.findOne({ name: teamName, guildId: interaction.guild.id });
+    if (existingTeam) {
+        return interaction.editReply({ content: `❌ Ya existe un equipo con el nombre "${teamName}".` });
+    }
+    const managerMember = await interaction.guild.members.fetch(managerId).catch(() => null);
+    if (!managerMember) {
+        return interaction.editReply({ content: `❌ El usuario seleccionado como mánager ya no se encuentra en el servidor.` });
+    }
+
+    // --- Creación y Asignación ---
+    const newTeam = new Team({
+        name: teamName,
+        abbreviation: teamAbbr,
+        guildId: interaction.guild.id,
+        league: league.name,
+        logoUrl: logoUrl,
+        managerId: managerId,
+    });
+    await newTeam.save();
+
+    await managerMember.roles.add([process.env.MANAGER_ROLE_ID, process.env.PLAYER_ROLE_ID]);
+    await managerMember.setNickname(`|MG| ${teamAbbr} ${managerMember.user.username}`).catch(() => {});
+    
+    // --- Respuesta final con opciones ---
+    const teamId = newTeam._id.toString();
+    const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId(`admin_add_captains_${teamId}`).setLabel('Añadir Capitanes').setStyle(ButtonStyle.Primary).setEmoji('🛡️'),
+        new ButtonBuilder().setCustomId(`admin_add_players_${teamId}`).setLabel('Añadir Jugadores').setStyle(ButtonStyle.Success).setEmoji('👥')
+    );
+
+    await managerMember.send({ content: `¡Enhorabuena! Un administrador te ha asignado como Mánager del nuevo equipo **${teamName}**.` }).catch(() => {});
+
+    await interaction.editReply({ 
+        content: `✅ Equipo **${teamName}** creado con <@${managerId}> como Mánager.\n\nUsa los botones de abajo para añadir miembros a la plantilla.`,
+        components: [row]
+    });
+    return;
+}
+
     if (customId === 'player_registration_modal') {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral }); 
 
