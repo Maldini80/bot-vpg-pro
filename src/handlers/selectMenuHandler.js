@@ -14,6 +14,41 @@ const POSITIONS = ['POR', 'DFC', 'CARR', 'MCD', 'MV', 'MCO', 'DC'];
 module.exports = async (client, interaction) => {
     const { customId, values, guild, user } = interaction;
     const selectedValue = values[0];
+    if (customId === 'admin_select_manager_for_creation') {
+    const managerId = values[0];
+
+    // Validación: Comprobar si el usuario ya está en un equipo
+    const isAlreadyInTeam = await Team.findOne({
+        guildId: interaction.guild.id,
+        $or: [{ managerId: managerId }, { captains: managerId }, { players: managerId }]
+    });
+
+    if (isAlreadyInTeam) {
+        return interaction.reply({
+            content: `❌ **Acción cancelada.** El usuario seleccionado ya pertenece al equipo **${isAlreadyInTeam.name}**.`,
+            flags: MessageFlags.Ephemeral
+        });
+    }
+
+    const modal = new ModalBuilder()
+        .setCustomId(`admin_create_team_modal_${managerId}`)
+        .setTitle('Paso 2: Datos del Nuevo Equipo');
+
+    const teamNameInput = new TextInputBuilder().setCustomId('teamName').setLabel("Nombre del equipo").setStyle(TextInputStyle.Short).setRequired(true);
+    const teamAbbrInput = new TextInputBuilder().setCustomId('teamAbbr').setLabel("Abreviatura (3 letras)").setStyle(TextInputStyle.Short).setRequired(true).setMinLength(3).setMaxLength(3);
+    const leagueNameInput = new TextInputBuilder().setCustomId('leagueName').setLabel("Nombre de la liga (debe existir)").setStyle(TextInputStyle.Short).setRequired(true);
+    const logoUrlInput = new TextInputBuilder().setCustomId('logoUrl').setLabel("URL del logo (opcional)").setStyle(TextInputStyle.Short).setRequired(false).setPlaceholder('https://i.imgur.com/V4J2Fcf.png');
+    
+    modal.addComponents(
+        new ActionRowBuilder().addComponents(teamNameInput),
+        new ActionRowBuilder().addComponents(teamAbbrInput),
+        new ActionRowBuilder().addComponents(leagueNameInput),
+        new ActionRowBuilder().addComponents(logoUrlInput)
+    );
+    
+    await interaction.showModal(modal);
+    return;
+}
 
     if (customId === 'invite_player_select') {
         await interaction.deferUpdate();
