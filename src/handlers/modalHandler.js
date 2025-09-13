@@ -49,42 +49,39 @@ module.exports = async (client, interaction) => {
     if (customId.startsWith('admin_create_team_modal_')) {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-    const managerId = customId.split('_')[4];
+    const parts = customId.split('_');
+    const managerId = parts[4];
+    const leagueName = parts[5].replace(/-/g, ' '); // Reconstruimos el nombre de la liga
     const teamName = fields.getTextInputValue('teamName');
     const teamAbbr = fields.getTextInputValue('teamAbbr').toUpperCase();
-    const leagueName = fields.getTextInputValue('leagueName');
-    const logoUrl = fields.getTextInputValue('logoUrl') || 'https://i.imgur.com/V4J2Fcf.png';
 
-    const league = await League.findOne({ name: leagueName, guildId: interaction.guild.id });
-    if (!league) return interaction.editReply({ content: `❌ La liga "${leagueName}" no existe.` });
-    
     const existingTeam = await Team.findOne({ name: teamName, guildId: interaction.guild.id });
     if (existingTeam) return interaction.editReply({ content: `❌ Ya existe un equipo con el nombre "${teamName}".` });
     
     const managerMember = await interaction.guild.members.fetch(managerId).catch(() => null);
     if (!managerMember) return interaction.editReply({ content: `❌ El mánager seleccionado ya no está en el servidor.` });
 
-    const newTeam = new Team({ name: teamName, abbreviation: teamAbbr, guildId: interaction.guild.id, league: league.name, logoUrl, managerId });
+    // Creamos el equipo con logo por defecto
+    const newTeam = new Team({ name: teamName, abbreviation: teamAbbr, guildId: interaction.guild.id, league: leagueName, logoUrl: 'https://i.imgur.com/V4J2Fcf.png', managerId });
     await newTeam.save();
 
     await managerMember.roles.add([process.env.MANAGER_ROLE_ID, process.env.PLAYER_ROLE_ID]);
     await managerMember.setNickname(`|MG| ${teamAbbr} ${managerMember.user.username}`).catch(() => {});
     
     const teamId = newTeam._id.toString();
-    const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId(`admin_add_captains_${teamId}`).setLabel('Añadir Capitanes').setStyle(ButtonStyle.Primary),
-        new ButtonBuilder().setCustomId(`admin_add_players_${teamId}`).setLabel('Añadir Jugadores').setStyle(ButtonStyle.Success)
+    
+    // Creamos botones para la decisión del logo
+    const logoRow = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId(`admin_set_logo_custom_${teamId}`).setLabel('Añadir Logo Personalizado').setStyle(ButtonStyle.Success),
+        new ButtonBuilder().setCustomId(`admin_continue_no_logo_${teamId}`).setLabel('Continuar (Usar Defecto)').setStyle(ButtonStyle.Secondary)
     );
 
-    await managerMember.send({ content: `Un administrador te ha asignado como Mánager del nuevo equipo **${teamName}**.` }).catch(() => {});
-
     await interaction.editReply({ 
-        content: `✅ Equipo **${teamName}** creado con <@${managerId}> como Mánager.\n\n**Paso 3 (Opcional):** Usa los botones para añadir miembros.`,
-        components: [row]
+        content: `✅ Equipo **${teamName}** creado con <@${managerId}> como Mánager.\n\n**Paso 3 de 3:** ¿Quieres añadir un logo personalizado o usar el logo por defecto?`,
+        components: [logoRow]
     });
     return;
 }
-
     if (customId === 'player_registration_modal') {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral }); 
 
