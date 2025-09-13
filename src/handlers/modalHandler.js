@@ -55,45 +55,31 @@ module.exports = async (client, interaction) => {
     const leagueName = fields.getTextInputValue('leagueName');
     const logoUrl = fields.getTextInputValue('logoUrl') || 'https://i.imgur.com/V4J2Fcf.png';
 
-    // --- Validaciones ---
     const league = await League.findOne({ name: leagueName, guildId: interaction.guild.id });
-    if (!league) {
-        return interaction.editReply({ content: `❌ La liga "${leagueName}" no existe. Créala primero desde el panel de admin.` });
-    }
+    if (!league) return interaction.editReply({ content: `❌ La liga "${leagueName}" no existe.` });
+    
     const existingTeam = await Team.findOne({ name: teamName, guildId: interaction.guild.id });
-    if (existingTeam) {
-        return interaction.editReply({ content: `❌ Ya existe un equipo con el nombre "${teamName}".` });
-    }
+    if (existingTeam) return interaction.editReply({ content: `❌ Ya existe un equipo con el nombre "${teamName}".` });
+    
     const managerMember = await interaction.guild.members.fetch(managerId).catch(() => null);
-    if (!managerMember) {
-        return interaction.editReply({ content: `❌ El usuario seleccionado como mánager ya no se encuentra en el servidor.` });
-    }
+    if (!managerMember) return interaction.editReply({ content: `❌ El mánager seleccionado ya no está en el servidor.` });
 
-    // --- Creación y Asignación ---
-    const newTeam = new Team({
-        name: teamName,
-        abbreviation: teamAbbr,
-        guildId: interaction.guild.id,
-        league: league.name,
-        logoUrl: logoUrl,
-        managerId: managerId,
-    });
+    const newTeam = new Team({ name: teamName, abbreviation: teamAbbr, guildId: interaction.guild.id, league: league.name, logoUrl, managerId });
     await newTeam.save();
 
     await managerMember.roles.add([process.env.MANAGER_ROLE_ID, process.env.PLAYER_ROLE_ID]);
     await managerMember.setNickname(`|MG| ${teamAbbr} ${managerMember.user.username}`).catch(() => {});
     
-    // --- Respuesta final con opciones ---
     const teamId = newTeam._id.toString();
     const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId(`admin_add_captains_${teamId}`).setLabel('Añadir Capitanes').setStyle(ButtonStyle.Primary).setEmoji('🛡️'),
-        new ButtonBuilder().setCustomId(`admin_add_players_${teamId}`).setLabel('Añadir Jugadores').setStyle(ButtonStyle.Success).setEmoji('👥')
+        new ButtonBuilder().setCustomId(`admin_add_captains_${teamId}`).setLabel('Añadir Capitanes').setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId(`admin_add_players_${teamId}`).setLabel('Añadir Jugadores').setStyle(ButtonStyle.Success)
     );
 
-    await managerMember.send({ content: `¡Enhorabuena! Un administrador te ha asignado como Mánager del nuevo equipo **${teamName}**.` }).catch(() => {});
+    await managerMember.send({ content: `Un administrador te ha asignado como Mánager del nuevo equipo **${teamName}**.` }).catch(() => {});
 
     await interaction.editReply({ 
-        content: `✅ Equipo **${teamName}** creado con <@${managerId}> como Mánager.\n\nUsa los botones de abajo para añadir miembros a la plantilla.`,
+        content: `✅ Equipo **${teamName}** creado con <@${managerId}> como Mánager.\n\n**Paso 3 (Opcional):** Usa los botones para añadir miembros.`,
         components: [row]
     });
     return;
