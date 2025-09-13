@@ -45,6 +45,24 @@ async function sendApprovalRequest(interaction, client, { vpgUsername, teamName,
 
 module.exports = async (client, interaction) => {
     const { customId, fields, guild, user, member } = interaction;
+    
+    if (customId.startsWith('admin_submit_logo_modal_')) {
+        await interaction.deferUpdate();
+        const teamId = customId.split('_')[4];
+        const logoUrl = fields.getTextInputValue('logoUrl');
+
+        await Team.findByIdAndUpdate(teamId, { logoUrl });
+
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId(`admin_add_captains_${teamId}`).setLabel('Añadir Capitanes').setStyle(ButtonStyle.Primary),
+            new ButtonBuilder().setCustomId(`admin_add_players_${teamId}`).setLabel('Añadir Jugadores').setStyle(ButtonStyle.Success)
+        );
+        await interaction.editReply({
+            content: `✅ Logo personalizado añadido con éxito. Ahora puedes añadir miembros a la plantilla.`,
+            components: [row]
+        });
+        return;
+    }
 
     if (customId.startsWith('admin_create_team_modal_')) {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
