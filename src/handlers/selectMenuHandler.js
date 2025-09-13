@@ -60,11 +60,19 @@ module.exports = async (client, interaction) => {
     if (customId === 'admin_select_manager_for_creation') {
     const managerId = values[0];
 
+    // Hacemos la comprobación en la base de datos
     const isAlreadyInTeam = await Team.findOne({ guildId: interaction.guild.id, $or: [{ managerId }, { captains: managerId }, { players: managerId }] });
+    
+    // SI EL USUARIO YA ESTÁ EN UN EQUIPO...
     if (isAlreadyInTeam) {
-        return interaction.reply({ content: `❌ El usuario seleccionado ya pertenece al equipo **${isAlreadyInTeam.name}**.`, flags: MessageFlags.Ephemeral });
+        // ... usamos .update() para modificar el mensaje original y mostrar el error.
+        return interaction.update({ 
+            content: `❌ **Acción cancelada.** El usuario seleccionado ya pertenece al equipo **${isAlreadyInTeam.name}**.`,
+            components: [] // Eliminamos el menú de selección
+        });
     }
 
+    // SI TODO ESTÁ BIEN, MOSTRAMOS EL FORMULARIO (esto ya era correcto)
     const modal = new ModalBuilder().setCustomId(`admin_create_team_modal_${managerId}`).setTitle('Paso 2: Datos del Nuevo Equipo');
     const teamNameInput = new TextInputBuilder().setCustomId('teamName').setLabel("Nombre del equipo").setStyle(TextInputStyle.Short).setRequired(true);
     const teamAbbrInput = new TextInputBuilder().setCustomId('teamAbbr').setLabel("Abreviatura (3 letras)").setStyle(TextInputStyle.Short).setRequired(true).setMinLength(3).setMaxLength(3);
