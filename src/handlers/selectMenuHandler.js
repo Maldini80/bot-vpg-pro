@@ -14,6 +14,64 @@ const POSITIONS = ['POR', 'DFC', 'CARR', 'MCD', 'MV', 'MCO', 'DC'];
 module.exports = async (client, interaction) => {
     const { customId, values, guild, user } = interaction;
     const selectedValue = values[0];
+
+    if (customId.startsWith('admin_select_new_manager_')) {
+    await interaction.deferUpdate();
+
+    const teamId = customId.split('_')[4];
+    const newManagerId = values[0];
+
+    const team = await Team.findById(teamId);
+    if (!team) return interaction.followUp({ content: '❌ El equipo ya no existe.', flags: MessageFlags.Ephemeral });
+    if (team.managerId === newManagerId) return interaction.editReply({ content: '⚠️ Has seleccionado al mánager actual. No se ha realizado ningún cambio.', components: [] });
+    
+    const isAlreadyManager = await Team.findOne({ managerId: newManagerId });
+    if (isAlreadyManager) {
+        return interaction.followUp({ content: `❌ El usuario seleccionado ya es mánager del equipo **${isAlreadyManager.name}**.`, flags: MessageFlags.Ephemeral });
+    }
+    
+    const oldManagerId = team.managerId;
+    const oldManagerMember = await guild.members.fetch(oldManagerId).catch(() => null);
+    const newManagerMember = await guild.members.fetch(newManagerId).catch(() => null);
+
+    if (!newManagerMember) return interaction.followUp({ content: '❌ El nuevo mánager seleccionado no se encuentra en el servidor.', flags: MessageFlags.Ephemeral });
+
+    // --- 1. Procesar al Antiguo Mánager ---
+    if (oldManagerMember) {
+        await oldManagerMember.roles.remove(process.env.MANAGER_ROLE_ID);
+        // Lo degradamos a jugador normal
+        await oldManagerMember.roles.add(process.env.PLAYER_ROLE_ID);
+        await oldManagerMember.setNickname(`${team.abbreviation} ${oldManagerMember.user.username}`).catch(() => {});
+        
+        // Lo añadimos a la lista de jugadores en la base de datos
+        if (!team.players.includes(oldManagerId)) {
+            team.players.push(oldManagerId);
+        }
+        await oldManagerMember.send(`Un administrador te ha reasignado. Ya no eres el mánager de **${team.name}** y ahora figuras como jugador.`).catch(() => {});
+    }
+
+    // --- 2. Procesar al Nuevo Mánager ---
+    team.managerId = newManagerId;
+    // Si el nuevo mánager ya era capitán o jugador, lo eliminamos de esas listas para evitar duplicados.
+    team.captains = team.captains.filter(id => id !== newManagerId);
+    team.players = team.players.filter(id => id !== newManagerId);
+
+    await newManagerMember.roles.add([process.env.MANAGER_ROLE_ID, process.env.PLAYER_ROLE_ID]);
+    await newManagerMember.roles.remove(process.env.CAPTAIN_ROLE_ID).catch(() => {}); // Por si era capitán
+    await newManagerMember.setNickname(`|MG| ${team.abbreviation} ${newManagerMember.user.username}`).catch(() => {});
+    
+    // --- 3. Guardar y Notificar ---
+    await team.save();
+
+    await newManagerMember.send(`¡Enhorabuena! Un administrador te ha asignado como nuevo Mánager de **${team.name}**.`).catch(() => {});
+
+    await interaction.editReply({
+        content: `✅ **¡Cambio de mánager completado!**\n- <@${oldManagerId}> ha sido degradado a jugador.\n- <@${newManagerId}> es ahora el nuevo mánager de **${team.name}**.`,
+        components: []
+    });
+    return;
+}
+    
     if (customId === 'admin_select_manager_for_creation') {
     const managerId = values[0];
 
