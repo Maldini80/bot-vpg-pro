@@ -72,6 +72,7 @@ module.exports = async (client, interaction) => {
     const leagueName = parts[5].replace(/-/g, ' '); // Reconstruimos el nombre de la liga
     const teamName = fields.getTextInputValue('teamName');
     const teamAbbr = fields.getTextInputValue('teamAbbr').toUpperCase();
+    const teamTwitter = fields.getTextInputValue('teamTwitter') || null;    
 
     const existingTeam = await Team.findOne({ name: teamName, guildId: interaction.guild.id });
     if (existingTeam) return interaction.editReply({ content: `❌ Ya existe un equipo con el nombre "${teamName}".` });
@@ -80,7 +81,15 @@ module.exports = async (client, interaction) => {
     if (!managerMember) return interaction.editReply({ content: `❌ El mánager seleccionado ya no está en el servidor.` });
 
     // Creamos el equipo con logo por defecto
-    const newTeam = new Team({ name: teamName, abbreviation: teamAbbr, guildId: interaction.guild.id, league: leagueName, logoUrl: 'https://i.imgur.com/V4J2Fcf.png', managerId });
+    const newTeam = new Team({ 
+    name: teamName, 
+    abbreviation: teamAbbr, 
+    guildId: interaction.guild.id, 
+    league: leagueName, 
+    logoUrl: 'https://i.imgur.com/X2YIZh4.png', // <-- Se corrige esta URL
+    managerId,
+    twitterHandle: teamTwitter // <-- Se añade esta propiedad
+});
     await newTeam.save();
 
     await managerMember.roles.add([process.env.MANAGER_ROLE_ID, process.env.PLAYER_ROLE_ID]);
