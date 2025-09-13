@@ -1608,6 +1608,26 @@ if (customId.startsWith('admin_add_captains_') || customId.startsWith('admin_add
     });
     return;
 }
+if (customId.startsWith('admin_change_manager_')) {
+    if (!isAdmin) return interaction.reply({ content: 'Acción restringida.', flags: MessageFlags.Ephemeral });
+    
+    const teamId = customId.split('_')[3];
+    const team = await Team.findById(teamId);
+    if (!team) return interaction.reply({ content: 'Equipo no encontrado.', flags: MessageFlags.Ephemeral });
+
+    const userSelectMenu = new UserSelectMenuBuilder()
+        .setCustomId(`admin_select_new_manager_${teamId}`)
+        .setPlaceholder('Selecciona al miembro que será el nuevo mánager')
+        .setMinValues(1)
+        .setMaxValues(1);
+
+    await interaction.reply({
+        content: `Estás a punto de cambiar el mánager del equipo **${team.name}**. El mánager actual es <@${team.managerId}>.\n\nPor favor, selecciona al nuevo mánager en el menú de abajo.`,
+        components: [new ActionRowBuilder().addComponents(userSelectMenu)],
+        flags: MessageFlags.Ephemeral
+    });
+    return;
+}
 
 // Exportamos el handler y las funciones de utilidad para que puedan ser usadas en otros archivos.
 handler.updatePanelMessage = updatePanelMessage;
