@@ -294,6 +294,129 @@ const handler = async (client, interaction) => {
     const { member, guild } = interaction;
     const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
 
+    if (customId === 'admin_create_team_button') {
+    if (!isAdmin) return interaction.reply({ content: 'Acción restringida.', flags: MessageFlags.Ephemeral });
+
+    const userSelectMenu = new UserSelectMenuBuilder()
+        .setCustomId('admin_select_manager_for_creation')
+        .setPlaceholder('Selecciona al futuro mánager del equipo')
+        .setMinValues(1)
+        .setMaxValues(1);
+
+    await interaction.reply({
+        content: '**Paso 1 de 3:** Selecciona al miembro del servidor que será el Mánager de este nuevo equipo.',
+        components: [new ActionRowBuilder().addComponents(userSelectMenu)],
+        flags: MessageFlags.Ephemeral
+    });
+    return;
+}
+
+if (customId.startsWith('admin_add_captains_') || customId.startsWith('admin_add_players_')) {
+    if (!isAdmin) return interaction.reply({ content: 'Acción restringida.', flags: MessageFlags.Ephemeral });
+
+    const isAddingCaptains = customId.startsWith('admin_add_captains_');
+    const teamId = customId.substring(customId.lastIndexOf('_') + 1);
+    
+    const userSelectMenu = new UserSelectMenuBuilder()
+        .setCustomId(`admin_select_members_${isAddingCaptains ? 'captains' : 'players'}_${teamId}`)
+        .setPlaceholder(`Selecciona los ${isAddingCaptains ? 'capitanes' : 'jugadores'} a añadir`)
+        .setMinValues(1)
+        .setMaxValues(25);
+
+    await interaction.reply({
+        content: `Selecciona los **${isAddingCaptains ? 'capitanes' : 'jugadores'}** que quieres añadir al equipo desde el menú de abajo.`,
+        components: [new ActionRowBuilder().addComponents(userSelectMenu)],
+        flags: MessageFlags.Ephemeral
+    });
+    return;
+}
+if (customId.startsWith('admin_change_manager_')) {
+    if (!isAdmin) return interaction.reply({ content: 'Acción restringida.', flags: MessageFlags.Ephemeral });
+    
+    const teamId = customId.split('_')[3];
+    const team = await Team.findById(teamId);
+    if (!team) return interaction.reply({ content: 'Equipo no encontrado.', flags: MessageFlags.Ephemeral });
+
+    const userSelectMenu = new UserSelectMenuBuilder()
+        .setCustomId(`admin_select_new_manager_${teamId}`)
+        .setPlaceholder('Selecciona al miembro que será el nuevo mánager')
+        .setMinValues(1)
+        .setMaxValues(1);
+
+    await interaction.reply({
+        content: `Estás a punto de cambiar el mánager del equipo **${team.name}**. El mánager actual es <@${team.managerId}>.\n\nPor favor, selecciona al nuevo mánager en el menú de abajo.`,
+        components: [new ActionRowBuilder().addComponents(userSelectMenu)],
+        flags: MessageFlags.Ephemeral
+    });
+    return;
+}
+
+if (customId.startsWith('admin_finalize_manager_change_')) {
+    if (!isAdmin) return interaction.reply({ content: 'Acción restringida.', flags: MessageFlags.Ephemeral });
+    
+    await interaction.deferUpdate();
+
+    const parts = customId.split('_');
+    const action = parts[4]; // 'captain', 'player', o 'kick'
+    const teamId = parts[5];
+    const oldManagerId = parts[6];
+    const newManagerId = parts[7];
+
+    const team = await Team.findById(teamId);
+    if (!team) return interaction.editReply({ content: '❌ El equipo ya no existe.', components: [] });
+
+    const oldManagerMember = await interaction.guild.members.fetch(oldManagerId).catch(() => null);
+    const newManagerMember = await interaction.guild.members.fetch(newManagerId).catch(() => null);
+
+    if (!newManagerMember) return interaction.editReply({ content: '❌ El nuevo mánager seleccionado ya no se encuentra en el servidor.', components: [] });
+    
+    let outcomeMessage = '';
+
+    // --- 1. Ejecutar la acción sobre el ANTIGUO Mánager ---
+    if (oldManagerMember) {
+        // Quitar rol de mánager siempre
+        await oldManagerMember.roles.remove(process.env.MANAGER_ROLE_ID);
+
+        if (action === 'captain') {
+            team.captains.push(oldManagerId);
+            await oldManagerMember.roles.add([process.env.CAPTAIN_ROLE_ID, process.env.PLAYER_ROLE_ID]);
+            await oldManagerMember.setNickname(`|C| ${team.abbreviation} ${oldManagerMember.user.username}`).catch(() => {});
+            outcomeMessage = `<@${oldManagerId}> ha sido degradado a **Capitán**.`;
+        } else if (action === 'player') {
+            team.players.push(oldManagerId);
+            await oldManagerMember.roles.add(process.env.PLAYER_ROLE_ID);
+            await oldManagerMember.setNickname(`${team.abbreviation} ${oldManagerMember.user.username}`).catch(() => {});
+            outcomeMessage = `<@${oldManagerId}> ha sido degradado a **Jugador**.`;
+        } else if (action === 'kick') {
+            await oldManagerMember.roles.remove([process.env.CAPTAIN_ROLE_ID, process.env.PLAYER_ROLE_ID, process.env.MUTED_ROLE_ID]).catch(() => {});
+            if (oldManagerMember.id !== interaction.guild.ownerId) await oldManagerMember.setNickname(oldManagerMember.user.username).catch(()=>{});
+            outcomeMessage = `<@${oldManagerId}> ha sido **expulsado** del equipo.`;
+        }
+        await oldManagerMember.send(`Un administrador ha modificado tu estatus en el equipo **${team.name}**.`).catch(() => {});
+    } else {
+        outcomeMessage = `El antiguo mánager <@${oldManagerId}> no se encontró en el servidor, por lo que solo se ha actualizado la base de datos.`;
+    }
+
+    // --- 2. Promocionar al NUEVO Mánager ---
+    team.managerId = newManagerId;
+    team.captains = team.captains.filter(id => id !== newManagerId);
+    team.players = team.players.filter(id => id !== newManagerId);
+
+    await newManagerMember.roles.add([process.env.MANAGER_ROLE_ID, process.env.PLAYER_ROLE_ID]);
+    await newManagerMember.roles.remove(process.env.CAPTAIN_ROLE_ID).catch(() => {});
+    await newManagerMember.setNickname(`|MG| ${team.abbreviation} ${newManagerMember.user.username}`).catch(() => {});
+    
+    // --- 3. Guardar y Notificar ---
+    await team.save();
+    await newManagerMember.send(`¡Enhorabuena! Un administrador te ha asignado como nuevo Mánager de **${team.name}**.`).catch(() => {});
+
+    await interaction.editReply({
+        content: `✅ **¡Cambio de mánager completado!**\n- <@${newManagerId}> es ahora el nuevo mánager de **${team.name}**.\n- ${outcomeMessage}`,
+        components: []
+    });
+    return;
+}
+
     if (customId.startsWith('paginate_')) {
     await interaction.deferUpdate();
     const parts = customId.split('_');
@@ -1572,128 +1695,7 @@ const handler = async (client, interaction) => {
         return interaction.editReply({ content: '✅ El ticket se está cerrando.' });
     }
 };
-if (customId === 'admin_create_team_button') {
-    if (!isAdmin) return interaction.reply({ content: 'Acción restringida.', flags: MessageFlags.Ephemeral });
 
-    const userSelectMenu = new UserSelectMenuBuilder()
-        .setCustomId('admin_select_manager_for_creation')
-        .setPlaceholder('Selecciona al futuro mánager del equipo')
-        .setMinValues(1)
-        .setMaxValues(1);
-
-    await interaction.reply({
-        content: '**Paso 1 de 3:** Selecciona al miembro del servidor que será el Mánager de este nuevo equipo.',
-        components: [new ActionRowBuilder().addComponents(userSelectMenu)],
-        flags: MessageFlags.Ephemeral
-    });
-    return;
-}
-
-if (customId.startsWith('admin_add_captains_') || customId.startsWith('admin_add_players_')) {
-    if (!isAdmin) return interaction.reply({ content: 'Acción restringida.', flags: MessageFlags.Ephemeral });
-
-    const isAddingCaptains = customId.startsWith('admin_add_captains_');
-    const teamId = customId.substring(customId.lastIndexOf('_') + 1);
-    
-    const userSelectMenu = new UserSelectMenuBuilder()
-        .setCustomId(`admin_select_members_${isAddingCaptains ? 'captains' : 'players'}_${teamId}`)
-        .setPlaceholder(`Selecciona los ${isAddingCaptains ? 'capitanes' : 'jugadores'} a añadir`)
-        .setMinValues(1)
-        .setMaxValues(25);
-
-    await interaction.reply({
-        content: `Selecciona los **${isAddingCaptains ? 'capitanes' : 'jugadores'}** que quieres añadir al equipo desde el menú de abajo.`,
-        components: [new ActionRowBuilder().addComponents(userSelectMenu)],
-        flags: MessageFlags.Ephemeral
-    });
-    return;
-}
-if (customId.startsWith('admin_change_manager_')) {
-    if (!isAdmin) return interaction.reply({ content: 'Acción restringida.', flags: MessageFlags.Ephemeral });
-    
-    const teamId = customId.split('_')[3];
-    const team = await Team.findById(teamId);
-    if (!team) return interaction.reply({ content: 'Equipo no encontrado.', flags: MessageFlags.Ephemeral });
-
-    const userSelectMenu = new UserSelectMenuBuilder()
-        .setCustomId(`admin_select_new_manager_${teamId}`)
-        .setPlaceholder('Selecciona al miembro que será el nuevo mánager')
-        .setMinValues(1)
-        .setMaxValues(1);
-
-    await interaction.reply({
-        content: `Estás a punto de cambiar el mánager del equipo **${team.name}**. El mánager actual es <@${team.managerId}>.\n\nPor favor, selecciona al nuevo mánager en el menú de abajo.`,
-        components: [new ActionRowBuilder().addComponents(userSelectMenu)],
-        flags: MessageFlags.Ephemeral
-    });
-    return;
-}
-
-if (customId.startsWith('admin_finalize_manager_change_')) {
-    if (!isAdmin) return interaction.reply({ content: 'Acción restringida.', flags: MessageFlags.Ephemeral });
-    
-    await interaction.deferUpdate();
-
-    const parts = customId.split('_');
-    const action = parts[4]; // 'captain', 'player', o 'kick'
-    const teamId = parts[5];
-    const oldManagerId = parts[6];
-    const newManagerId = parts[7];
-
-    const team = await Team.findById(teamId);
-    if (!team) return interaction.editReply({ content: '❌ El equipo ya no existe.', components: [] });
-
-    const oldManagerMember = await interaction.guild.members.fetch(oldManagerId).catch(() => null);
-    const newManagerMember = await interaction.guild.members.fetch(newManagerId).catch(() => null);
-
-    if (!newManagerMember) return interaction.editReply({ content: '❌ El nuevo mánager seleccionado ya no se encuentra en el servidor.', components: [] });
-    
-    let outcomeMessage = '';
-
-    // --- 1. Ejecutar la acción sobre el ANTIGUO Mánager ---
-    if (oldManagerMember) {
-        // Quitar rol de mánager siempre
-        await oldManagerMember.roles.remove(process.env.MANAGER_ROLE_ID);
-
-        if (action === 'captain') {
-            team.captains.push(oldManagerId);
-            await oldManagerMember.roles.add([process.env.CAPTAIN_ROLE_ID, process.env.PLAYER_ROLE_ID]);
-            await oldManagerMember.setNickname(`|C| ${team.abbreviation} ${oldManagerMember.user.username}`).catch(() => {});
-            outcomeMessage = `<@${oldManagerId}> ha sido degradado a **Capitán**.`;
-        } else if (action === 'player') {
-            team.players.push(oldManagerId);
-            await oldManagerMember.roles.add(process.env.PLAYER_ROLE_ID);
-            await oldManagerMember.setNickname(`${team.abbreviation} ${oldManagerMember.user.username}`).catch(() => {});
-            outcomeMessage = `<@${oldManagerId}> ha sido degradado a **Jugador**.`;
-        } else if (action === 'kick') {
-            await oldManagerMember.roles.remove([process.env.CAPTAIN_ROLE_ID, process.env.PLAYER_ROLE_ID, process.env.MUTED_ROLE_ID]).catch(() => {});
-            if (oldManagerMember.id !== interaction.guild.ownerId) await oldManagerMember.setNickname(oldManagerMember.user.username).catch(()=>{});
-            outcomeMessage = `<@${oldManagerId}> ha sido **expulsado** del equipo.`;
-        }
-        await oldManagerMember.send(`Un administrador ha modificado tu estatus en el equipo **${team.name}**.`).catch(() => {});
-    } else {
-        outcomeMessage = `El antiguo mánager <@${oldManagerId}> no se encontró en el servidor, por lo que solo se ha actualizado la base de datos.`;
-    }
-
-    // --- 2. Promocionar al NUEVO Mánager ---
-    team.managerId = newManagerId;
-    team.captains = team.captains.filter(id => id !== newManagerId);
-    team.players = team.players.filter(id => id !== newManagerId);
-
-    await newManagerMember.roles.add([process.env.MANAGER_ROLE_ID, process.env.PLAYER_ROLE_ID]);
-    await newManagerMember.roles.remove(process.env.CAPTAIN_ROLE_ID).catch(() => {});
-    await newManagerMember.setNickname(`|MG| ${team.abbreviation} ${newManagerMember.user.username}`).catch(() => {});
-    
-    // --- 3. Guardar y Notificar ---
-    await team.save();
-    await newManagerMember.send(`¡Enhorabuena! Un administrador te ha asignado como nuevo Mánager de **${team.name}**.`).catch(() => {});
-
-    await interaction.editReply({
-        content: `✅ **¡Cambio de mánager completado!**\n- <@${newManagerId}> es ahora el nuevo mánager de **${team.name}**.\n- ${outcomeMessage}`,
-        components: []
-    });
-    return;
-}
 
 // Exportamos el handler y las funciones de utilidad para que puedan ser usadas en otros archivos.
 handler.updatePanelMessage = updatePanelMessage;
