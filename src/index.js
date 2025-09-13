@@ -149,31 +149,32 @@ client.on(Events.InteractionCreate, async interaction => {
     let handlerName = '';
 
     try {
-        if (interaction.isChatInputCommand()) {
-            handlerName = 'comando';
-            handler = client.commands.get(interaction.commandName);
-            if (handler) await handler.execute(interaction);
+    if (interaction.isChatInputCommand()) {
+        handlerName = 'comando';
+        handler = client.commands.get(interaction.commandName);
+        if (handler) await handler.execute(interaction);
 
-        } else if (interaction.isButton()) {
-            handlerName = 'buttonHandler';
-            handler = client.handlers.get('buttonHandler');
-            if (handler) await handler(client, interaction);
+    } else if (interaction.isButton()) {
+        handlerName = 'buttonHandler';
+        handler = client.handlers.get('buttonHandler');
+        if (handler) await handler(client, interaction);
 
-        } else if (interaction.isStringSelectMenu()) {
-            handlerName = 'selectMenuHandler';
-            handler = client.handlers.get('selectMenuHandler');
-            if (handler) await handler(client, interaction);
+    // --- LÍNEA CORREGIDA Y MEJORADA ---
+    } else if (interaction.isStringSelectMenu() || interaction.isUserSelectMenu()) { 
+        handlerName = 'selectMenuHandler';
+        handler = client.handlers.get('selectMenuHandler');
+        if (handler) await handler(client, interaction);
 
-        } else if (interaction.isModalSubmit()) {
-            handlerName = 'modalHandler';
-            handler = client.handlers.get('modalHandler');
-            if (handler) await handler(client, interaction);
+    } else if (interaction.isModalSubmit()) {
+        handlerName = 'modalHandler';
+        handler = client.handlers.get('modalHandler');
+        if (handler) await handler(client, interaction);
 
-        } else if (interaction.isAutocomplete()) {
-            handlerName = 'autocompleteHandler';
-            handler = client.handlers.get('autocompleteHandler');
-            if (handler) await handler(client, interaction);
-        }
+    } else if (interaction.isAutocomplete()) {
+        handlerName = 'autocompleteHandler';
+        handler = client.handlers.get('autocompleteHandler');
+        if (handler) await handler(client, interaction);
+    }
 
     } catch (error) {
     // Si el error es "Unknown Interaction" (código 10062), es probable que sea por un "arranque en frío" de Render.
