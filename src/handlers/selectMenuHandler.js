@@ -17,27 +17,16 @@ module.exports = async (client, interaction) => {
     if (customId === 'admin_select_manager_for_creation') {
     const managerId = values[0];
 
-    // Validación: Comprobar si el usuario ya está en un equipo
-    const isAlreadyInTeam = await Team.findOne({
-        guildId: interaction.guild.id,
-        $or: [{ managerId: managerId }, { captains: managerId }, { players: managerId }]
-    });
-
+    const isAlreadyInTeam = await Team.findOne({ guildId: interaction.guild.id, $or: [{ managerId }, { captains: managerId }, { players: managerId }] });
     if (isAlreadyInTeam) {
-        return interaction.reply({
-            content: `❌ **Acción cancelada.** El usuario seleccionado ya pertenece al equipo **${isAlreadyInTeam.name}**.`,
-            flags: MessageFlags.Ephemeral
-        });
+        return interaction.reply({ content: `❌ El usuario seleccionado ya pertenece al equipo **${isAlreadyInTeam.name}**.`, flags: MessageFlags.Ephemeral });
     }
 
-    const modal = new ModalBuilder()
-        .setCustomId(`admin_create_team_modal_${managerId}`)
-        .setTitle('Paso 2: Datos del Nuevo Equipo');
-
+    const modal = new ModalBuilder().setCustomId(`admin_create_team_modal_${managerId}`).setTitle('Paso 2: Datos del Nuevo Equipo');
     const teamNameInput = new TextInputBuilder().setCustomId('teamName').setLabel("Nombre del equipo").setStyle(TextInputStyle.Short).setRequired(true);
     const teamAbbrInput = new TextInputBuilder().setCustomId('teamAbbr').setLabel("Abreviatura (3 letras)").setStyle(TextInputStyle.Short).setRequired(true).setMinLength(3).setMaxLength(3);
     const leagueNameInput = new TextInputBuilder().setCustomId('leagueName').setLabel("Nombre de la liga (debe existir)").setStyle(TextInputStyle.Short).setRequired(true);
-    const logoUrlInput = new TextInputBuilder().setCustomId('logoUrl').setLabel("URL del logo (opcional)").setStyle(TextInputStyle.Short).setRequired(false).setPlaceholder('https://i.imgur.com/V4J2Fcf.png');
+    const logoUrlInput = new TextInputBuilder().setCustomId('logoUrl').setLabel("URL del logo (opcional)").setStyle(TextInputStyle.Short).setRequired(false);
     
     modal.addComponents(
         new ActionRowBuilder().addComponents(teamNameInput),
@@ -47,6 +36,53 @@ module.exports = async (client, interaction) => {
     );
     
     await interaction.showModal(modal);
+    return;
+}
+
+if (customId.startsWith('admin_select_members_')) {
+    await interaction.deferUpdate();
+    const parts = customId.split('_');
+    const roleToAdd = parts[3]; // 'captains' o 'players'
+    const teamId = parts[4];
+    const selectedUserIds = values;
+
+    const team = await Team.findById(teamId);
+    if (!team) return interaction.editReply({ content: '❌ El equipo ya no existe.', components: [] });
+
+    let addedCount = 0;
+    let failedUsernames = [];
+
+    for (const userId of selectedUserIds) {
+        const isAlreadyInTeam = await Team.findOne({ guildId: interaction.guild.id, $or: [{ managerId: userId }, { captains: userId }, { players: userId }] });
+        if (isAlreadyInTeam) {
+            const member = await guild.members.fetch(userId).catch(() => ({ user: { username: 'Usuario Desconocido' } }));
+            failedUsernames.push(member.user.username);
+            continue;
+        }
+
+        const member = await guild.members.fetch(userId).catch(() => null);
+        if (member) {
+            if (roleToAdd === 'captains') {
+                team.captains.push(userId);
+                await member.roles.add([process.env.CAPTAIN_ROLE_ID, process.env.PLAYER_ROLE_ID]);
+                await member.setNickname(`|C| ${team.abbreviation} ${member.user.username}`).catch(() => {});
+            } else {
+                team.players.push(userId);
+                await member.roles.add(process.env.PLAYER_ROLE_ID);
+                await member.setNickname(`${team.abbreviation} ${member.user.username}`).catch(() => {});
+            }
+            addedCount++;
+        }
+    }
+
+    await team.save();
+    
+    let responseMessage = `✅ Se han añadido **${addedCount}** nuevos ${roleToAdd === 'captains' ? 'capitanes' : 'jugadores'} al equipo **${team.name}**.`;
+    if (failedUsernames.length > 0) {
+        responseMessage += `\n\n⚠️ Los siguientes usuarios no se pudieron añadir porque ya pertenecen a otro equipo: ${failedUsernames.join(', ')}.`;
+    }
+
+    await interaction.editReply({ content: responseMessage, components: [] });
     return;
 }
 
