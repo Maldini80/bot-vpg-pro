@@ -1572,6 +1572,22 @@ const handler = async (client, interaction) => {
         return interaction.editReply({ content: '✅ El ticket se está cerrando.' });
     }
 };
+if (customId === 'admin_create_team_button') {
+    if (!isAdmin) return interaction.reply({ content: 'Acción restringida.', flags: MessageFlags.Ephemeral });
+
+    const userSelectMenu = new UserSelectMenuBuilder()
+        .setCustomId('admin_select_manager_for_creation')
+        .setPlaceholder('Selecciona al futuro mánager del equipo')
+        .setMinValues(1)
+        .setMaxValues(1);
+
+    await interaction.reply({
+        content: '**Paso 1 de 2:** Selecciona al miembro del servidor que será el Mánager de este nuevo equipo.',
+        components: [new ActionRowBuilder().addComponents(userSelectMenu)],
+        flags: MessageFlags.Ephemeral
+    });
+    return;
+}
 
 // Exportamos el handler y las funciones de utilidad para que puedan ser usadas en otros archivos.
 handler.updatePanelMessage = updatePanelMessage;
