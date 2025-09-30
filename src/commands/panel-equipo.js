@@ -11,26 +11,30 @@ module.exports = {
         await interaction.deferReply({ flags: 64 });
 
         const embed = new EmbedBuilder()
-            .setTitle('PANEL DE GESTIÓN DE EQUIPO')
-            .setDescription('Este es el centro de control para Mánagers y Capitanes. Selecciona una categoría para ver las acciones disponibles.')
+            .setTitle('🇪🇸 PANEL DE GESTIÓN DE EQUIPO / 🇬🇧 TEAM MANAGEMENT PANEL')
+            .setDescription(
+                '🇪🇸 Centro de control para Mánagers y Capitanes. Selecciona una categoría.\n' +
+                '----------------------------------------------------------------------\n' +
+                '🇬🇧 Control center for Managers and Captains. Select a category.'
+            )
             .setColor('#e67e22')
-            .setImage('https://i.imgur.com/KjamtCg.jpeg') // <-- TU IMAGEN AÑADIDA
-            .setFooter({ text: 'Las opciones se mostrarán en un mensaje privado solo para ti.' });
+            .setImage('https://i.imgur.com/KjamtCg.jpeg')
+            .setFooter({ text: '🇪🇸 Las opciones se mostrarán en privado. / 🇬🇧 Options will be shown privately.' });
 
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
                 .setCustomId('team_submenu_roster')
-                .setLabel('Gestionar Plantilla')
+                .setLabel('Gestionar Plantilla / Manage Roster')
                 .setStyle(ButtonStyle.Primary)
                 .setEmoji('📋'),
             new ButtonBuilder()
                 .setCustomId('team_submenu_friendlies')
-                .setLabel('Gestionar Amistosos')
+                .setLabel('Gestionar Amistosos / Manage Friendlies')
                 .setStyle(ButtonStyle.Success)
                 .setEmoji('🗓️'),
             new ButtonBuilder()
                 .setCustomId('team_submenu_market')
-                .setLabel('Gestionar Fichajes')
+                .setLabel('Gestionar Fichajes / Manage Transfers')
                 .setStyle(ButtonStyle.Secondary)
                 .setEmoji('📄')
         );
