@@ -167,5 +167,13 @@
   "applyToTeamModalTitle": "Takıma Başvur",
   "applicationPresentationLabel": "Kısa bir tanıtım yazın",
   "registrationStep2": "**Adım 2/2:** Neredeyse bitti! Şimdi sahadaki pozisyonlarınızı seçin.",
-  "noSecondaryPosition": "Hiçbiri"
+  "noSecondaryPosition": "Hiçbiri",
+
+  "pos_GK": "GK",
+  "pos_CB": "CB",
+  "pos_WB": "WB",
+  "pos_CDM": "CDM",
+  "pos_CM": "CM",
+  "pos_CAM": "CAM",
+  "pos_ST": "ST"
 }
