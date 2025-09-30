@@ -978,17 +978,18 @@ if (customId.startsWith('admin_continue_no_logo_')) {
     if (customId === 'team_toggle_recruitment_button') {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const team = await Team.findOne({ guildId: guild.id, managerId: user.id }); // Solo el mánager puede
-        if (!team) return interaction.editReply({ content: 'Solo los mánagers pueden cambiar el estado de reclutamiento.' });
+        if (!team) return interaction.editReply({ content: t('errorOnlyManagersToggleRecruitment', member) });
 
         team.recruitmentOpen = !team.recruitmentOpen;
         await team.save();
 
-        const status = team.recruitmentOpen ? 'ABIERTAS' : 'CERRADAS';
+        const description = (team.recruitmentOpen ? t('recruitmentStatusOpen', member) : t('recruitmentStatusClosed', member))
+            .replace('{teamName}', team.name);
         const color = team.recruitmentOpen ? 'Green' : 'Red';
         
         const embed = new EmbedBuilder()
-            .setTitle(`✅ Reclutamiento Actualizado`)
-            .setDescription(`Las solicitudes para unirse a **${team.name}** ahora están **${status}**.`)
+            .setTitle(t('recruitmentStatusTitle', member))
+            .setDescription(description)
             .setColor(color);
         
         await interaction.editReply({ embeds: [embed] });
