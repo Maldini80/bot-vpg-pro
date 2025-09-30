@@ -3,5 +3,33 @@
   "playerActionsDescription": "Verwalte dein Profil und deine Team-Mitgliedschaft.",
   "editProfileButton": "✏️ Profil aktualisieren",
   "applyToTeamButton": "✉️ Team beitreten",
-  "leaveTeamButton": "🚪 Team verlassen"
+  "leaveTeamButton": "🚪 Team verlassen",
+
+  "managerActionsTitle": "👑 Manager-Aktionen",
+  "managerActionsDescription": "Hier sind die verfügbaren Aktionen für die Team-Verwaltung.",
+  "registerTeamButton": "📝 Mein Team registrieren",
+
+  "errorAlreadyManager": "❌ Du bist bereits Manager eines Teams, du kannst kein weiteres registrieren.",
+  "errorNoLeaguesConfigured": "Es sind keine Ligen von einem Administrator konfiguriert.",
+  "promptSelectLeagueStep1": "Der erste Schritt ist die Auswahl der Liga für dein Team:",
+
+  "rosterSubmenuTitle": "UNTERMENÜ: KADERVERWALTUNG",
+  "rosterSubmenuDescription": "Verwende die Schaltflächen, um die Mitglieder und Daten deines Teams zu verwalten.",
+  "invitePlayerButton": "Spieler einladen",
+  "manageMembersButton": "Mitglieder verwalten",
+  "viewRosterButton": "Kader ansehen",
+  "toggleRecruitmentButton": "Rekrutierung öffnen/schließen",
+  "editTeamDataButton": "Teamdaten bearbeiten",
+
+  "friendliesSubmenuTitle": "UNTERMENÜ: FREUNDSCHAFTSSPIELVERWALTUNG",
+  "friendliesSubmenuDescription": "Organisiere Spiele, finde Gegner und überprüfe deine bestätigten Freundschaftsspiele.",
+  "scheduleSearchButton": "Suche planen",
+  "findRivalNowButton": "Gegner suchen (Jetzt)",
+  "deleteSearchButton": "Suche löschen",
+  "viewMatchesButton": "Spiele ansehen",
+
+  "marketSubmenuTitle": "UNTERMENÜ: TRANSFERVERWALTUNG",
+  "marketSubmenuDescription": "Veröffentliche oder verwalte das Transferangebot deines Teams.",
+  "createEditOfferButton": "Angebot erstellen / bearbeiten",
+  "manageOfferButton": "Bestehendes Angebot verwalten"
 }
