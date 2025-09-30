@@ -65,5 +65,15 @@
   "applicationSentFailManagerDMsClosed": "❌ Die Bewerbung konnte nicht gesendet werden. Der Manager des Teams hat DMs geschlossen.",
   "leaveTeamSuccess": "Du hast das Team **{teamName}** verlassen.",
   "manageRosterHeader": "Wähle ein Mitglied aus deinem Team:",
-  "manageRosterMenuPlaceholder": "Wähle ein Mitglied zum Verwalten"
+  "manageRosterMenuPlaceholder": "Wähle ein Mitglied zum Verwalten",
+  "actionsForPlayer": "Aktionen für **{playerName}**:",
+  "demoteToPlayerButton": "Zum Spieler degradieren",
+  "promoteToCaptainButton": "Zum Kapitän befördern",
+  "kickFromTeamButton": "Aus dem Team werfen",
+  "toggleChatMuteButton": "Chat stummschalten/aktivieren",
+  "playerKicked": "✅ **{playerName}** wurde rausgeworfen.",
+  "playerPromoted": "✅ **{playerName}** zum Kapitän befördert.",
+  "playerDemoted": "✅ **{playerName}** zum Spieler degradiert.",
+  "playerMuted": "🔇 **{playerName}** wurde stummgeschaltet.",
+  "playerUnmuted": "✅ **{playerName}** wurde entstummt."
 }
