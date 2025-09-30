@@ -145,5 +145,17 @@
   "challengeRejectedNotification": "La tua sfida contro **{hostTeamName}** per le **{time}** è stata **RIFIUTATA**.",
   "challengeLostNotification": "Spiacenti, la tua sfida contro **{hostTeamName}** per le **{time}** non è stata accettata. L'ospite ha scelto un altro avversario.",
   "hostAcceptedConfirmation": "✅ Hai accettato la sfida di **{challengerTeamName}**. Tutte le squadre sono state notificate.",
-  "hostRejectedConfirmation": "❌ Hai rifiutato la sfida."
+  "hostRejectedConfirmation": "❌ Hai rifiutato la sfida.",
+  "captainGuideTitle": "🛡️ Congratulazioni! Sei stato promosso a Capitano di \"{teamName}\".",
+  "captainGuideDescription": "Il Manager si fida di te per essere il suo braccio destro. Hai ottenuto accesso a nuovi strumenti nel pannello della squadra per assistere nella gestione.",
+  "captainGuideResponsibilitiesTitle": "✅ Le Tue Nuove Responsabilità",
+  "captainGuideResponsibilitiesValue": "• **Gestire Amichevoli**: Sei fondamentale per mantenere la squadra in forma.\n• **Gestire Trasferimenti**: Aiuta a trovare nuovi talenti creando offerte.\n• **Gestire Membri**: Mantieni l'ordine. Puoi espellere giocatori (tranne altri capitani) e usare la funzione di silenziamento.",
+  "captainGuideLimitsTitle": "❌ Limiti del Tuo Ruolo",
+  "captainGuideLimitsValue": "Non puoi modificare i dati della squadra, invitare giocatori o promuovere/declassare membri.",
+  "applicationAcceptedNotification": "Congratulazioni! La tua candidatura per unirti a **{teamName}** è stata **accettata**.",
+  "applicationRejectedNotification": "Spiacenti, la tua candidatura per unirti a **{teamName}** è stata **rifiutata**.",
+  "managerAcceptedPlayer": "Hai accettato **{playerName}** nella tua squadra.",
+  "managerRejectedPlayer": "Hai rifiutato la candidatura di **{playerName}**.",
+  "playerJoinedNotification": "✅ Il giocatore **{playerName}** ha accettato il tuo invito e si è unito a **{teamName}**!",
+  "playerRejectedNotification": "❌ Il giocatore **{playerName}** ha rifiutato il tuo invito a unirsi a **{teamName}**."
 }
