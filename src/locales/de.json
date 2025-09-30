@@ -106,5 +106,12 @@
   "timeSlotsPlaceholder": "Wähle die verfügbaren Zeitfenster",
   "errorScheduledChannelNotSet": "❌ Fehler: Der Kanal für geplante Freundschaftsspiele ist nicht konfiguriert.",
   "errorScheduledChannelNotFound": "❌ Fehler: Der Kanal für geplante Freundschaftsspiele wurde nicht gefunden.",
-  "scheduledPanelCreatedSuccess": "✅ Dein Freundschaftsspiel-Suchpanel wurde in {channel} veröffentlicht!"
+  "scheduledPanelCreatedSuccess": "✅ Dein Freundschaftsspiel-Suchpanel wurde in {channel} veröffentlicht!",
+
+    "errorExistingInstantPanel": "❌ Du hast bereits ein aktives Sofort-Suchpanel in {channel}.",
+  "errorInstantChannelNotSet": "❌ Fehler: Kanal für sofortige Freundschaftsspiele nicht konfiguriert.",
+  "errorInstantChannelNotFound": "❌ Fehler: Der Kanal für sofortige Freundschaftsspiele wurde nicht gefunden.",
+  "instantPanelCreatedSuccess": "✅ Dein Sofort-Suchpanel wurde in {channel} veröffentlicht!",
+  "errorNoPanelsToDelete": "Du hast keine aktiven Suchpanels zum Löschen.",
+  "panelsDeletedSuccess": "✅ {count} Freundschaftsspiel-Suchpanel(s) wurden erfolgreich gelöscht."
 }
