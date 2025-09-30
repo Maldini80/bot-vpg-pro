@@ -34,6 +34,8 @@
   "errorApplicationPending": "❌ Ya tienes una solicitud de aplicación pendiente.",
   "errorNoRecruitingTeams": "No hay equipos con reclutamiento abierto en este momento.",
   "errorNotInTeamToLeave": "❌ No perteneces a un equipo como jugador o capitán para poder abandonarlo.",
+  "errorTeamNotFound": "❌ No se ha encontrado tu equipo.",
+  "errorNoMembersToManage": "No hay miembros en tu plantilla que puedas gestionar.",
   "promptSelectLeagueStep1": "El primer paso es seleccionar la liga para tu equipo:",
   "selectLeaguePlaceholder": "Selecciona la liga en la que competirá tu equipo",
   "registerModalTitle": "Registrar Equipo en {leagueName}",
@@ -61,5 +63,7 @@
   "applyToTeamMenuHeader": "Selecciona el equipo al que quieres aplicar:",
   "applicationSentSuccess": "✅ Tu solicitud para **{teamName}** ha sido enviada.",
   "applicationSentFailManagerDMsClosed": "❌ No se pudo enviar la solicitud. El mánager del equipo tiene los MDs cerrados.",
-  "leaveTeamSuccess": "Has abandonado el equipo **{teamName}**."
+  "leaveTeamSuccess": "Has abandonado el equipo **{teamName}**.",
+  "manageRosterHeader": "Selecciona un miembro de tu equipo:",
+  "manageRosterMenuPlaceholder": "Selecciona un miembro para gestionar"
 }
