@@ -157,5 +157,15 @@
   "managerAcceptedPlayer": "Du hast **{playerName}** in dein Team aufgenommen.",
   "managerRejectedPlayer": "Du hast die Bewerbung von **{playerName}** abgelehnt.",
   "playerJoinedNotification": "✅ Der Spieler **{playerName}** hat deine Einladung angenommen und ist **{teamName}** beigetreten!",
-  "playerRejectedNotification": "❌ Der Spieler **{playerName}** hat deine Einladung, **{teamName}** beizutreten, abgelehnt."
+  "playerRejectedNotification": "❌ Der Spieler **{playerName}** hat deine Einladung, **{teamName}** beizutreten, abgelehnt.",
+
+  "playerRegistrationTitle": "Spielerprofil-Registrierung (1/2)",
+  "playerTwitterLabel": "Dein Twitter (Benutzername ohne @, optional)",
+  "psnIdLabel": "Deine PlayStation Network ID (PSN)",
+  "eaIdLabel": "Deine EA Sports FC ID",
+  "updateProfileModalTitle": "Profil aktualisieren (Letzter Schritt)",
+  "applyToTeamModalTitle": "Für ein Team bewerben",
+  "applicationPresentationLabel": "Schreibe eine kurze Vorstellung",
+  "registrationStep2": "**Schritt 2 von 2:** Fast geschafft! Wähle nun deine Positionen auf dem Spielfeld aus.",
+  "noSecondaryPosition": "Keine"
 }
