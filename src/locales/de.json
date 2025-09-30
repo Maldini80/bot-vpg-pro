@@ -113,5 +113,9 @@
   "errorInstantChannelNotFound": "❌ Fehler: Der Kanal für sofortige Freundschaftsspiele wurde nicht gefunden.",
   "instantPanelCreatedSuccess": "✅ Dein Sofort-Suchpanel wurde in {channel} veröffentlicht!",
   "errorNoPanelsToDelete": "Du hast keine aktiven Suchpanels zum Löschen.",
-  "panelsDeletedSuccess": "✅ {count} Freundschaftsspiel-Suchpanel(s) wurden erfolgreich gelöscht."
+  "panelsDeletedSuccess": "✅ {count} Freundschaftsspiel-Suchpanel(s) wurden erfolgreich gelöscht.",
+
+    "confirmedMatchesTitle": "🗓️ Bestätigte Freundschaftsspiele für {teamName}",
+  "noConfirmedMatches": "Du hast keine geplanten Spiele.",
+  "matchInfoLine": "**🕕 {time}** vs **{opponentName}**\n> Kontakt: <@{managerId}>\n\n"
 }
