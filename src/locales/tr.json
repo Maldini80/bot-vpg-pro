@@ -34,6 +34,8 @@
   "errorApplicationPending": "❌ Zaten beklemede bir başvurunuz var.",
   "errorNoRecruitingTeams": "Şu anda alım yapan takım yok.",
   "errorNotInTeamToLeave": "❌ Ayrılmak için bir takımda oyuncu veya kaptan olarak bulunmuyorsunuz.",
+  "errorTeamNotFound": "❌ Takımın bulunamadı.",
+  "errorNoMembersToManage": "Kadronda yönetecek üye yok.",
   "promptSelectLeagueStep1": "İlk adım, takımınız için lig seçmektir:",
   "selectLeaguePlaceholder": "Takımınızın yarışacağı ligi seçin",
   "registerModalTitle": "{leagueName} Ligi'ne Takım Kaydet",
@@ -61,5 +63,7 @@
   "applyToTeamMenuHeader": "Başvurmak istediğiniz takımı seçin:",
   "applicationSentSuccess": "✅ **{teamName}** takımına başvurunuz gönderildi.",
   "applicationSentFailManagerDMsClosed": "❌ Başvuru gönderilemedi. Takım menajerinin DM'leri kapalı.",
-  "leaveTeamSuccess": "**{teamName}** takımından ayrıldınız."
+  "leaveTeamSuccess": "**{teamName}** takımından ayrıldınız.",
+  "manageRosterHeader": "Takımınızdan bir üye seçin:",
+  "manageRosterMenuPlaceholder": "Yönetmek için bir üye seçin"
 }
