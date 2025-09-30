@@ -32,4 +32,7 @@
   "marketSubmenuDescription": "Veröffentliche oder verwalte das Transferangebot deines Teams.",
   "createEditOfferButton": "Angebot erstellen / bearbeiten",
   "manageOfferButton": "Bestehendes Angebot verwalten"
+
+    "errorAlreadyInTeam": "❌ Du gehörst bereits zum Team **{teamName}**.",
+  "selectLeaguePlaceholder": "Wähle die Liga aus, in der dein Team antreten wird"
 }
