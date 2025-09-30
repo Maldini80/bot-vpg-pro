@@ -1326,10 +1326,10 @@ if (customId.startsWith('admin_continue_no_logo_')) {
         return interaction.editReply({ content: `Para hablar con el rival, contacta a su mánager: <@${opponentTeam.managerId}>` });
     }
     
-    if (customId === 'team_view_confirmed_matches') {
+        if (customId === 'team_view_confirmed_matches') {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const userTeam = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }, { players: user.id }] });
-        if (!userTeam) return interaction.editReply({ content: 'Debes pertenecer a un equipo para ver los partidos.' });
+        if (!userTeam) return interaction.editReply({ content: t('errorNotInAnyTeam', member) });
 
         const confirmedPanels = await AvailabilityPanel.find({
             guildId: guild.id,
@@ -1355,13 +1355,19 @@ if (customId.startsWith('admin_continue_no_logo_')) {
         uniqueMatches.sort((a,b) => a.time.localeCompare(b.time));
 
         for(const match of uniqueMatches) {
-            description += `**🕕 ${match.time}** vs **${match.opponent.name}**\n> Contacto: <@${match.opponent.managerId}>\n\n`;
+            description += t('matchInfoLine', member)
+                .replace('{time}', match.time)
+                .replace('{opponentName}', match.opponent.name)
+                .replace('{managerId}', match.opponent.managerId);
         }
         
-        if (description === '') { description = 'No tienes ningún partido programado.'; }
+        if (description === '') { 
+            description = t('noConfirmedMatches', member);
+        }
 
+        const embedTitle = t('confirmedMatchesTitle', member).replace('{teamName}', userTeam.name);
         const embed = new EmbedBuilder()
-            .setTitle(`🗓️ Amistosos Confirmados de ${userTeam.name}`)
+            .setTitle(embedTitle)
             .setDescription(description)
             .setColor('Green')
             .setThumbnail(userTeam.logoUrl)
@@ -1369,7 +1375,6 @@ if (customId.startsWith('admin_continue_no_logo_')) {
 
         return interaction.editReply({ embeds: [embed] });
     }
-
     // --- Lógica de Mercado de Fichajes y Perfil de Jugador ---
 
         if (customId === 'edit_profile_button') {
