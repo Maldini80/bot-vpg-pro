@@ -34,5 +34,11 @@
   "manageOfferButton": "Bestehendes Angebot verwalten",
 
     "errorAlreadyInTeam": "❌ Du gehörst bereits zum Team **{teamName}**.",
-  "selectLeaguePlaceholder": "Wähle die Liga aus, in der dein Team antreten wird"
+  "selectLeaguePlaceholder": "Wähle die Liga aus, in der dein Team antreten wird",
+
+    "registerModalTitle": "Team in {leagueName} registrieren",
+  "vpgUsernameLabel": "Dein VPG-Benutzername",
+  "teamNameLabel": "Name deines Teams",
+  "teamAbbrLabel": "Abkürzung (3 Buchstaben)",
+  "teamTwitterLabel": "Team-Twitter (optional, ohne @)"
 }
