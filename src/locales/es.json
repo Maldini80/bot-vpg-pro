@@ -31,7 +31,7 @@
   "marketSubmenuTitle": "SUBMENÚ: GESTIÓN DE FICHAJES",
   "marketSubmenuDescription": "Publica o gestiona la oferta de fichajes de tu equipo.",
   "createEditOfferButton": "Crear / Editar Oferta",
-  "manageOfferButton": "Gestionar Oferta Existente"
+  "manageOfferButton": "Gestionar Oferta Existente",
 
   "errorAlreadyInTeam": "❌ Ya perteneces al equipo **{teamName}**.",
   "selectLeaguePlaceholder": "Selecciona la liga en la que competirá tu equipo"
