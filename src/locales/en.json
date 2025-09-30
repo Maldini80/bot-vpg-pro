@@ -157,5 +157,15 @@
   "managerAcceptedPlayer": "You have accepted **{playerName}** into your team.",
   "managerRejectedPlayer": "You have rejected the application from **{playerName}**.",
   "playerJoinedNotification": "✅ The player **{playerName}** has accepted your invitation and joined **{teamName}**!",
-  "playerRejectedNotification": "❌ The player **{playerName}** has rejected your invitation to join **{teamName}**."
+  "playerRejectedNotification": "❌ The player **{playerName}** has rejected your invitation to join **{teamName}**.",
+
+  "playerRegistrationTitle": "Player Profile Registration (1/2)",
+  "playerTwitterLabel": "Your Twitter (username without @, optional)",
+  "psnIdLabel": "Your PlayStation Network ID (PSN)",
+  "eaIdLabel": "Your EA Sports FC ID",
+  "updateProfileModalTitle": "Update Profile (Final step)",
+  "applyToTeamModalTitle": "Apply to Team",
+  "applicationPresentationLabel": "Write a brief introduction",
+  "registrationStep2": "**Step 2 of 2:** Almost done! Now select your positions on the field.",
+  "noSecondaryPosition": "None"
 }
