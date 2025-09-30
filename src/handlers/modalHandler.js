@@ -492,7 +492,7 @@ module.exports = async (client, interaction) => {
         return interaction.editReply({ content: `✅ El equipo **${team.name}** ha sido disuelto.` });
     }
     
-    if (customId.startsWith('application_modal_')) {
+        if (customId.startsWith('application_modal_')) {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const teamId = customId.split('_')[2];
@@ -502,14 +502,18 @@ module.exports = async (client, interaction) => {
         if(!manager) return interaction.editReply({ content: 'No se pudo encontrar al mánager.' });
         const presentation = fields.getTextInputValue('presentation');
         const application = await PlayerApplication.create({ userId: user.id, teamId: teamId, presentation: presentation });
-        const embed = new EmbedBuilder().setTitle(`✉️ Nueva solicitud para ${team.name}`).setAuthor({ name: user.tag, iconURL: user.displayAvatarURL() }).setDescription(presentation).setColor('Blue');
-        const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`accept_application_${application._id}`).setLabel('Aceptar').setStyle(ButtonStyle.Success), new ButtonBuilder().setCustomId(`reject_application_${application._id}`).setLabel('Rechazar').setStyle(ButtonStyle.Danger));
+        
+        // El MD al mánager lo dejamos bilingüe, ya que no sabemos su idioma
+        const embed = new EmbedBuilder().setTitle(`✉️ New Application / Nueva Solicitud for ${team.name}`).setAuthor({ name: user.tag, iconURL: user.displayAvatarURL() }).setDescription(presentation).setColor('Blue');
+        const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`accept_application_${application._id}`).setLabel('Accept / Aceptar').setStyle(ButtonStyle.Success), new ButtonBuilder().setCustomId(`reject_application_${application._id}`).setLabel('Decline / Rechazar').setStyle(ButtonStyle.Danger));
+        
         try {
             await manager.send({ embeds: [embed], components: [row] });
-            return interaction.editReply({ content: `✅ Tu solicitud para **${team.name}** ha sido enviada.` });
+            const successMessage = t('applicationSentSuccess', member).replace('{teamName}', team.name);
+            return interaction.editReply({ content: successMessage });
         } catch (error) {
             await PlayerApplication.findByIdAndDelete(application._id);
-            return interaction.editReply({ content: `❌ No se pudo enviar la solicitud. El mánager tiene los MDs cerrados.` });
+            return interaction.editReply({ content: t('applicationSentFailManagerDMsClosed', member) });
         }
     }
 };
