@@ -113,5 +113,9 @@
   "errorInstantChannelNotFound": "❌ Hata: Anlık dostluk maçları kanalı bulunamadı.",
   "instantPanelCreatedSuccess": "✅ Anlık arama panelin {channel} kanalında yayınlandı!",
   "errorNoPanelsToDelete": "Silecek aktif arama panelin yok.",
-  "panelsDeletedSuccess": "✅ {count} dostluk maçı arama paneli başarıyla silindi."
+  "panelsDeletedSuccess": "✅ {count} dostluk maçı arama paneli başarıyla silindi.",
+
+    "confirmedMatchesTitle": "🗓️ {teamName} Onaylanmış Dostluk Maçları",
+  "noConfirmedMatches": "Zamanlanmış maçınız yok.",
+  "matchInfoLine": "**🕕 {time}** vs **{opponentName}**\n> İletişim: <@{managerId}>\n\n"
 }
