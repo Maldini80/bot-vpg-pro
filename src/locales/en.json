@@ -125,5 +125,16 @@
   "offerRequirementsField": "Current Requirements",
   "editReplaceOfferButton": "Edit / Replace Offer",
   "deleteOfferButton": "Delete Offer",
-  "offerDeletedSuccess": "✅ The transfer offer has been deleted."
+  "offerDeletedSuccess": "✅ The transfer offer has been deleted.",
+  "welcomeTitle": "Welcome to the VPG community, {userName}!",
+  "welcomeDescription": "To fully participate, you must first complete your player profile.\n\n**Click the button below to start the registration.**",
+  "startRegistrationButton": "📝 Start Player Registration",
+  "managerGuideTitle": "👑 Congratulations, Manager! Your team \"{teamName}\" has been approved.",
+  "managerGuideDescription": "Welcome to the community's elite! Here is a detailed guide to your new responsibilities and tools. Your main command center is the team management panel.",
+  "managerGuideStep1Title": "Step 1: Build Your Roster",
+  "managerGuideStep1Value": "Your priority is to build your team. From the `Manage Roster` submenu, you can:\n• **`Invite Player`**: Add members directly to your roster.\n• **`Promote to Captain`**: Delegate responsibilities to trusted players to help with daily management.",
+  "managerGuideStep2Title": "Step 2: Keep Your Team Active",
+  "managerGuideStep2Value": "Activity is key to success. From the corresponding submenus, you can:\n• **`Manage Friendlies`**: Use `Schedule Search` to announce your availability or `Find Rival (Now)` for an immediate match.\n• **`Manage Transfers`**: Use `Create / Edit Offer` to post that you are looking for players.",
+  "managerGuideStep3Title": "Step 3: Administration and Tips",
+  "managerGuideStep3Value": "• **`Edit Team Data`**: Keep your team's data updated.\n• **`Open/Close Recruitment`**: Control whether your team accepts applications.\n• **You have full control**: You are ultimately responsible for your team."
 }
