@@ -9,10 +9,6 @@
   "managerActionsDescription": "Aqui estão as ações disponíveis para a gestão de equipes.",
   "registerTeamButton": "📝 Registrar minha Equipe",
 
-  "errorAlreadyManager": "❌ Você já é manager de uma equipe, não pode registrar outra.",
-  "errorNoLeaguesConfigured": "Não há ligas configuradas por um administrador.",
-  "promptSelectLeagueStep1": "O primeiro passo é selecionar a liga para sua equipe:",
-
   "rosterSubmenuTitle": "SUBMENU: GERENCIAMENTO DE ELENCO",
   "rosterSubmenuDescription": "Use os botões para gerenciar os membros e dados da sua equipe.",
   "invitePlayerButton": "Convidar Jogador",
@@ -33,12 +29,29 @@
   "createEditOfferButton": "Criar / Editar Oferta",
   "manageOfferButton": "Gerenciar Oferta Existente",
 
-    "errorAlreadyInTeam": "❌ Você já pertence à equipe **{teamName}**.",
-  "selectLeaguePlaceholder": "Selecione a liga em que sua equipe competirá",
+  "errorAlreadyManager": "❌ Você já é manager de uma equipe, não pode registrar outra.",
+  "errorNoLeaguesConfigured": "❌ Não há ligas configuradas por um administrador.",
+  "errorAlreadyInTeam": "❌ Você já pertence à equipe **{teamName}**.",
+  "errorMustBeManagerOrCaptain": "❌ Você deve ser um Manager ou Capitão para usar estes menus.",
 
-    "registerModalTitle": "Registrar Equipe em {leagueName}",
+  "promptSelectLeagueStep1": "O primeiro passo é selecionar a liga para sua equipe:",
+  "selectLeaguePlaceholder": "Selecione a liga em que sua equipe competirá",
+  
+  "registerModalTitle": "Registrar Equipe em {leagueName}",
   "vpgUsernameLabel": "Seu nome de usuário VPG",
   "teamNameLabel": "Nome da sua equipe",
   "teamAbbrLabel": "Abreviação (3 letras)",
-  "teamTwitterLabel": "Twitter da equipe (opcional, sem @)"
+  "teamTwitterLabel": "Twitter da equipe (opcional, sem @)",
+
+  "askForLogoTitle": "✅ Dados salvos. Deseja adicionar um logotipo à sua equipe?",
+  "askForLogoDescription": "Esta etapa é opcional. Você pode carregar um logotipo personalizado para o seu clube ou usar um genérico fornecido pela comunidade.",
+  "addLogoYesButton": "Sim, adicionar logotipo",
+  "addLogoNoButton": "Não, usar logotipo padrão",
+  
+  "finalLogoModalTitle": "Etapa Final: Adicionar Logotipo",
+  "logoUrlLabel": "URL da imagem do seu logotipo",
+  "logoUrlPlaceholder": "https://i.imgur.com/logo.png",
+  
+  "requestSentDefaultLogo": "✅ Perfeito! Seu pedido foi enviado com um logotipo padrão. Um administrador irá analisá-lo.",
+  "requestSentCustomLogo": "✅ Perfeito! Seu pedido foi enviado com seu logotipo personalizado. Um administrador irá analisá-lo."
 }
