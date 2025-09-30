@@ -1085,18 +1085,19 @@ if (customId.startsWith('admin_continue_no_logo_')) {
     if (customId === 'post_instant_panel') {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
-        if (!team) return interaction.editReply({ content: 'No se encontró tu equipo.' });
+        if (!team) return interaction.editReply({ content: t('errorTeamNotFound', member) });
         
         const existingPanel = await AvailabilityPanel.findOne({ teamId: team._id, panelType: 'INSTANT' });
         if (existingPanel) {
             const channel = guild.channels.cache.get(existingPanel.channelId);
-            return interaction.editReply({ content: `❌ Ya tienes un panel de búsqueda instantánea activo en ${channel || 'un canal'}.` });
+            const errorMessage = t('errorExistingInstantPanel', member).replace('{channel}', channel || 'un canal');
+            return interaction.editReply({ content: errorMessage });
         }
 
         const channelId = process.env.INSTANT_FRIENDLY_CHANNEL_ID;
-        if (!channelId) return interaction.editReply({ content: 'Error: Canal de amistosos instantáneos no configurado.' });
+        if (!channelId) return interaction.editReply({ content: t('errorInstantChannelNotSet', member) });
         const channel = await client.channels.fetch(channelId).catch(() => null);
-        if (!channel) return interaction.editReply({ content: 'Error: No se encontró el canal de amistosos instantáneos.' });
+        if (!channel) return interaction.editReply({ content: t('errorInstantChannelNotFound', member) });
 
         const webhook = await getOrCreateWebhook(channel, client);
         const message = await webhook.send({ content: 'Creando panel...', username: team.name, avatarURL: team.logoUrl });
@@ -1114,16 +1115,17 @@ if (customId.startsWith('admin_continue_no_logo_')) {
         await panel.save();
         await updatePanelMessage(client, panel._id);
         
-        return interaction.editReply({ content: `✅ ¡Tu panel de búsqueda instantánea ha sido publicado en ${channel}!` });
+        const successMessage = t('instantPanelCreatedSuccess', member).replace('{channel}', channel.toString());
+        return interaction.editReply({ content: successMessage });
     }
 
-    if (customId === 'delete_friendly_panel') {
+        if (customId === 'delete_friendly_panel') {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
-        if (!team) return interaction.editReply({ content: 'No se encontró tu equipo.' });
+        if (!team) return interaction.editReply({ content: t('errorTeamNotFound', member) });
         
         const panels = await AvailabilityPanel.find({ teamId: team._id });
-        if(panels.length === 0) return interaction.editReply({ content: 'No tienes ningún panel de búsqueda activo para borrar.' });
+        if(panels.length === 0) return interaction.editReply({ content: t('errorNoPanelsToDelete', member) });
         
         let deletedCount = 0;
         for (const panel of panels) {
@@ -1138,7 +1140,8 @@ if (customId.startsWith('admin_continue_no_logo_')) {
             deletedCount++;
         }
         
-        return interaction.editReply({ content: `✅ ${deletedCount} panel(es) de búsqueda de amistosos han sido borrados con éxito.` });
+        const successMessage = t('panelsDeletedSuccess', member).replace('{count}', deletedCount);
+        return interaction.editReply({ content: successMessage });
     }
 
     if (customId.startsWith('challenge_slot_')) {
