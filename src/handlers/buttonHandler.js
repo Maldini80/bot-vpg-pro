@@ -173,8 +173,9 @@ const handler = async (client, interaction) => {
             }
             
             if (slot.status === 'CONFIRMED') {
-                await message.edit({ content: '❌ Este desafío ha expirado porque ya se ha confirmado otro partido en este horario.', components: [] });
-                return interaction.followUp({ content: '¡Demasiado tarde! Ya has aceptado otro desafío para este horario.', flags: MessageFlags.Ephemeral });
+                const hostMember = await interaction.guild.members.fetch(user.id);
+                await message.edit({ content: t('errorChallengeExpired', hostMember), components: [] });
+                return interaction.followUp({ content: t('errorChallengeExpired', hostMember), flags: MessageFlags.Ephemeral });
             }
 
             const challengeIndex = slot.pendingChallenges.findIndex(c => c._id.toString() === challengeId);
@@ -193,13 +194,26 @@ const handler = async (client, interaction) => {
                 
                 const winnerTeam = await Team.findById(acceptedChallenge.teamId);
                 const winnerUser = await client.users.fetch(acceptedChallenge.userId);
+                const winnerMember = await interaction.guild.members.fetch(acceptedChallenge.userId);
                 
-                await winnerUser.send(`✅ ¡Enhorabuena! Tu desafío contra **${panel.teamId.name}** para las **${time}** ha sido **ACEPTADO**!`).catch(()=>{});
-                await message.edit({ content: `✅ Has aceptado el desafío de **${winnerTeam.name}**. Se ha notificado a todos los equipos.`, components: [], embeds: [] });
+                const acceptedNotification = t('challengeAcceptedNotification', winnerMember)
+                    .replace('{hostTeamName}', panel.teamId.name)
+                    .replace('{time}', time);
+                await winnerUser.send(acceptedNotification).catch(()=>{});
+                
+                const hostMember = await interaction.guild.members.fetch(user.id);
+                const hostConfirmation = t('hostAcceptedConfirmation', hostMember).replace('{challengerTeamName}', winnerTeam.name);
+                await message.edit({ content: hostConfirmation, components: [], embeds: [] });
 
                 for (const loser of rejectedChallenges) {
                     const loserUser = await client.users.fetch(loser.userId).catch(() => null);
-                    if (loserUser) await loserUser.send(`Lo sentimos, tu desafío contra **${panel.teamId.name}** para las **${time}** no pudo ser aceptado. El anfitrión ha elegido a otro rival.`).catch(()=>{});
+                    if (loserUser) {
+                        const loserMember = await interaction.guild.members.fetch(loser.userId);
+                        const lostNotification = t('challengeLostNotification', loserMember)
+                            .replace('{hostTeamName}', panel.teamId.name)
+                            .replace('{time}', time);
+                        await loserUser.send(lostNotification).catch(()=>{});
+                    }
                 }
 
                 const challengerPanel = await AvailabilityPanel.findOne({ teamId: winnerTeam._id, panelType: 'SCHEDULED' });
@@ -215,9 +229,14 @@ const handler = async (client, interaction) => {
                 }
 
             } else { // REJECT
-                 await message.edit({ content: `❌ Has rechazado el desafío.`, components: [], embeds: [] });
+                 const hostMember = await interaction.guild.members.fetch(user.id);
+                 await message.edit({ content: t('hostRejectedConfirmation', hostMember), components: [], embeds: [] });
                  const rejectedUser = await client.users.fetch(acceptedChallenge.userId);
-                 await rejectedUser.send(`Tu desafío contra **${panel.teamId.name}** para las **${time}** ha sido **RECHAZADO**.`).catch(()=>{});
+                 const rejectedMember = await interaction.guild.members.fetch(acceptedChallenge.userId);
+                 const rejectedNotification = t('challengeRejectedNotification', rejectedMember)
+                    .replace('{hostTeamName}', panel.teamId.name)
+                    .replace('{time}', time);
+                 await rejectedUser.send(rejectedNotification).catch(()=>{});
             }
 
             await panel.save();
@@ -1144,11 +1163,11 @@ if (customId.startsWith('admin_continue_no_logo_')) {
         return interaction.editReply({ content: successMessage });
     }
 
-    if (customId.startsWith('challenge_slot_')) {
+        if (customId.startsWith('challenge_slot_')) {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         
         const challengerTeam = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
-        if (!challengerTeam) return interaction.editReply({ content: 'Debes ser Mánager o Capitán de un equipo para desafiar.' });
+        if (!challengerTeam) return interaction.editReply({ content: t('errorMustBeManagerOrCaptain', member) });
 
         const [, , panelId, time] = customId.split('_');
 
@@ -1195,16 +1214,27 @@ if (customId.startsWith('admin_continue_no_logo_')) {
         const recipients = [hostManagerId, ...hostCaptains.captains];
         const uniqueRecipients = [...new Set(recipients)];
 
-        const embed = new EmbedBuilder().setTitle('⚔️ ¡Nuevo Desafío!').setDescription(`El equipo **${challengerTeam.name}** os ha desafiado para un partido a las **${time}**.`).setColor('Gold').setThumbnail(challengerTeam.logoUrl);
+        // Preparamos los botones bilingües
         const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId(`accept_challenge_${panel._id}_${time}_${savedChallenge._id}`).setLabel('Aceptar').setStyle(ButtonStyle.Success),
-            new ButtonBuilder().setCustomId(`reject_challenge_${panel._id}_${time}_${savedChallenge._id}`).setLabel('Rechazar').setStyle(ButtonStyle.Danger)
+            new ButtonBuilder().setCustomId(`accept_challenge_${panel._id}_${time}_${savedChallenge._id}`).setLabel('Accept / Aceptar').setStyle(ButtonStyle.Success),
+            new ButtonBuilder().setCustomId(`reject_challenge_${panel._id}_${time}_${savedChallenge._id}`).setLabel('Decline / Rechazar').setStyle(ButtonStyle.Danger)
         );
 
         let notified = false;
         for(const recipientId of uniqueRecipients) {
             try {
                 const recipientUser = await client.users.fetch(recipientId);
+                const recipientMember = await guild.members.fetch(recipientId); // Necesario para el traductor
+                
+                // Creamos el embed en el idioma del destinatario
+                const embed = new EmbedBuilder()
+                    .setTitle(t('challengeReceivedTitle', recipientMember))
+                    .setDescription(t('challengeReceivedDescription', recipientMember)
+                        .replace('{challengerTeamName}', challengerTeam.name)
+                        .replace('{time}', time))
+                    .setColor('Gold')
+                    .setThumbnail(challengerTeam.logoUrl);
+
                 await recipientUser.send({ embeds: [embed], components: [row] });
                 notified = true;
             } catch (error) {
@@ -1213,7 +1243,6 @@ if (customId.startsWith('admin_continue_no_logo_')) {
         }
 
         if(!notified) {
-            // Revert challenge if no one could be notified
             panel.timeSlots.find(s => s.time === time).pendingChallenges = panel.timeSlots.find(s => s.time === time).pendingChallenges.filter(c => !c._id.equals(savedChallenge._id));
             await panel.save();
             await interaction.editReply({ content: 'No se pudo enviar el desafío. El mánager y los capitanes rivales tienen los MDs cerrados.' });
@@ -1222,7 +1251,7 @@ if (customId.startsWith('admin_continue_no_logo_')) {
         }
 
         await updatePanelMessage(client, panel._id);
-        return interaction.editReply({ content: '✅ ¡Desafío enviado!' });
+        return interaction.editReply({ content: t('challengeSent', member) });
     }
     
     if (customId.startsWith('cancel_all_challenges_')) {
