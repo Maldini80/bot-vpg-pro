@@ -31,7 +31,7 @@
   "marketSubmenuTitle": "SUBMENU: GERENCIAMENTO DE TRANSFERÊNCIAS",
   "marketSubmenuDescription": "Publique ou gerencie a oferta de transferência da sua equipe.",
   "createEditOfferButton": "Criar / Editar Oferta",
-  "manageOfferButton": "Gerenciar Oferta Existente"
+  "manageOfferButton": "Gerenciar Oferta Existente",
 
     "errorAlreadyInTeam": "❌ Você já pertence à equipe **{teamName}**.",
   "selectLeaguePlaceholder": "Selecione a liga em que sua equipe competirá"
