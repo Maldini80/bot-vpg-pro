@@ -47,6 +47,7 @@
   "errorInstantChannelNotFound": "❌ Hata: Anlık dostluk maçları kanalı bulunamadı.",
   "errorNoPanelsToDelete": "Silecek aktif arama panelin yok.",
   "errorNoOfferToManage": "❌ Takımınızın aktif bir transfer teklifi yok. Transferler menüsünden bir tane oluşturabilirsiniz.",
+  "errorChallengeExpired": "❌ Bu meydan okuma süresi doldu çünkü bu zaman dilimi için başka bir maç zaten onaylandı.",
   "promptSelectLeagueStep1": "İlk adım, takımınız için lig seçmektir:",
   "selectLeaguePlaceholder": "Takımınızın yarışacağı ligi seçin",
   "registerModalTitle": "{leagueName} Ligi'ne Takım Kaydet",
@@ -136,5 +137,13 @@
   "managerGuideStep2Title": "Adım 2: Takımını Aktif Tut",
   "managerGuideStep2Value": "Aktivite başarının anahtarıdır. İlgili alt menülerden şunları yapabilirsin:\n• **`Dostluk Maçlarını Yönet`**: Müsaitliğini duyurmak için `Arama Planla`yı veya anında bir maç için `Rakip Bul (Şimdi)`yi kullan.\n• **`Transferleri Yönet`**: Oyuncu aradığını duyurmak için `Teklif Oluştur / Düzenle`yi kullan.",
   "managerGuideStep3Title": "Adım 3: Yönetim ve İpuçları",
-  "managerGuideStep3Value": "• **`Takım Verilerini Düzenle`**: Takımının verilerini güncel tut.\n• **`Alımı Aç/Kapat`**: Takımının başvuruları kabul edip etmediğini kontrol et.\n• **Tam kontrole sahipsin**: Takımından nihai olarak sen sorumlusun."
+  "managerGuideStep3Value": "• **`Takım Verilerini Düzenle`**: Takımının verilerini güncel tut.\n• **`Alımı Aç/Kapat`**: Takımının başvuruları kabul edip etmediğini kontrol et.\n• **Tam kontrole sahipsin**: Takımından nihai olarak sen sorumlusun.",
+  "challengeSent": "✅ Meydan okuma gönderildi!",
+  "challengeReceivedTitle": "⚔️ Yeni Meydan Okuma!",
+  "challengeReceivedDescription": "**{challengerTeamName}** takımı sana **{time}** saatinde bir maç için meydan okudu.",
+  "challengeAcceptedNotification": "✅ Tebrikler! **{hostTeamName}** takımına **{time}** için yaptığın meydan okuma **KABUL EDİLDİ**.",
+  "challengeRejectedNotification": "**{hostTeamName}** takımına **{time}** için yaptığın meydan okuma **REDDEDİLDİ**.",
+  "challengeLostNotification": "Üzgünüm, **{hostTeamName}** takımına **{time}** için yaptığın meydan okuma kabul edilemedi. Ev sahibi başka bir rakip seçti.",
+  "hostAcceptedConfirmation": "✅ **{challengerTeamName}** takımından gelen meydan okumayı kabul ettin. Tüm takımlar bilgilendirildi.",
+  "hostRejectedConfirmation": "❌ Meydan okumayı reddettin."
 }
