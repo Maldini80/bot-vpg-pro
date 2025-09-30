@@ -152,11 +152,12 @@ const handler = async (client, interaction) => {
     // ===========================================================================
     // =================== LÓGICA DE INTERACCIONES EN MD =========================
     // ===========================================================================
-    if (!interaction.inGuild()) {
+        if (!interaction.inGuild()) {
         await interaction.deferUpdate();
         const { message } = interaction;
         
         if (customId.startsWith('accept_challenge_') || customId.startsWith('reject_challenge_')) {
+            // ESTE CÓDIGO YA ESTÁ TRADUCIDO DE LA RESPUESTA ANTERIOR
             const parts = customId.split('_');
             const action = parts[0]; 
             const panelId = parts[2];
@@ -172,8 +173,11 @@ const handler = async (client, interaction) => {
                 return interaction.followUp({ content: 'El horario ya no existe.', flags: MessageFlags.Ephemeral });
             }
             
+            // Necesitamos el guild para poder obtener el 'member' del que responde
+            const guild = await client.guilds.fetch(panel.guildId);
+            const hostMember = await guild.members.fetch(user.id);
+
             if (slot.status === 'CONFIRMED') {
-                const hostMember = await interaction.guild.members.fetch(user.id);
                 await message.edit({ content: t('errorChallengeExpired', hostMember), components: [] });
                 return interaction.followUp({ content: t('errorChallengeExpired', hostMember), flags: MessageFlags.Ephemeral });
             }
@@ -194,21 +198,20 @@ const handler = async (client, interaction) => {
                 
                 const winnerTeam = await Team.findById(acceptedChallenge.teamId);
                 const winnerUser = await client.users.fetch(acceptedChallenge.userId);
-                const winnerMember = await interaction.guild.members.fetch(acceptedChallenge.userId);
+                const winnerMember = await guild.members.fetch(acceptedChallenge.userId);
                 
                 const acceptedNotification = t('challengeAcceptedNotification', winnerMember)
                     .replace('{hostTeamName}', panel.teamId.name)
                     .replace('{time}', time);
                 await winnerUser.send(acceptedNotification).catch(()=>{});
                 
-                const hostMember = await interaction.guild.members.fetch(user.id);
                 const hostConfirmation = t('hostAcceptedConfirmation', hostMember).replace('{challengerTeamName}', winnerTeam.name);
                 await message.edit({ content: hostConfirmation, components: [], embeds: [] });
 
                 for (const loser of rejectedChallenges) {
                     const loserUser = await client.users.fetch(loser.userId).catch(() => null);
                     if (loserUser) {
-                        const loserMember = await interaction.guild.members.fetch(loser.userId);
+                        const loserMember = await guild.members.fetch(loser.userId);
                         const lostNotification = t('challengeLostNotification', loserMember)
                             .replace('{hostTeamName}', panel.teamId.name)
                             .replace('{time}', time);
@@ -229,10 +232,9 @@ const handler = async (client, interaction) => {
                 }
 
             } else { // REJECT
-                 const hostMember = await interaction.guild.members.fetch(user.id);
                  await message.edit({ content: t('hostRejectedConfirmation', hostMember), components: [], embeds: [] });
                  const rejectedUser = await client.users.fetch(acceptedChallenge.userId);
-                 const rejectedMember = await interaction.guild.members.fetch(acceptedChallenge.userId);
+                 const rejectedMember = await guild.members.fetch(acceptedChallenge.userId);
                  const rejectedNotification = t('challengeRejectedNotification', rejectedMember)
                     .replace('{hostTeamName}', panel.teamId.name)
                     .replace('{time}', time);
@@ -241,34 +243,47 @@ const handler = async (client, interaction) => {
 
             await panel.save();
             await updatePanelMessage(client, panel._id);
+
         } else if (customId.startsWith('accept_application_') || customId.startsWith('reject_application_')) {
             const applicationId = customId.split('_')[2];
             const application = await PlayerApplication.findById(applicationId).populate('teamId');
             if(!application || application.status !== 'pending') return interaction.editReply({ content: 'Esta solicitud ya no es válida o ya ha sido gestionada.', components: [], embeds: [] });
             
+            const guild = await client.guilds.fetch(application.teamId.guildId);
             const applicantUser = await client.users.fetch(application.userId).catch(()=>null);
+            const managerMember = await guild.members.fetch(user.id);
+
             if (customId.startsWith('accept_application_')) {
                 application.status = 'accepted';
                 if (applicantUser) {
-                    const targetGuild = await client.guilds.fetch(application.teamId.guildId);
-                    const applicantMember = await targetGuild.members.fetch(application.userId).catch(()=>null);
+                    const applicantMember = await guild.members.fetch(application.userId).catch(()=>null);
                     if (applicantMember) {
                         await applicantMember.roles.add(process.env.PLAYER_ROLE_ID);
                         await applicantMember.setNickname(`${application.teamId.abbreviation} ${applicantUser.username}`).catch(()=>{});
                         application.teamId.players.push(applicantUser.id);
+
+                        const notification = t('applicationAcceptedNotification', applicantMember).replace('{teamName}', application.teamId.name);
+                        await applicantUser.send(notification).catch(() => {});
                     }
-                    await applicantUser.send(`¡Enhorabuena! Tu solicitud para unirte a **${application.teamId.name}** ha sido **aceptada**.`);
                 }
-                await interaction.editReply({ content: `Has aceptado a ${applicantUser ? applicantUser.tag : 'un usuario'} en tu equipo.`, components: [], embeds: [] });
+                const confirmation = t('managerAcceptedPlayer', managerMember).replace('{playerName}', applicantUser ? applicantUser.tag : 'a user');
+                await interaction.editReply({ content: confirmation, components: [], embeds: [] });
             } else {
                 application.status = 'rejected';
-                if(applicantUser) await applicantUser.send(`Lo sentimos, tu solicitud para unirte a **${application.teamId.name}** ha sido **rechazada**.`);
-                await interaction.editReply({ content: `Has rechazado la solicitud de ${applicantUser ? applicantUser.tag : 'un usuario'}.`, components: [], embeds: [] });
+                if(applicantUser) {
+                    const applicantMember = await guild.members.fetch(application.userId).catch(()=>null);
+                    if (applicantMember) {
+                        const notification = t('applicationRejectedNotification', applicantMember).replace('{teamName}', application.teamId.name);
+                        await applicantUser.send(notification).catch(() => {});
+                    }
+                }
+                const confirmation = t('managerRejectedPlayer', managerMember).replace('{playerName}', applicantUser ? applicantUser.tag : 'a user');
+                await interaction.editReply({ content: confirmation, components: [], embeds: [] });
             }
             await application.teamId.save();
             await application.save();
-        }
-        else if (customId.startsWith('accept_invite_') || customId.startsWith('reject_invite_')) {
+
+        } else if (customId.startsWith('accept_invite_') || customId.startsWith('reject_invite_')) {
             const parts = customId.split('_');
             const action = parts[0];
             const teamId = parts[2];
@@ -283,37 +298,48 @@ const handler = async (client, interaction) => {
                 return interaction.editReply({ content: 'Este equipo ya no existe.', components: [], embeds: [] });
             }
 
+            const guild = await client.guilds.fetch(team.guildId);
             const manager = await client.users.fetch(team.managerId).catch(() => null);
+            const managerMember = manager ? await guild.members.fetch(team.managerId).catch(() => null) : null;
+            const playerMember = await guild.members.fetch(playerId).catch(() => null);
+
 
             if (action === 'accept') {
-                const targetGuild = await client.guilds.fetch(team.guildId);
-                const member = await targetGuild.members.fetch(playerId).catch(() => null);
-                if (!member) {
+                if (!playerMember) {
                     return interaction.editReply({ content: 'Parece que ya no estás en el servidor del equipo.', components: [], embeds: [] });
                 }
 
                 const existingTeam = await Team.findOne({ guildId: team.guildId, $or: [{ managerId: playerId }, { captains: playerId }, { players: playerId }] });
                 if (existingTeam) {
-                    return interaction.editReply({ content: `❌ No puedes unirte. Ya perteneces al equipo **${existingTeam.name}**.`, components: [], embeds: [] });
+                    const errorMessage = t('errorAlreadyInTeam', playerMember).replace('{teamName}', existingTeam.name);
+                    return interaction.editReply({ content: errorMessage, components: [], embeds: [] });
                 }
                 
                 team.players.push(playerId);
                 await team.save();
 
-                await member.roles.add(process.env.PLAYER_ROLE_ID);
-                await member.setNickname(`${team.abbreviation} ${member.user.username}`).catch(()=>{});
+                await playerMember.roles.add(process.env.PLAYER_ROLE_ID);
+                await playerMember.setNickname(`${team.abbreviation} ${playerMember.user.username}`).catch(()=>{});
                 
-                if (manager) await manager.send(`✅ ¡El jugador **${member.user.tag}** ha aceptado tu invitación y se ha unido a **${team.name}**!`);
-                await interaction.editReply({ content: `¡Enhorabuena! Te has unido al equipo **${team.name}**.`, components: [], embeds: [] });
+                if (manager && managerMember) {
+                    const notification = t('playerJoinedNotification', managerMember).replace('{playerName}', playerMember.user.tag).replace('{teamName}', team.name);
+                    await manager.send(notification).catch(() => {});
+                }
+                
+                const successMessage = t('applicationAcceptedNotification', playerMember).replace('{teamName}', team.name);
+                await interaction.editReply({ content: successMessage, components: [], embeds: [] });
 
             } else { 
-                if (manager) await manager.send(`❌ El jugador **${interaction.user.tag}** ha rechazado tu invitación para unirse a **${team.name}**.`);
-                await interaction.editReply({ content: 'Has rechazado la invitación al equipo.', components: [], embeds: [] });
+                if (manager && managerMember) {
+                    const notification = t('playerRejectedNotification', managerMember).replace('{playerName}', interaction.user.tag).replace('{teamName}', team.name);
+                    await manager.send(notification).catch(() => {});
+                }
+                const successMessage = t('applicationRejectedNotification', playerMember).replace('{teamName}', team.name);
+                await interaction.editReply({ content: successMessage, components: [], embeds: [] });
             }
         }
         return;
     }
-
 
     // ===========================================================================
     // =================== LÓGICA DE INTERACCIONES EN GUILD ======================
@@ -627,7 +653,7 @@ if (customId.startsWith('admin_continue_no_logo_')) {
     // ===========================================================================
     // ================== BLOQUE DE CÓDIGO FALTANTE (AHORA PRESENTE) ==============
     // ===========================================================================
-        if (customId.startsWith('promote_player_') || customId.startsWith('demote_captain_') || customId.startsWith('kick_player_') || customId.startsWith('toggle_mute_player_')) {
+            if (customId.startsWith('promote_player_') || customId.startsWith('demote_captain_') || customId.startsWith('kick_player_') || customId.startsWith('toggle_mute_player_')) {
         await interaction.deferUpdate();
     
         const targetId = customId.substring(customId.lastIndexOf('_') + 1);
@@ -660,7 +686,7 @@ if (customId.startsWith('admin_continue_no_logo_')) {
             team.captains = team.captains.filter(c => c !== targetId);
             await targetMember.roles.remove([process.env.PLAYER_ROLE_ID, process.env.CAPTAIN_ROLE_ID, process.env.MUTED_ROLE_ID]).catch(() => {});
             if (targetMember.id !== interaction.guild.ownerId) await targetMember.setNickname(targetMember.user.username).catch(()=>{});
-            
+
             const successMessage = t('playerKicked', member).replace('{playerName}', targetMember.user.username);
             await interaction.editReply({ content: successMessage, components: [] });
 
@@ -673,20 +699,19 @@ if (customId.startsWith('admin_continue_no_logo_')) {
             if (targetMember.id !== interaction.guild.ownerId) await targetMember.setNickname(`|C| ${team.abbreviation} ${targetMember.user.username}`).catch(()=>{});
     
             try {
-                // El MD de guía para el nuevo capitán lo dejamos bilingüe
                 const captainGuideEmbed = new EmbedBuilder()
-                    .setTitle(`🛡️ ¡Enhorabuena! / Congratulations!`)
+                    .setTitle(t('captainGuideTitle', targetMember).replace('{teamName}', team.name))
                     .setColor('Blue')
-                    .setDescription(`Has sido ascendido a Capitán de "${team.name}".\nYou have been promoted to Captain of "${team.name}".`)
+                    .setDescription(t('captainGuideDescription', targetMember))
                     .addFields(
-                        { name: '✅ Tus Nuevas Responsabilidades / Your New Responsibilities', value: '• Gestionar Amistosos / Manage Friendlies\n• Gestionar Fichajes / Manage Transfers\n• Gestionar Miembros / Manage Members' },
-                        { name: '❌ Límites de tu Rol / Role Limitations', value: 'No puedes invitar jugadores ni editar datos del equipo.\nYou cannot invite players or edit team data.' }
+                        { name: t('captainGuideResponsibilitiesTitle', targetMember), value: t('captainGuideResponsibilitiesValue', targetMember) },
+                        { name: t('captainGuideLimitsTitle', targetMember), value: t('captainGuideLimitsValue', targetMember) }
                     );
                 await targetMember.send({ embeds: [captainGuideEmbed] });
             } catch (dmError) {
                 console.log(`AVISO: No se pudo enviar el MD de guía al nuevo capitán ${targetMember.user.tag}.`);
             }
-            
+
             const successMessage = t('playerPromoted', member).replace('{playerName}', targetMember.user.username);
             await interaction.editReply({ content: successMessage, components: [] });
 
@@ -697,7 +722,7 @@ if (customId.startsWith('admin_continue_no_logo_')) {
             await targetMember.roles.remove(process.env.CAPTAIN_ROLE_ID).catch(()=>{});
             await targetMember.roles.add(process.env.PLAYER_ROLE_ID).catch(()=>{});
             if (targetMember.id !== interaction.guild.ownerId) await targetMember.setNickname(`${team.abbreviation} ${targetMember.user.username}`).catch(()=>{});
-            
+
             const successMessage = t('playerDemoted', member).replace('{playerName}', targetMember.user.username);
             await interaction.editReply({ content: successMessage, components: [] });
 
