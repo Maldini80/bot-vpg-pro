@@ -125,5 +125,16 @@
   "offerRequirementsField": "Requisitos Actuales",
   "editReplaceOfferButton": "Editar / Reemplazar Oferta",
   "deleteOfferButton": "Borrar Oferta",
-  "offerDeletedSuccess": "✅ La oferta de fichajes ha sido borrada."
+  "offerDeletedSuccess": "✅ La oferta de fichajes ha sido borrada.",
+  "welcomeTitle": "¡Bienvenido a la comunidad VPG, {userName}!",
+  "welcomeDescription": "Para poder participar plenamente, primero debes completar tu perfil de jugador.\n\n**Haz clic en el botón de abajo para empezar el registro.**",
+  "startRegistrationButton": "📝 Iniciar Registro de Jugador",
+  "managerGuideTitle": "👑 ¡Felicidades, Mánager! Tu equipo \"{teamName}\" ha sido aprobado.",
+  "managerGuideDescription": "¡Bienvenido a la élite de la comunidad! Aquí tienes una guía detallada de tus nuevas responsabilidades y herramientas. Tu centro de mando principal es el panel del canal de gestión de equipo.",
+  "managerGuideStep1Title": "Paso 1: Construye tu Plantilla",
+  "managerGuideStep1Value": "Tu prioridad es formar tu equipo. Desde el submenú `Gestionar Plantilla` puedes:\n• **`Invitar Jugador`**: Añade miembros directamente a tu plantilla.\n• **`Ascender a Capitán`**: Delega responsabilidades en jugadores de confianza para que te ayuden con la gestión diaria.",
+  "managerGuideStep2Title": "Paso 2: Mantén tu Equipo Activo",
+  "managerGuideStep2Value": "La actividad es clave para el éxito. Desde los submenús correspondientes puedes:\n• **`Gestionar Amistosos`**: Usa `Programar Búsqueda` para anunciar tu disponibilidad o `Buscar Rival (Ahora)` para un partido inmediato.\n• **`Gestionar Fichajes`**: Usa `Crear / Editar Oferta` para publicar que buscas jugadores.",
+  "managerGuideStep3Title": "Paso 3: Administración y Consejos",
+  "managerGuideStep3Value": "• **`Editar Datos del Equipo`**: Mantén actualizados los datos de tu equipo.\n• **`Abrir/Cerrar Reclutamiento`**: Controla si tu equipo acepta solicitudes.\n• **Tienes el control total**: Eres el máximo responsable de tu equipo."
 }
