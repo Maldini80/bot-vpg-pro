@@ -706,48 +706,48 @@ if (customId.startsWith('admin_continue_no_logo_')) {
         return interaction.reply({ embeds: [subMenuEmbed], components: [subMenuRow], flags: MessageFlags.Ephemeral });
     }
 
-    if (customId.startsWith('team_submenu_')) {
+        if (customId.startsWith('team_submenu_')) {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
+        // MÁS ADELANTE TRADUCIREMOS ESTE ERROR
         if (!team) return interaction.editReply({ content: '❌ Debes ser Mánager o Capitán para usar estos menús.' });
 
         let embed, row1, row2;
         switch (customId) {
             case 'team_submenu_roster':
-                embed = new EmbedBuilder().setTitle('SUBMENÚ: GESTIÓN DE PLANTILLA').setColor('Blue').setDescription('Utiliza los botones para gestionar los miembros y datos de tu equipo.');
+                embed = new EmbedBuilder().setTitle(t('rosterSubmenuTitle', member)).setColor('Blue').setDescription(t('rosterSubmenuDescription', member));
                 row1 = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder().setCustomId('team_invite_player_button').setLabel('Invitar Jugador').setStyle(ButtonStyle.Success),
-                    new ButtonBuilder().setCustomId('team_manage_roster_button').setLabel('Gestionar Miembros').setStyle(ButtonStyle.Primary),
-                    new ButtonBuilder().setCustomId('team_view_roster_button').setLabel('Ver Plantilla').setStyle(ButtonStyle.Secondary)
+                    new ButtonBuilder().setCustomId('team_invite_player_button').setLabel(t('invitePlayerButton', member)).setStyle(ButtonStyle.Success),
+                    new ButtonBuilder().setCustomId('team_manage_roster_button').setLabel(t('manageMembersButton', member)).setStyle(ButtonStyle.Primary),
+                    new ButtonBuilder().setCustomId('team_view_roster_button').setLabel(t('viewRosterButton', member)).setStyle(ButtonStyle.Secondary)
                 );
                 row2 = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder().setCustomId('team_toggle_recruitment_button').setLabel('Abrir/Cerrar Reclutamiento').setStyle(ButtonStyle.Secondary),
-                    new ButtonBuilder().setCustomId('team_edit_data_button').setLabel('Editar Datos del Equipo').setStyle(ButtonStyle.Danger)
+                    new ButtonBuilder().setCustomId('team_toggle_recruitment_button').setLabel(t('toggleRecruitmentButton', member)).setStyle(ButtonStyle.Secondary),
+                    new ButtonBuilder().setCustomId('team_edit_data_button').setLabel(t('editTeamDataButton', member)).setStyle(ButtonStyle.Danger)
                 );
                 await interaction.editReply({ embeds: [embed], components: [row1, row2] });
                 break;
             case 'team_submenu_friendlies':
-                embed = new EmbedBuilder().setTitle('SUBMENÚ: GESTIÓN DE AMISTOSOS').setColor('Green').setDescription('Organiza partidos, busca rivales y consulta tus amistosos confirmados.');
+                embed = new EmbedBuilder().setTitle(t('friendliesSubmenuTitle', member)).setColor('Green').setDescription(t('friendliesSubmenuDescription', member));
                 row1 = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder().setCustomId('post_scheduled_panel').setLabel('Programar Búsqueda').setStyle(ButtonStyle.Primary).setEmoji('🗓️'),
-                    new ButtonBuilder().setCustomId('post_instant_panel').setLabel('Buscar Rival (Ahora)').setStyle(ButtonStyle.Primary).setEmoji('⚡'),
-                    new ButtonBuilder().setCustomId('delete_friendly_panel').setLabel('Borrar Búsqueda').setStyle(ButtonStyle.Danger).setEmoji('🗑️'),
-                    new ButtonBuilder().setCustomId('team_view_confirmed_matches').setLabel('Ver Partidos').setStyle(ButtonStyle.Secondary)
+                    new ButtonBuilder().setCustomId('post_scheduled_panel').setLabel(t('scheduleSearchButton', member)).setStyle(ButtonStyle.Primary).setEmoji('🗓️'),
+                    new ButtonBuilder().setCustomId('post_instant_panel').setLabel(t('findRivalNowButton', member)).setStyle(ButtonStyle.Primary).setEmoji('⚡'),
+                    new ButtonBuilder().setCustomId('delete_friendly_panel').setLabel(t('deleteSearchButton', member)).setStyle(ButtonStyle.Danger).setEmoji('🗑️'),
+                    new ButtonBuilder().setCustomId('team_view_confirmed_matches').setLabel(t('viewMatchesButton', member)).setStyle(ButtonStyle.Secondary)
                 );
                 await interaction.editReply({ embeds: [embed], components: [row1] });
                 break;
             case 'team_submenu_market':
-                embed = new EmbedBuilder().setTitle('SUBMENÚ: GESTIÓN DE FICHAJES').setColor('Purple').setDescription('Publica o gestiona la oferta de fichajes de tu equipo.');
+                embed = new EmbedBuilder().setTitle(t('marketSubmenuTitle', member)).setColor('Purple').setDescription(t('marketSubmenuDescription', member));
                 row1 = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder().setCustomId('market_post_offer').setLabel('Crear / Editar Oferta').setStyle(ButtonStyle.Success),
-                    new ButtonBuilder().setCustomId('team_manage_offer_button').setLabel('Gestionar Oferta Existente').setStyle(ButtonStyle.Primary)
+                    new ButtonBuilder().setCustomId('market_post_offer').setLabel(t('createEditOfferButton', member)).setStyle(ButtonStyle.Success),
+                    new ButtonBuilder().setCustomId('team_manage_offer_button').setLabel(t('manageOfferButton', member)).setStyle(ButtonStyle.Primary)
                 );
                 await interaction.editReply({ embeds: [embed], components: [row1] });
                 break;
         }
         return; 
     }
-
     if (customId === 'admin_create_league_button') {
         if (!isAdmin) return interaction.reply({ content: 'Acción restringida.', flags: MessageFlags.Ephemeral });
         const modal = new ModalBuilder().setCustomId('create_league_modal').setTitle('Crear Nueva Liga');
