@@ -47,6 +47,7 @@
   "errorInstantChannelNotFound": "❌ Error: No se encontró el canal de amistosos instantáneos.",
   "errorNoPanelsToDelete": "No tienes ningún panel de búsqueda activo para borrar.",
   "errorNoOfferToManage": "❌ Tu equipo no tiene ninguna oferta de fichajes activa. Puedes crear una desde el menú de fichajes.",
+  "errorChallengeExpired": "❌ Este desafío ha expirado porque ya se ha confirmado otro partido en este horario.",
   "promptSelectLeagueStep1": "El primer paso es seleccionar la liga para tu equipo:",
   "selectLeaguePlaceholder": "Selecciona la liga en la que competirá tu equipo",
   "registerModalTitle": "Registrar Equipo en {leagueName}",
@@ -136,5 +137,13 @@
   "managerGuideStep2Title": "Paso 2: Mantén tu Equipo Activo",
   "managerGuideStep2Value": "La actividad es clave para el éxito. Desde los submenús correspondientes puedes:\n• **`Gestionar Amistosos`**: Usa `Programar Búsqueda` para anunciar tu disponibilidad o `Buscar Rival (Ahora)` para un partido inmediato.\n• **`Gestionar Fichajes`**: Usa `Crear / Editar Oferta` para publicar que buscas jugadores.",
   "managerGuideStep3Title": "Paso 3: Administración y Consejos",
-  "managerGuideStep3Value": "• **`Editar Datos del Equipo`**: Mantén actualizados los datos de tu equipo.\n• **`Abrir/Cerrar Reclutamiento`**: Controla si tu equipo acepta solicitudes.\n• **Tienes el control total**: Eres el máximo responsable de tu equipo."
+  "managerGuideStep3Value": "• **`Editar Datos del Equipo`**: Mantén actualizados los datos de tu equipo.\n• **`Abrir/Cerrar Reclutamiento`**: Controla si tu equipo acepta solicitudes.\n• **Tienes el control total**: Eres el máximo responsable de tu equipo.",
+  "challengeSent": "✅ ¡Desafío enviado!",
+  "challengeReceivedTitle": "⚔️ ¡Nuevo Desafío!",
+  "challengeReceivedDescription": "El equipo **{challengerTeamName}** os ha desafiado para un partido a las **{time}**.",
+  "challengeAcceptedNotification": "✅ ¡Enhorabuena! Tu desafío contra **{hostTeamName}** para las **{time}** ha sido **ACEPTADO**.",
+  "challengeRejectedNotification": "Tu desafío contra **{hostTeamName}** para las **{time}** ha sido **RECHAZADO**.",
+  "challengeLostNotification": "Lo sentimos, tu desafío contra **{hostTeamName}** para las **{time}** no pudo ser aceptado. El anfitrión ha elegido a otro rival.",
+  "hostAcceptedConfirmation": "✅ Has aceptado el desafío de **{challengerTeamName}**. Se ha notificado a todos los equipos.",
+  "hostRejectedConfirmation": "❌ Has rechazado el desafío."
 }
