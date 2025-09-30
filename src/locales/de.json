@@ -47,6 +47,7 @@
   "errorInstantChannelNotFound": "❌ Fehler: Der Kanal für sofortige Freundschaftsspiele wurde nicht gefunden.",
   "errorNoPanelsToDelete": "Du hast keine aktiven Suchpanels zum Löschen.",
   "errorNoOfferToManage": "❌ Dein Team hat kein aktives Transferangebot. Du kannst eines über das Transfermenü erstellen.",
+  "errorChallengeExpired": "❌ Diese Herausforderung ist abgelaufen, da bereits ein anderes Spiel für diesen Zeitpunkt bestätigt wurde.",
   "promptSelectLeagueStep1": "Der erste Schritt ist die Auswahl der Liga für dein Team:",
   "selectLeaguePlaceholder": "Wähle die Liga aus, in der dein Team antreten wird",
   "registerModalTitle": "Team in {leagueName} registrieren",
@@ -136,5 +137,13 @@
   "managerGuideStep2Title": "Schritt 2: Halte dein Team aktiv",
   "managerGuideStep2Value": "Aktivität ist der Schlüssel zum Erfolg. In den entsprechenden Untermenüs kannst du:\n• **`Freundschaftsspiele verwalten`**: Nutze `Suche planen`, um deine Verfügbarkeit anzukündigen, oder `Gegner suchen (Jetzt)` für ein sofortiges Spiel.\n• **`Transfers verwalten`**: Nutze `Angebot erstellen / bearbeiten`, um zu veröffentlichen, dass du Spieler suchst.",
   "managerGuideStep3Title": "Schritt 3: Verwaltung und Tipps",
-  "managerGuideStep3Value": "• **`Teamdaten bearbeiten`**: Halte die Daten deines Teams aktuell.\n• **`Rekrutierung öffnen/schließen`**: Steuere, ob dein Team Bewerbungen annimmt.\n• **Du hast die volle Kontrolle**: Du bist letztendlich für dein Team verantwortlich."
+  "managerGuideStep3Value": "• **`Teamdaten bearbeiten`**: Halte die Daten deines Teams aktuell.\n• **`Rekrutierung öffnen/schließen`**: Steuere, ob dein Team Bewerbungen annimmt.\n• **Du hast die volle Kontrolle**: Du bist letztendlich für dein Team verantwortlich.",
+  "challengeSent": "✅ Herausforderung gesendet!",
+  "challengeReceivedTitle": "⚔️ Neue Herausforderung!",
+  "challengeReceivedDescription": "Das Team **{challengerTeamName}** hat dich zu einem Spiel um **{time}** herausgefordert.",
+  "challengeAcceptedNotification": "✅ Herzlichen Glückwunsch! Deine Herausforderung gegen **{hostTeamName}** um **{time}** wurde **AKZEPTIERT**.",
+  "challengeRejectedNotification": "Deine Herausforderung gegen **{hostTeamName}** um **{time}** wurde **ABGELEHNT**.",
+  "challengeLostNotification": "Entschuldigung, deine Herausforderung gegen **{hostTeamName}** um **{time}** konnte nicht angenommen werden. Der Gastgeber hat einen anderen Gegner gewählt.",
+  "hostAcceptedConfirmation": "✅ Du hast die Herausforderung von **{challengerTeamName}** angenommen. Alle Teams wurden benachrichtigt.",
+  "hostRejectedConfirmation": "❌ Du hast die Herausforderung abgelehnt."
 }
