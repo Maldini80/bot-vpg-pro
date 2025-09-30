@@ -4,11 +4,9 @@
   "editProfileButton": "✏️ Update Profile",
   "applyToTeamButton": "✉️ Join a Team",
   "leaveTeamButton": "🚪 Leave Team",
-
   "managerActionsTitle": "👑 Manager Actions",
   "managerActionsDescription": "Here are the available actions for team management.",
   "registerTeamButton": "📝 Register my Team",
-
   "rosterSubmenuTitle": "SUBMENU: ROSTER MANAGEMENT",
   "rosterSubmenuDescription": "Use the buttons to manage your team's members and data.",
   "invitePlayerButton": "Invite Player",
@@ -16,42 +14,52 @@
   "viewRosterButton": "View Roster",
   "toggleRecruitmentButton": "Open/Close Recruitment",
   "editTeamDataButton": "Edit Team Data",
-
   "friendliesSubmenuTitle": "SUBMENU: FRIENDLIES MANAGEMENT",
   "friendliesSubmenuDescription": "Organize matches, find opponents, and check your confirmed friendlies.",
   "scheduleSearchButton": "Schedule Search",
   "findRivalNowButton": "Find Rival (Now)",
   "deleteSearchButton": "Delete Search",
   "viewMatchesButton": "View Matches",
-
   "marketSubmenuTitle": "SUBMENU: TRANSFER MANAGEMENT",
   "marketSubmenuDescription": "Post or manage your team's transfer offer.",
   "createEditOfferButton": "Create / Edit Offer",
   "manageOfferButton": "Manage Existing Offer",
-
   "errorAlreadyManager": "❌ You are already a manager of a team, you cannot register another one.",
   "errorNoLeaguesConfigured": "❌ There are no leagues configured by an administrator.",
   "errorAlreadyInTeam": "❌ You already belong to the team **{teamName}**.",
   "errorMustBeManagerOrCaptain": "❌ You must be a Manager or Captain to use these menus.",
-
+  "errorOnlyManagersCanInvite": "❌ Only managers can invite players.",
+  "errorNoEligibleMembers": "No eligible members found to invite.",
+  "errorManagerCannotApply": "❌ As a Manager, you cannot send applications to other teams.",
+  "errorApplicationPending": "❌ You already have a pending application.",
+  "errorNoRecruitingTeams": "There are no teams with open recruitment at the moment.",
+  "errorNotInTeamToLeave": "❌ You do not belong to a team as a player or captain to leave it.",
   "promptSelectLeagueStep1": "The first step is to select the league for your team:",
   "selectLeaguePlaceholder": "Select the league your team will compete in",
-  
   "registerModalTitle": "Register Team in {leagueName}",
   "vpgUsernameLabel": "Your VPG username",
   "teamNameLabel": "Your team's name",
   "teamAbbrLabel": "Abbreviation (3 letters)",
   "teamTwitterLabel": "Team Twitter (optional, without @)",
-
   "askForLogoTitle": "✅ Data saved. Do you want to add a logo to your team?",
   "askForLogoDescription": "This step is optional. You can upload a custom logo for your club or use a generic one provided by the community.",
   "addLogoYesButton": "Yes, add logo",
   "addLogoNoButton": "No, use default logo",
-  
   "finalLogoModalTitle": "Final Step: Add Logo",
   "logoUrlLabel": "URL of your logo image",
   "logoUrlPlaceholder": "https://i.imgur.com/logo.png",
-  
   "requestSentDefaultLogo": "✅ Perfect! Your request has been sent with a default logo. An administrator will review it.",
-  "requestSentCustomLogo": "✅ Perfect! Your request has been sent with your custom logo. An administrator will review it."
+  "requestSentCustomLogo": "✅ Perfect! Your request has been sent with your custom logo. An administrator will review it.",
+  "invitePlayerMenuHeader": "Select a player from the menu to send an invitation:",
+  "invitePlayerMenuPlaceholder": "Page {currentPage} of {totalPages} - Select a player",
+  "inviteSentSuccess": "✅ Invitation sent to **{playerName}**.",
+  "inviteSentFail": "❌ Could not send invitation to {playerName}. They may have DMs closed.",
+  "updateProfilePrompt": "Let's update your profile. Please start by selecting your primary position.",
+  "primaryPositionPlaceholder": "Step 1: Select your primary position",
+  "primaryPositionSaved": "✅ Primary position saved. Now, select your secondary position.",
+  "secondaryPositionPlaceholder": "Step 2: Select your secondary position",
+  "applyToTeamMenuHeader": "Select the team you want to apply to:",
+  "applicationSentSuccess": "✅ Your application to **{teamName}** has been sent.",
+  "applicationSentFailManagerDMsClosed": "❌ Could not send the application. The team's manager has DMs closed.",
+  "leaveTeamSuccess": "You have left the team **{teamName}**."
 }
