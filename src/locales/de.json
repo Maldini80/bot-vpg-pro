@@ -125,5 +125,16 @@
   "offerRequirementsField": "Aktuelle Anforderungen",
   "editReplaceOfferButton": "Angebot bearbeiten / ersetzen",
   "deleteOfferButton": "Angebot löschen",
-  "offerDeletedSuccess": "✅ Das Transferangebot wurde gelöscht."
+  "offerDeletedSuccess": "✅ Das Transferangebot wurde gelöscht.",
+  "welcomeTitle": "Willkommen in der VPG-Community, {userName}!",
+  "welcomeDescription": "Um vollständig teilnehmen zu können, musst du zuerst dein Spielerprofil ausfüllen.\n\n**Klicke auf die Schaltfläche unten, um die Registrierung zu starten.**",
+  "startRegistrationButton": "📝 Spielerregistrierung starten",
+  "managerGuideTitle": "👑 Herzlichen Glückwunsch, Manager! Dein Team \"{teamName}\" wurde genehmigt.",
+  "managerGuideDescription": "Willkommen in der Elite der Community! Hier ist eine detaillierte Anleitung zu deinen neuen Verantwortlichkeiten und Werkzeugen. Dein Hauptkontrollzentrum ist das Team-Management-Panel.",
+  "managerGuideStep1Title": "Schritt 1: Baue deinen Kader auf",
+  "managerGuideStep1Value": "Deine Priorität ist es, dein Team aufzubauen. Im Untermenü `Kader verwalten` kannst du:\n• **`Spieler einladen`**: Füge Mitglieder direkt zu deinem Kader hinzu.\n• **`Zum Kapitän befördern`**: Delegiere Verantwortlichkeiten an vertrauenswürdige Spieler, um bei der täglichen Verwaltung zu helfen.",
+  "managerGuideStep2Title": "Schritt 2: Halte dein Team aktiv",
+  "managerGuideStep2Value": "Aktivität ist der Schlüssel zum Erfolg. In den entsprechenden Untermenüs kannst du:\n• **`Freundschaftsspiele verwalten`**: Nutze `Suche planen`, um deine Verfügbarkeit anzukündigen, oder `Gegner suchen (Jetzt)` für ein sofortiges Spiel.\n• **`Transfers verwalten`**: Nutze `Angebot erstellen / bearbeiten`, um zu veröffentlichen, dass du Spieler suchst.",
+  "managerGuideStep3Title": "Schritt 3: Verwaltung und Tipps",
+  "managerGuideStep3Value": "• **`Teamdaten bearbeiten`**: Halte die Daten deines Teams aktuell.\n• **`Rekrutierung öffnen/schließen`**: Steuere, ob dein Team Bewerbungen annimmt.\n• **Du hast die volle Kontrolle**: Du bist letztendlich für dein Team verantwortlich."
 }
