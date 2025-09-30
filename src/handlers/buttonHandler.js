@@ -461,21 +461,26 @@ if (customId.startsWith('admin_continue_no_logo_')) {
         return interaction.editReply({ embeds: [subMenuEmbed], components: [subMenuRow] });
     }
 
-    if (customId === 'request_manager_role_button') {
+        if (customId === 'request_manager_role_button') {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const existingTeam = await Team.findOne({ $or: [{ managerId: user.id }, { captains: user.id }, { players: user.id }], guildId: guild.id });
-        if (existingTeam) return interaction.editReply({ content: `Ya perteneces al equipo **${existingTeam.name}**.` });
+        if (existingTeam) {
+            const errorMessage = t('errorAlreadyInTeam', member).replace('{teamName}', existingTeam.name);
+            return interaction.editReply({ content: errorMessage });
+        }
         
         const leagues = await League.find({ guildId: guild.id });
-        if(leagues.length === 0) return interaction.editReply({ content: 'No hay ligas configuradas por un administrador.' });
+        if(leagues.length === 0) {
+            return interaction.editReply({ content: t('errorNoLeaguesConfigured', member) });
+        }
         
         const leagueOptions = leagues.map(l => ({ label: l.name, value: l.name }));
         const selectMenu = new StringSelectMenuBuilder()
             .setCustomId('select_league_for_registration')
-            .setPlaceholder('Selecciona la liga en la que competirá tu equipo')
+            .setPlaceholder(t('selectLeaguePlaceholder', member))
             .addOptions(leagueOptions);
         
-        return interaction.editReply({ content: 'El primer paso es seleccionar la liga para tu equipo:', components: [new ActionRowBuilder().addComponents(selectMenu)]});
+        return interaction.editReply({ content: t('promptSelectLeagueStep1', member), components: [new ActionRowBuilder().addComponents(selectMenu)]});
     }
 
     if (customId.startsWith('ask_logo_yes_')) {
