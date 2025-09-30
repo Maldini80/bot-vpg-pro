@@ -12,6 +12,7 @@ const TeamChatChannel = require('./models/teamChatChannel.js');
 const Team = require('./models/team.js');
 const Ticket = require('./models/ticket.js'); // Nuevo modelo para tickets
 const TicketConfig = require('./models/ticketConfig.js'); // Nuevo modelo para configuración de tickets
+const t = require('./utils/translator.js');
 
 mongoose.connect(process.env.DATABASE_URL)
     .then(() => console.log('Conectado a MongoDB.'))
@@ -81,37 +82,37 @@ client.once(Events.ClientReady, () => {
 // == INICIO DE BIENVENIDA POR MENSAJE DIRECTO (MD) - CÓDIGO NUEVO ==
 // =================================================================
 client.on(Events.GuildMemberAdd, async member => {
-    if (member.user.bot) return;
-
-    // Comprobamos si ya tiene un rol de equipo (por si salió y volvió a entrar)
-    const hasTeamRole = member.roles.cache.some(role => [
-        process.env.PLAYER_ROLE_ID,
-        process.env.CAPTAIN_ROLE_ID,
-        process.env.MANAGER_ROLE_ID
-    ].includes(role.id));
-    if (hasTeamRole) return;
-
-    // Preparamos el mensaje y el botón de bienvenida.
-    const welcomeEmbed = new EmbedBuilder()
-        .setTitle(`¡Bienvenido a la comunidad VPG, ${member.displayName}!`)
-        .setDescription('Para poder participar plenamente, primero debes completar tu perfil de jugador.\n\n**Haz clic en el botón de abajo para empezar el registro.**')
-        .setColor('Green')
-        .setImage('https://i.imgur.com/Ode1MEI.jpeg'); // La imagen para nuevos miembros
-
-    const registerButton = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-            .setCustomId('start_player_registration')
-            .setLabel('📝 Iniciar Registro de Jugador')
-            .setStyle(ButtonStyle.Success)
-    );
-
-    // Intentamos enviar el MD. Si falla, lo registramos en la consola.
-    try {
-        await member.send({ embeds: [welcomeEmbed], components: [registerButton] });
-    } catch (error) {
-        console.log(`AVISO: No se pudo enviar el MD de bienvenida a ${member.user.tag}. Posiblemente los tiene desactivados.`);
-    }
-});
+     if (member.user.bot) return;
+ 
+     // Comprobamos si ya tiene un rol de equipo (por si salió y volvió a entrar)
+     const hasTeamRole = member.roles.cache.some(role => [
+         process.env.PLAYER_ROLE_ID,
+         process.env.CAPTAIN_ROLE_ID,
+         process.env.MANAGER_ROLE_ID
+     ].includes(role.id));
+     if (hasTeamRole) return;
+ 
+     // Usamos el traductor para construir el mensaje
+     const welcomeEmbed = new EmbedBuilder()
+         .setTitle(t('welcomeTitle', member).replace('{userName}', member.displayName))
+         .setDescription(t('welcomeDescription', member))
+         .setColor('Green')
+         .setImage('https://i.imgur.com/Ode1MEI.jpeg'); // La imagen para nuevos miembros
+ 
+     const registerButton = new ActionRowBuilder().addComponents(
+         new ButtonBuilder()
+             .setCustomId('start_player_registration')
+             .setLabel(t('startRegistrationButton', member))
+             .setStyle(ButtonStyle.Success)
+     );
+ 
+     // Intentamos enviar el MD. Si falla, lo registramos en la consola.
+     try {
+         await member.send({ embeds: [welcomeEmbed], components: [registerButton] });
+     } catch (error) {
+         console.log(`AVISO: No se pudo enviar el MD de bienvenida a ${member.user.tag}. Posiblemente los tiene desactivados.`);
+     }
+ });
 // =================================================================
 // == FIN DE BIENVENIDA POR MENSAJE DIRECTO (MD) ===================
 // =================================================================
