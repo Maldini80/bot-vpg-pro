@@ -34,5 +34,11 @@
   "manageOfferButton": "Gerenciar Oferta Existente",
 
     "errorAlreadyInTeam": "❌ Você já pertence à equipe **{teamName}**.",
-  "selectLeaguePlaceholder": "Selecione a liga em que sua equipe competirá"
+  "selectLeaguePlaceholder": "Selecione a liga em que sua equipe competirá",
+
+    "registerModalTitle": "Registrar Equipe em {leagueName}",
+  "vpgUsernameLabel": "Seu nome de usuário VPG",
+  "teamNameLabel": "Nome da sua equipe",
+  "teamAbbrLabel": "Abreviação (3 letras)",
+  "teamTwitterLabel": "Twitter da equipe (opcional, sem @)"
 }
