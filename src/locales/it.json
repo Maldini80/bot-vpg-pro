@@ -93,5 +93,18 @@
 
   "recruitmentStatusTitle": "✅ Reclutamento Aggiornato",
   "recruitmentStatusOpen": "Le candidature per unirsi a **{teamName}** sono ora **APERTE**.",
-  "recruitmentStatusClosed": "Le candidature per unirsi a **{teamName}** sono ora **CHIUSE**."
+  "recruitmentStatusClosed": "Le candidature per unirsi a **{teamName}** sono ora **CHIUSE**.",
+
+    "errorExistingScheduledPanel": "❌ Hai già un pannello di ricerca programmata attivo nel canale {channel}. Eliminalo prima di crearne uno nuovo.",
+  "friendlyStep1Header": "**Passo 1/2:** Se vuoi che solo squadre di determinati campionati possano sfidarti, selezionale dal menu. Altrimenti, premi continua direttamente.",
+  "leagueFilterPlaceholder": "Filtra per campionato (opzionale, per tutti)",
+  "continueButtonLabel": "Continua (Amichevole aperta a tutti)",
+  "leaguesSelectedConfirmation": "Hai selezionato i campionati: **{leagues}**. Premi continua.",
+  "leaguesSelectedNone": "Nessuno",
+  "continuePanelCreationButtonLabel": "Continua con la Creazione del Pannello",
+  "friendlyStep2Header": "**Passo 2/2:** Seleziona dal menu tutte le fasce orarie in cui la tua squadra cercherà un rivale.",
+  "timeSlotsPlaceholder": "Seleziona le fasce orarie in cui sei disponibile",
+  "errorScheduledChannelNotSet": "❌ Errore: Il canale delle amichevoli programmate non è configurato.",
+  "errorScheduledChannelNotFound": "❌ Errore: Il canale delle amichevoli programmate non è stato trovato.",
+  "scheduledPanelCreatedSuccess": "✅ Il tuo pannello di ricerca amichevoli è stato pubblicato in {channel}!"
 }
