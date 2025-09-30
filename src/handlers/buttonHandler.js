@@ -441,10 +441,23 @@ if (customId.startsWith('admin_continue_no_logo_')) {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const team = await Team.findOne({ guildId: interaction.guildId, managerId: interaction.user.id });
         if (team) {
-            return interaction.editReply({ content: '❌ Ya eres mánager de un equipo, no puedes registrar otro.' });
+            // Ahora también traducimos el mensaje de error
+            return interaction.editReply({ content: t('errorAlreadyManager', member) });
         }
-        const subMenuEmbed = new EmbedBuilder().setTitle('👑 Acciones de Mánager').setDescription('Aquí tienes las acciones disponibles para la gestión de equipos.').setColor('Green');
-        const subMenuRow = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('request_manager_role_button').setLabel('📝 Registrar mi Equipo').setStyle(ButtonStyle.Success));
+        
+        // Usamos la función 't' para obtener los textos en el idioma del usuario
+        const subMenuEmbed = new EmbedBuilder()
+            .setTitle(t('managerActionsTitle', member))
+            .setDescription(t('managerActionsDescription', member))
+            .setColor('Green');
+            
+        const subMenuRow = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId('request_manager_role_button')
+                .setLabel(t('registerTeamButton', member))
+                .setStyle(ButtonStyle.Success)
+        );
+        
         return interaction.editReply({ embeds: [subMenuEmbed], components: [subMenuRow] });
     }
 
