@@ -1024,15 +1024,16 @@ if (customId.startsWith('admin_continue_no_logo_')) {
     
     // --- Lógica para el Panel de Amistosos ---
 
-    if (customId === 'post_scheduled_panel') {
+            if (customId === 'post_scheduled_panel') {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
-        if (!team) return interaction.editReply({ content: 'No se encontró tu equipo.' });
+        if (!team) return interaction.editReply({ content: t('errorTeamNotFound', member) });
 
         const existingPanel = await AvailabilityPanel.findOne({ teamId: team._id, panelType: 'SCHEDULED' });
         if (existingPanel) {
             const channel = guild.channels.cache.get(existingPanel.channelId);
-            return interaction.editReply({ content: `❌ Ya tienes un panel de búsqueda programada activo en el canal ${channel || 'desconocido'}. Bórralo antes de crear uno nuevo.` });
+            const errorMessage = t('errorExistingScheduledPanel', member).replace('{channel}', channel || 'un canal');
+            return interaction.editReply({ content: errorMessage });
         }
         
         const leagues = await League.find({ guildId: guild.id }).lean();
@@ -1040,14 +1041,14 @@ if (customId.startsWith('admin_continue_no_logo_')) {
 
         const leaguesMenu = new StringSelectMenuBuilder()
             .setCustomId('select_league_filter_SCHEDULED')
-            .setPlaceholder('Filtrar por liga (opcional, deja en blanco para todos)')
+            .setPlaceholder(t('leagueFilterPlaceholder', member))
             .addOptions(leagueOptions)
             .setMinValues(0)
             .setMaxValues(leagueOptions.length > 0 ? leagueOptions.length : 1);
 
         const continueButton = new ButtonBuilder()
             .setCustomId('continue_panel_creation_SCHEDULED_all')
-            .setLabel('Continuar (Amistoso Abierto a Todos)')
+            .setLabel(t('continueButtonLabel', member))
             .setStyle(ButtonStyle.Primary);
         
         const components = [new ActionRowBuilder().addComponents(continueButton)];
@@ -1055,11 +1056,10 @@ if (customId.startsWith('admin_continue_no_logo_')) {
             components.unshift(new ActionRowBuilder().addComponents(leaguesMenu));
         }
 
-        await interaction.editReply({ content: '**Paso 1/2:** Si quieres que solo equipos de ciertas ligas puedan desafiarte, selecciónalas en el menú. Si no, pulsa continuar directamente.', components });
+        await interaction.editReply({ content: t('friendlyStep1Header', member), components });
         return;
     }
-
-    if (customId.startsWith('continue_panel_creation_')) {
+        if (customId.startsWith('continue_panel_creation_')) {
         const panelType = customId.split('_')[3];
         const leaguesString = customId.split('_').slice(4).join('_');
         
@@ -1069,13 +1069,13 @@ if (customId.startsWith('admin_continue_no_logo_')) {
 
             const timeMenu = new StringSelectMenuBuilder()
                 .setCustomId(`select_available_times_${leaguesString}`)
-                .setPlaceholder('Selecciona los horarios en los que estás disponible')
+                .setPlaceholder(t('timeSlotsPlaceholder', member))
                 .addOptions(timeOptions)
                 .setMinValues(1)
                 .setMaxValues(timeSlots.length);
             
             await interaction.update({
-                content: '**Paso 2/2:** Selecciona del menú todos los horarios en los que tu equipo buscará rival.',
+                content: t('friendlyStep2Header', member),
                 components: [new ActionRowBuilder().addComponents(timeMenu)]
             });
         }
