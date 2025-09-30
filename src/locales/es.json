@@ -24,6 +24,7 @@
   "marketSubmenuDescription": "Publica o gestiona la oferta de fichajes de tu equipo.",
   "createEditOfferButton": "Crear / Editar Oferta",
   "manageOfferButton": "Gestionar Oferta Existente",
+
   "errorAlreadyManager": "❌ Ya eres mánager de un equipo, no puedes registrar otro.",
   "errorNoLeaguesConfigured": "❌ No hay ligas configuradas por un administrador.",
   "errorAlreadyInTeam": "❌ Ya perteneces al equipo **{teamName}**.",
@@ -36,6 +37,10 @@
   "errorNotInTeamToLeave": "❌ No perteneces a un equipo como jugador o capitán para poder abandonarlo.",
   "errorTeamNotFound": "❌ No se ha encontrado tu equipo.",
   "errorNoMembersToManage": "No hay miembros en tu plantilla que puedas gestionar.",
+  "errorNotInAnyTeam": "❌ No perteneces a ningún equipo.",
+  "errorTeamHasNoMembers": "Este equipo no tiene miembros.",
+  "errorOnlyManagersToggleRecruitment": "❌ Solo los mánagers pueden cambiar el estado de reclutamiento.",
+
   "promptSelectLeagueStep1": "El primer paso es seleccionar la liga para tu equipo:",
   "selectLeaguePlaceholder": "Selecciona la liga en la que competirá tu equipo",
   "registerModalTitle": "Registrar Equipo en {leagueName}",
@@ -66,14 +71,27 @@
   "leaveTeamSuccess": "Has abandonado el equipo **{teamName}**.",
   "manageRosterHeader": "Selecciona un miembro de tu equipo:",
   "manageRosterMenuPlaceholder": "Selecciona un miembro para gestionar",
+  
   "actionsForPlayer": "Acciones para **{playerName}**:",
   "demoteToPlayerButton": "Degradar a Jugador",
   "promoteToCaptainButton": "Ascender a Capitán",
   "kickFromTeamButton": "Expulsar del Equipo",
   "toggleChatMuteButton": "Mutear/Desmutear Chat",
+  
   "playerKicked": "✅ **{playerName}** ha sido expulsado.",
   "playerPromoted": "✅ **{playerName}** ascendido a Capitán.",
   "playerDemoted": "✅ **{playerName}** degradado a Jugador.",
   "playerMuted": "🔇 **{playerName}** muteado.",
-  "playerUnmuted": "✅ **{playerName}** desmuteado."
+  "playerUnmuted": "✅ **{playerName}** desmuteado.",
+
+  "rosterEmbedTitle": "Plantilla de {teamName}",
+  "rosterManager": "👑 Mánager",
+  "rosterCaptains": "🛡️ Capitanes",
+  "rosterPlayers": "Jugadores",
+  "rosterLeague": "Liga: {leagueName}",
+  "rosterNoMembers": "Este equipo no tiene miembros.",
+
+  "recruitmentStatusTitle": "✅ Reclutamiento Actualizado",
+  "recruitmentStatusOpen": "Las solicitudes para unirse a **{teamName}** ahora están **ABIERTAS**.",
+  "recruitmentStatusClosed": "Las solicitudes para unirse a **{teamName}** ahora están **CERRADAS**."
 }
