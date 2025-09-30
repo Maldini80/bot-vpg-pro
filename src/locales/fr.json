@@ -106,5 +106,12 @@
   "timeSlotsPlaceholder": "Sélectionnez les créneaux où vous êtes disponible",
   "errorScheduledChannelNotSet": "❌ Erreur : Le canal des matchs amicaux planifiés n'est pas configuré.",
   "errorScheduledChannelNotFound": "❌ Erreur : Le canal des matchs amicaux planifiés n'a pas été trouvé.",
-  "scheduledPanelCreatedSuccess": "✅ Votre panneau de recherche de match amical a été publié dans {channel} !"
+  "scheduledPanelCreatedSuccess": "✅ Votre panneau de recherche de match amical a été publié dans {channel} !",
+
+    "errorExistingInstantPanel": "❌ Vous avez déjà un panneau de recherche instantanée actif dans {channel}.",
+  "errorInstantChannelNotSet": "❌ Erreur : Canal des matchs amicaux instantanés non configuré.",
+  "errorInstantChannelNotFound": "❌ Erreur : Le canal des matchs amicaux instantanés n'a pas été trouvé.",
+  "instantPanelCreatedSuccess": "✅ Votre panneau de recherche instantanée a été publié dans {channel} !",
+  "errorNoPanelsToDelete": "Vous n'avez aucun panneau de recherche actif à supprimer.",
+  "panelsDeletedSuccess": "✅ {count} panneau(x) de recherche d'amicaux ont été supprimés avec succès."
 }
