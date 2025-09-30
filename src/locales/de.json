@@ -115,11 +115,7 @@
   "errorNoPanelsToDelete": "Du hast keine aktiven Suchpanels zum Löschen.",
   "panelsDeletedSuccess": "✅ {count} Freundschaftsspiel-Suchpanel(s) wurden erfolgreich gelöscht.",
 
-    "confirmedMatchesTitle": "🗓️ Bestätigte Freundschaftsspiele für {teamName}",
+      "confirmedMatchesTitle": "🗓️ Bestätigte Freundschaftsspiele für {teamName}",
   "noConfirmedMatches": "Du hast keine geplanten Spiele.",
-  "matchInfoLine": "**🕕 {time}** vs **{opponentName}**\n> Kontakt: <@{managerId}>\n\n",
-
-    "confirmedMatchesTitle": "🗓️ {teamName} Onaylanmış Dostluk Maçları",
-  "noConfirmedMatches": "Zamanlanmış maçınız yok.",
-  "matchInfoLine": "**🕕 {time}** vs **{opponentName}**\n> İletişim: <@{managerId}>\n\n"
+  "matchInfoLine": "**🕕 {time}** vs **{opponentName}**\n> Kontakt: <@{managerId}>\n\n"
 }
