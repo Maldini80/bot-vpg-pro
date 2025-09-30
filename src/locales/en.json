@@ -106,5 +106,12 @@
   "timeSlotsPlaceholder": "Select the time slots you are available",
   "errorScheduledChannelNotSet": "❌ Error: The scheduled friendlies channel is not configured.",
   "errorScheduledChannelNotFound": "❌ Error: The scheduled friendlies channel was not found.",
-  "scheduledPanelCreatedSuccess": "✅ Your friendly match search panel has been published in {channel}!"
+  "scheduledPanelCreatedSuccess": "✅ Your friendly match search panel has been published in {channel}!",
+
+    "errorExistingInstantPanel": "❌ You already have an active instant search panel in {channel}.",
+  "errorInstantChannelNotSet": "❌ Error: Instant friendlies channel not configured.",
+  "errorInstantChannelNotFound": "❌ Error: The instant friendlies channel was not found.",
+  "instantPanelCreatedSuccess": "✅ Your instant search panel has been published in {channel}!",
+  "errorNoPanelsToDelete": "You don't have any active search panels to delete.",
+  "panelsDeletedSuccess": "✅ {count} friendly search panel(s) have been successfully deleted."
 }
