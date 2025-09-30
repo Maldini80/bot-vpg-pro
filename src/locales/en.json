@@ -31,7 +31,7 @@
   "marketSubmenuTitle": "SUBMENU: TRANSFER MANAGEMENT",
   "marketSubmenuDescription": "Post or manage your team's transfer offer.",
   "createEditOfferButton": "Create / Edit Offer",
-  "manageOfferButton": "Manage Existing Offer"
+  "manageOfferButton": "Manage Existing Offer",
 
   "errorAlreadyInTeam": "❌ You already belong to the team **{teamName}**.",
   "selectLeaguePlaceholder": "Select the league your team will compete in"
