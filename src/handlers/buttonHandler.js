@@ -1360,22 +1360,22 @@ if (customId.startsWith('admin_continue_no_logo_')) {
         return;
     }
 
-    if (customId === 'apply_to_team_button') {
+        if (customId === 'apply_to_team_button') {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const isManager = await Team.findOne({ guildId: guild.id, managerId: user.id });
         if (isManager) {
-            return interaction.editReply({ content: '❌ Como Mánager de un equipo, no puedes enviar solicitudes de unión a otros equipos.' });
+            return interaction.editReply({ content: t('errorManagerCannotApply', member) });
         }
         const existingApplication = await PlayerApplication.findOne({ userId: user.id, status: 'pending' });
         if (existingApplication) {
-            return interaction.editReply({ content: 'Ya tienes una solicitud de aplicación pendiente.' });
+            return interaction.editReply({ content: t('errorApplicationPending', member) });
         }
         
         const openTeams = await Team.find({ guildId: guild.id, recruitmentOpen: true }).sort({ name: 1 }).lean();
         if (openTeams.length === 0) {
-            return interaction.editReply({ content: 'No hay equipos con reclutamiento abierto en este momento.' });
+            return interaction.editReply({ content: t('errorNoRecruitingTeams', member) });
         }
-        await sendPaginatedTeamMenu(interaction, openTeams, 'apply_to_team_select', 'apply', 0, 'Selecciona el equipo al que quieres aplicar:');
+        await sendPaginatedTeamMenu(interaction, openTeams, 'apply_to_team_select', 'apply', 0, t('applyToTeamMenuHeader', member));
         return;
     }
 
