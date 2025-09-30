@@ -9,10 +9,6 @@
   "managerActionsDescription": "Voici les actions disponibles pour la gestion d'équipe.",
   "registerTeamButton": "📝 Enregistrer mon Équipe",
 
-  "errorAlreadyManager": "❌ Vous êtes déjà manager d'une équipe, vous ne pouvez pas en enregistrer une autre.",
-  "errorNoLeaguesConfigured": "Aucune ligue n'est configurée par un administrateur.",
-  "promptSelectLeagueStep1": "La première étape consiste à sélectionner la ligue pour votre équipe:",
-
   "rosterSubmenuTitle": "SOUS-MENU: GESTION DE L'EFFECTIF",
   "rosterSubmenuDescription": "Utilisez les boutons pour gérer les membres et les données de votre équipe.",
   "invitePlayerButton": "Inviter un Joueur",
@@ -33,12 +29,29 @@
   "createEditOfferButton": "Créer / Modifier l'Offre",
   "manageOfferButton": "Gérer l'Offre Existante",
 
-    "errorAlreadyInTeam": "❌ Vous appartenez déjà à l'équipe **{teamName}**.",
-  "selectLeaguePlaceholder": "Sélectionnez la ligue dans laquelle votre équipe concourra",
+  "errorAlreadyManager": "❌ Vous êtes déjà manager d'une équipe, vous ne pouvez pas en enregistrer une autre.",
+  "errorNoLeaguesConfigured": "❌ Aucune ligue n'est configurée par un administrateur.",
+  "errorAlreadyInTeam": "❌ Vous appartenez déjà à l'équipe **{teamName}**.",
+  "errorMustBeManagerOrCaptain": "❌ Vous devez être Manager ou Capitaine pour utiliser ces menus.",
 
+  "promptSelectLeagueStep1": "La première étape consiste à sélectionner la ligue pour votre équipe:",
+  "selectLeaguePlaceholder": "Sélectionnez la ligue dans laquelle votre équipe concourra",
+  
   "registerModalTitle": "Enregistrer l'Équipe dans {leagueName}",
   "vpgUsernameLabel": "Votre nom d'utilisateur VPG",
   "teamNameLabel": "Nom de votre équipe",
   "teamAbbrLabel": "Abréviation (3 lettres)",
-  "teamTwitterLabel": "Twitter de l'équipe (optionnel, sans @)"
+  "teamTwitterLabel": "Twitter de l'équipe (optionnel, sans @)",
+
+  "askForLogoTitle": "✅ Données enregistrées. Voulez-vous ajouter un logo à votre équipe ?",
+  "askForLogoDescription": "Cette étape est facultative. Vous pouvez télécharger un logo personnalisé pour votre club ou en utiliser un générique fourni par la communauté.",
+  "addLogoYesButton": "Oui, ajouter un logo",
+  "addLogoNoButton": "Non, utiliser le logo par défaut",
+  
+  "finalLogoModalTitle": "Étape Finale : Ajouter un Logo",
+  "logoUrlLabel": "URL de l'image de votre logo",
+  "logoUrlPlaceholder": "https://i.imgur.com/logo.png",
+  
+  "requestSentDefaultLogo": "✅ Parfait ! Votre demande a été envoyée avec un logo par défaut. Un administrateur l'examinera.",
+  "requestSentCustomLogo": "✅ Parfait ! Votre demande a été envoyée avec votre logo personnalisé. Un administrateur l'examinera."
 }
