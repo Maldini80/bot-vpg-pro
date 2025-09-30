@@ -125,5 +125,16 @@
   "offerRequirementsField": "Mevcut Gereksinimler",
   "editReplaceOfferButton": "Teklifi Düzenle / Değiştir",
   "deleteOfferButton": "Teklifi Sil",
-  "offerDeletedSuccess": "✅ Transfer teklifi silindi."
+  "offerDeletedSuccess": "✅ Transfer teklifi silindi.",
+  "welcomeTitle": "VPG topluluğuna hoş geldin, {userName}!",
+  "welcomeDescription": "Tam olarak katılabilmek için önce oyuncu profilini tamamlaman gerekir.\n\n**Kayda başlamak için aşağıdaki düğmeye tıkla.**",
+  "startRegistrationButton": "📝 Oyuncu Kaydını Başlat",
+  "managerGuideTitle": "👑 Tebrikler, Menajer! \"{teamName}\" adlı takımın onaylandı.",
+  "managerGuideDescription": "Topluluğun elitlerine hoş geldin! İşte yeni sorumlulukların ve araçların hakkında detaylı bir rehber. Ana komuta merkezin takım yönetimi panelidir.",
+  "managerGuideStep1Title": "Adım 1: Kadronu Oluştur",
+  "managerGuideStep1Value": "Önceliğin takımını oluşturmak. `Kadro Yönetimi` alt menüsünden şunları yapabilirsin:\n• **`Oyuncu Davet Et`**: Üyeleri doğrudan kadrona ekle.\n• **`Kaptana Yükselt`**: Günlük yönetimde yardımcı olmaları için güvendiğin oyunculara sorumluluklar devret.",
+  "managerGuideStep2Title": "Adım 2: Takımını Aktif Tut",
+  "managerGuideStep2Value": "Aktivite başarının anahtarıdır. İlgili alt menülerden şunları yapabilirsin:\n• **`Dostluk Maçlarını Yönet`**: Müsaitliğini duyurmak için `Arama Planla`yı veya anında bir maç için `Rakip Bul (Şimdi)`yi kullan.\n• **`Transferleri Yönet`**: Oyuncu aradığını duyurmak için `Teklif Oluştur / Düzenle`yi kullan.",
+  "managerGuideStep3Title": "Adım 3: Yönetim ve İpuçları",
+  "managerGuideStep3Value": "• **`Takım Verilerini Düzenle`**: Takımının verilerini güncel tut.\n• **`Alımı Aç/Kapat`**: Takımının başvuruları kabul edip etmediğini kontrol et.\n• **Tam kontrole sahipsin**: Takımından nihai olarak sen sorumlusun."
 }
