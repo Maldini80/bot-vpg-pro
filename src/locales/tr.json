@@ -145,5 +145,17 @@
   "challengeRejectedNotification": "**{hostTeamName}** takımına **{time}** için yaptığın meydan okuma **REDDEDİLDİ**.",
   "challengeLostNotification": "Üzgünüm, **{hostTeamName}** takımına **{time}** için yaptığın meydan okuma kabul edilemedi. Ev sahibi başka bir rakip seçti.",
   "hostAcceptedConfirmation": "✅ **{challengerTeamName}** takımından gelen meydan okumayı kabul ettin. Tüm takımlar bilgilendirildi.",
-  "hostRejectedConfirmation": "❌ Meydan okumayı reddettin."
+  "hostRejectedConfirmation": "❌ Meydan okumayı reddettin.",
+  "captainGuideTitle": "🛡️ Tebrikler! \"{teamName}\" takımının Kaptanı oldun.",
+  "captainGuideDescription": "Menajer sana sağ kolu olman için güveniyor. Yönetime yardımcı olmak için takım panelinde yeni araçlara erişim kazandın.",
+  "captainGuideResponsibilitiesTitle": "✅ Yeni Sorumlulukların",
+  "captainGuideResponsibilitiesValue": "• **Dostluk Maçlarını Yönet**: Takımı formda tutmak için kilit rol oynarsın.\n• **Transferleri Yönet**: Teklifler oluşturarak yeni yetenekler bulmaya yardım et.\n• **Üyeleri Yönet**: Düzeni sağla. Oyuncuları atabilir (diğer kaptanlar hariç) ve susturma işlevini kullanabilirsin.",
+  "captainGuideLimitsTitle": "❌ Rolünün Sınırları",
+  "captainGuideLimitsValue": "Takım verilerini düzenleyemez, oyuncu davet edemez veya üyeleri terfi/tenzil edemezsin.",
+  "applicationAcceptedNotification": "Tebrikler! **{teamName}** takımına katılma başvurunuz **kabul edildi**.",
+  "applicationRejectedNotification": "Üzgünüm, **{teamName}** takımına katılma başvurunuz **reddedildi**.",
+  "managerAcceptedPlayer": "**{playerName}** adlı oyuncuyu takımına kabul ettin.",
+  "managerRejectedPlayer": "**{playerName}** adlı oyuncunun başvurusunu reddettin.",
+  "playerJoinedNotification": "✅ **{playerName}** adlı oyuncu davetini kabul etti ve **{teamName}** takımına katıldı!",
+  "playerRejectedNotification": "❌ **{playerName}** adlı oyuncu **{teamName}** takımına katılma davetini reddetti."
 }
