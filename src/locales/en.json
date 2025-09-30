@@ -93,5 +93,18 @@
 
   "recruitmentStatusTitle": "✅ Recruitment Updated",
   "recruitmentStatusOpen": "Applications to join **{teamName}** are now **OPEN**.",
-  "recruitmentStatusClosed": "Applications to join **{teamName}** are now **CLOSED**."
+  "recruitmentStatusClosed": "Applications to join **{teamName}** are now **CLOSED**.",
+
+    "errorExistingScheduledPanel": "❌ You already have an active scheduled search panel in the {channel} channel. Delete it before creating a new one.",
+  "friendlyStep1Header": "**Step 1/2:** If you want only teams from certain leagues to challenge you, select them from the menu. Otherwise, press continue directly.",
+  "leagueFilterPlaceholder": "Filter by league (optional, for all)",
+  "continueButtonLabel": "Continue (Friendly Open to All)",
+  "leaguesSelectedConfirmation": "You have selected the leagues: **{leagues}**. Press continue.",
+  "leaguesSelectedNone": "None",
+  "continuePanelCreationButtonLabel": "Continue with Panel Creation",
+  "friendlyStep2Header": "**Step 2/2:** Select from the menu all the time slots when your team will be looking for a rival.",
+  "timeSlotsPlaceholder": "Select the time slots you are available",
+  "errorScheduledChannelNotSet": "❌ Error: The scheduled friendlies channel is not configured.",
+  "errorScheduledChannelNotFound": "❌ Error: The scheduled friendlies channel was not found.",
+  "scheduledPanelCreatedSuccess": "✅ Your friendly match search panel has been published in {channel}!"
 }
