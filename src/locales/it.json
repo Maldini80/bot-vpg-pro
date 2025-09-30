@@ -167,5 +167,13 @@
   "applyToTeamModalTitle": "Candidati per una Squadra",
   "applicationPresentationLabel": "Scrivi una breve presentazione",
   "registrationStep2": "**Passo 2 di 2:** Quasi finito! Ora seleziona le tue posizioni in campo.",
-  "noSecondaryPosition": "Nessuna"
+  "noSecondaryPosition": "Nessuna",
+
+  "pos_GK": "GK",
+  "pos_CB": "CB",
+  "pos_WB": "WB",
+  "pos_CDM": "CDM",
+  "pos_CM": "CM",
+  "pos_CAM": "CAM",
+  "pos_ST": "ST"
 }
