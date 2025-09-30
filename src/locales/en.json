@@ -145,5 +145,17 @@
   "challengeRejectedNotification": "Your challenge against **{hostTeamName}** for **{time}** has been **REJECTED**.",
   "challengeLostNotification": "Sorry, your challenge against **{hostTeamName}** for **{time}** could not be accepted. The host has chosen another opponent.",
   "hostAcceptedConfirmation": "✅ You have accepted the challenge from **{challengerTeamName}**. All teams have been notified.",
-  "hostRejectedConfirmation": "❌ You have rejected the challenge."
+  "hostRejectedConfirmation": "❌ You have rejected the challenge.",
+  "captainGuideTitle": "🛡️ Congratulations! You have been promoted to Captain of \"{teamName}\".",
+  "captainGuideDescription": "The Manager trusts you to be their right hand. You have gained access to new tools in the team panel to assist with management.",
+  "captainGuideResponsibilitiesTitle": "✅ Your New Responsibilities",
+  "captainGuideResponsibilitiesValue": "• **Manage Friendlies**: You are key to keeping the team in shape.\n• **Manage Transfers**: Help find new talent by creating offers.\n• **Manage Members**: Maintain order. You can kick players (except other captains) and use the mute function.",
+  "captainGuideLimitsTitle": "❌ Your Role's Limits",
+  "captainGuideLimitsValue": "You cannot edit team data, invite players, or promote/demote members.",
+  "applicationAcceptedNotification": "Congratulations! Your application to join **{teamName}** has been **accepted**.",
+  "applicationRejectedNotification": "Sorry, your application to join **{teamName}** has been **rejected**.",
+  "managerAcceptedPlayer": "You have accepted **{playerName}** into your team.",
+  "managerRejectedPlayer": "You have rejected the application from **{playerName}**.",
+  "playerJoinedNotification": "✅ The player **{playerName}** has accepted your invitation and joined **{teamName}**!",
+  "playerRejectedNotification": "❌ The player **{playerName}** has rejected your invitation to join **{teamName}**."
 }
