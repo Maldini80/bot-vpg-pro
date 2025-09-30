@@ -3,5 +3,33 @@
   "playerActionsDescription": "Gestisci il tuo profilo e la tua appartenenza alla squadra.",
   "editProfileButton": "✏️ Aggiorna Profilo",
   "applyToTeamButton": "✉️ Unisciti a una Squadra",
-  "leaveTeamButton": "🚪 Abbandona Squadra"
+  "leaveTeamButton": "🚪 Abbandona Squadra",
+
+  "managerActionsTitle": "👑 Azioni Manager",
+  "managerActionsDescription": "Ecco le azioni disponibili per la gestione della squadra.",
+  "registerTeamButton": "📝 Registra la mia Squadra",
+
+  "errorAlreadyManager": "❌ Sei già manager di una squadra, non puoi registrarne un'altra.",
+  "errorNoLeaguesConfigured": "Nessun campionato configurato da un amministratore.",
+  "promptSelectLeagueStep1": "Il primo passo è selezionare il campionato per la tua squadra:",
+
+  "rosterSubmenuTitle": "SOTTOMENÙ: GESTIONE ROSA",
+  "rosterSubmenuDescription": "Usa i pulsanti per gestire i membri e i dati della tua squadra.",
+  "invitePlayerButton": "Invita Giocatore",
+  "manageMembersButton": "Gestisci Membri",
+  "viewRosterButton": "Visualizza Rosa",
+  "toggleRecruitmentButton": "Apri/Chiudi Reclutamento",
+  "editTeamDataButton": "Modifica Dati Squadra",
+
+  "friendliesSubmenuTitle": "SOTTOMENÙ: GESTIONE AMICHEVOLI",
+  "friendliesSubmenuDescription": "Organizza partite, trova avversari e controlla le tue amichevoli confermate.",
+  "scheduleSearchButton": "Programma Ricerca",
+  "findRivalNowButton": "Trova Rivale (Ora)",
+  "deleteSearchButton": "Elimina Ricerca",
+  "viewMatchesButton": "Visualizza Partite",
+
+  "marketSubmenuTitle": "SOTTOMENÙ: GESTIONE MERCATO",
+  "marketSubmenuDescription": "Pubblica o gestisci l'offerta di trasferimento della tua squadra.",
+  "createEditOfferButton": "Crea / Modifica Offerta",
+  "manageOfferButton": "Gestisci Offerta Esistente"
 }
