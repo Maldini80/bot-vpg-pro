@@ -487,13 +487,13 @@ if (customId.startsWith('admin_continue_no_logo_')) {
         const pendingTeamId = customId.split('_')[3];
         const modal = new ModalBuilder()
             .setCustomId(`final_logo_submit_${pendingTeamId}`)
-            .setTitle('Paso Final: Añadir Logo');
+            .setTitle(t('finalLogoModalTitle', member)); // Traducido
         const teamLogoUrlInput = new TextInputBuilder()
             .setCustomId('teamLogoUrlInput')
-            .setLabel("URL de la imagen de tu logo")
+            .setLabel(t('logoUrlLabel', member)) // Traducido
             .setStyle(TextInputStyle.Short)
             .setRequired(true)
-            .setPlaceholder('https://i.imgur.com/logo.png');
+            .setPlaceholder(t('logoUrlPlaceholder', member)); // Traducido
         modal.addComponents(new ActionRowBuilder().addComponents(teamLogoUrlInput));
         return interaction.showModal(modal);
     }
@@ -504,14 +504,16 @@ if (customId.startsWith('admin_continue_no_logo_')) {
 
         const pendingTeam = await PendingTeam.findById(pendingTeamId);
         if (!pendingTeam || pendingTeam.userId !== user.id) {
+            // Este es un mensaje de error interno, lo traduciremos más adelante si es necesario
             return interaction.editReply({ content: 'Esta solicitud ha expirado o no es tuya.', components: [] });
         }
 
-        const defaultLogo = 'https://i.imgur.com/X2YIZh4.png';
+        const defaultLogo = 'https://i.imgur.com/V4J2Fcf.png';
         await sendApprovalRequest(interaction, client, { ...pendingTeam.toObject(), logoUrl: defaultLogo });
         await PendingTeam.findByIdAndDelete(pendingTeamId);
 
-        return interaction.editReply({ content: '✅ ¡Perfecto! Tu solicitud ha sido enviada con un logo por defecto. Un administrador la revisará.', components: [] });
+        // Mensaje de confirmación traducido
+        return interaction.editReply({ content: t('requestSentDefaultLogo', member), components: [] });
     }
     
     // ===========================================================================
