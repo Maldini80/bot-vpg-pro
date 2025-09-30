@@ -65,5 +65,15 @@
   "applicationSentFailManagerDMsClosed": "❌ Impossible d'envoyer la candidature. Les MP du manager de l'équipe sont fermés.",
   "leaveTeamSuccess": "Vous avez quitté l'équipe **{teamName}**.",
   "manageRosterHeader": "Sélectionnez un membre de votre équipe :",
-  "manageRosterMenuPlaceholder": "Sélectionnez un membre à gérer"
+  "manageRosterMenuPlaceholder": "Sélectionnez un membre à gérer",
+  "actionsForPlayer": "Actions pour **{playerName}**:",
+  "demoteToPlayerButton": "Rétrograder en Joueur",
+  "promoteToCaptainButton": "Promouvoir en Capitaine",
+  "kickFromTeamButton": "Expulser de l'Équipe",
+  "toggleChatMuteButton": "Mute/Unmute Chat",
+  "playerKicked": "✅ **{playerName}** a été expulsé.",
+  "playerPromoted": "✅ **{playerName}** promu Capitaine.",
+  "playerDemoted": "✅ **{playerName}** rétrogradé en Joueur.",
+  "playerMuted": "🔇 **{playerName}** a été rendu muet.",
+  "playerUnmuted": "✅ Le son de **{playerName}** a été réactivé."
 }
