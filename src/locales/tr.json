@@ -4,11 +4,9 @@
   "editProfileButton": "✏️ Profili Güncelle",
   "applyToTeamButton": "✉️ Takıma Katıl",
   "leaveTeamButton": "🚪 Takımdan Ayrıl",
-
   "managerActionsTitle": "👑 Menajer Eylemleri",
   "managerActionsDescription": "Takım yönetimi için mevcut eylemler burada.",
   "registerTeamButton": "📝 Takımımı Kaydet",
-
   "rosterSubmenuTitle": "ALT MENÜ: KADRO YÖNETİMİ",
   "rosterSubmenuDescription": "Takımınızın üyelerini ve verilerini yönetmek için düğmeleri kullanın.",
   "invitePlayerButton": "Oyuncu Davet Et",
@@ -16,42 +14,52 @@
   "viewRosterButton": "Kadro Görüntüle",
   "toggleRecruitmentButton": "Alımı Aç/Kapat",
   "editTeamDataButton": "Takım Verilerini Düzenle",
-
   "friendliesSubmenuTitle": "ALT MENÜ: DOSTLUK MAÇI YÖNETİMİ",
   "friendliesSubmenuDescription": "Maçlar düzenleyin, rakip bulun ve onaylanmış dostluk maçlarınızı kontrol edin.",
   "scheduleSearchButton": "Arama Planla",
   "findRivalNowButton": "Rakip Bul (Şimdi)",
   "deleteSearchButton": "Aramayı Sil",
   "viewMatchesButton": "Maçları Görüntüle",
-
   "marketSubmenuTitle": "ALT MENÜ: TRANSFER YÖNETİMİ",
   "marketSubmenuDescription": "Takımınızın transfer teklifini yayınlayın veya yönetin.",
   "createEditOfferButton": "Teklif Oluştur / Düzenle",
   "manageOfferButton": "Mevcut Teklifi Yönet",
-
   "errorAlreadyManager": "❌ Zaten bir takımın menajerisin, başka bir tane kaydedemezsin.",
   "errorNoLeaguesConfigured": "❌ Bir yönetici tarafından yapılandırılmış lig yok.",
   "errorAlreadyInTeam": "❌ Zaten **{teamName}** takımına aitsin.",
   "errorMustBeManagerOrCaptain": "❌ Bu menüleri kullanmak için Menajer veya Kaptan olmalısınız.",
-
+  "errorOnlyManagersCanInvite": "❌ Sadece menajerler oyuncu davet edebilir.",
+  "errorNoEligibleMembers": "Davet edilecek uygun üye bulunamadı.",
+  "errorManagerCannotApply": "❌ Menajer olarak, diğer takımlara başvuru gönderemezsiniz.",
+  "errorApplicationPending": "❌ Zaten beklemede bir başvurunuz var.",
+  "errorNoRecruitingTeams": "Şu anda alım yapan takım yok.",
+  "errorNotInTeamToLeave": "❌ Ayrılmak için bir takımda oyuncu veya kaptan olarak bulunmuyorsunuz.",
   "promptSelectLeagueStep1": "İlk adım, takımınız için lig seçmektir:",
   "selectLeaguePlaceholder": "Takımınızın yarışacağı ligi seçin",
-  
   "registerModalTitle": "{leagueName} Ligi'ne Takım Kaydet",
   "vpgUsernameLabel": "VPG kullanıcı adınız",
   "teamNameLabel": "Takımınızın adı",
   "teamAbbrLabel": "Kısaltma (3 harf)",
   "teamTwitterLabel": "Takım Twitter'ı (isteğe bağlı, @ olmadan)",
-
   "askForLogoTitle": "✅ Veriler kaydedildi. Takımınıza bir logo eklemek ister misiniz?",
   "askForLogoDescription": "Bu adım isteğe bağlıdır. Kulübünüz için özel bir logo yükleyebilir veya topluluk tarafından sağlanan genel bir logoyu kullanabilirsiniz.",
   "addLogoYesButton": "Evet, logo ekle",
   "addLogoNoButton": "Hayır, varsayılan logoyu kullan",
-  
   "finalLogoModalTitle": "Son Adım: Logo Ekle",
   "logoUrlLabel": "Logo resminizin URL'si",
   "logoUrlPlaceholder": "https://i.imgur.com/logo.png",
-  
   "requestSentDefaultLogo": "✅ Harika! İsteğiniz varsayılan bir logo ile gönderildi. Bir yönetici inceleyecektir.",
-  "requestSentCustomLogo": "✅ Harika! İsteğiniz özel logonuzla gönderildi. Bir yönetici inceleyecektir."
+  "requestSentCustomLogo": "✅ Harika! İsteğiniz özel logonuzla gönderildi. Bir yönetici inceleyecektir.",
+  "invitePlayerMenuHeader": "Davetiye göndermek için menüden bir oyuncu seçin:",
+  "invitePlayerMenuPlaceholder": "Sayfa {currentPage} / {totalPages} - Bir oyuncu seçin",
+  "inviteSentSuccess": "✅ **{playerName}** adlı oyuncuya davetiye gönderildi.",
+  "inviteSentFail": "❌ {playerName} adlı oyuncuya davetiye gönderilemedi. DM'leri kapalı olabilir.",
+  "updateProfilePrompt": "Profilini güncelleyelim. Lütfen ana pozisyonunu seçerek başla.",
+  "primaryPositionPlaceholder": "Adım 1: Ana pozisyonunu seç",
+  "primaryPositionSaved": "✅ Ana pozisyon kaydedildi. Şimdi, ikincil pozisyonunu seç.",
+  "secondaryPositionPlaceholder": "Adım 2: İkincil pozisyonunu seç",
+  "applyToTeamMenuHeader": "Başvurmak istediğiniz takımı seçin:",
+  "applicationSentSuccess": "✅ **{teamName}** takımına başvurunuz gönderildi.",
+  "applicationSentFailManagerDMsClosed": "❌ Başvuru gönderilemedi. Takım menajerinin DM'leri kapalı.",
+  "leaveTeamSuccess": "**{teamName}** takımından ayrıldınız."
 }
