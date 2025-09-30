@@ -106,5 +106,12 @@
   "timeSlotsPlaceholder": "Selecciona los horarios en los que estás disponible",
   "errorScheduledChannelNotSet": "❌ Error: El canal de amistosos programados no está configurado.",
   "errorScheduledChannelNotFound": "❌ Error: No se encontró el canal de amistosos programados.",
-  "scheduledPanelCreatedSuccess": "✅ ¡Tu panel de búsqueda de amistosos ha sido publicado en {channel}!"
+  "scheduledPanelCreatedSuccess": "✅ ¡Tu panel de búsqueda de amistosos ha sido publicado en {channel}!",
+
+  "errorExistingInstantPanel": "❌ Ya tienes un panel de búsqueda instantánea activo en {channel}.",
+  "errorInstantChannelNotSet": "❌ Error: Canal de amistosos instantáneos no configurado.",
+  "errorInstantChannelNotFound": "❌ Error: No se encontró el canal de amistosos instantáneos.",
+  "instantPanelCreatedSuccess": "✅ ¡Tu panel de búsqueda instantánea ha sido publicado en {channel}!",
+  "errorNoPanelsToDelete": "No tienes ningún panel de búsqueda activo para borrar.",
+  "panelsDeletedSuccess": "✅ {count} panel(es) de búsqueda de amistosos han sido borrados con éxito."
 }
