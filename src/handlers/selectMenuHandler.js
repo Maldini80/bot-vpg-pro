@@ -6,6 +6,7 @@ const League = require('../models/league.js');
 const AvailabilityPanel = require('../models/availabilityPanel.js');
 const FreeAgent = require('../models/freeAgent.js');
 const TeamOffer = require('../models/teamOffer.js');
+const t = require('../utils/translator.js');
 const { updatePanelMessage, getOrCreateWebhook } = require('./buttonHandler.js');
 
 
@@ -377,20 +378,21 @@ if (customId.startsWith('admin_select_members_')) {
     // ===========================================================================
     if (customId === 'select_league_for_registration') {
         const leagueName = selectedValue;
-        const modal = new ModalBuilder().setCustomId(`manager_request_modal_${leagueName}`).setTitle(`Registrar Equipo en ${leagueName}`);
+        const member = interaction.member; // Obtenemos el 'member' para pasarlo al traductor
         
-        const vpgUsernameInput = new TextInputBuilder().setCustomId('vpgUsername').setLabel("Tu nombre de usuario en VPG").setStyle(TextInputStyle.Short).setRequired(true);
-        const teamNameInput = new TextInputBuilder().setCustomId('teamName').setLabel("Nombre de tu equipo").setStyle(TextInputStyle.Short).setRequired(true);
-        const teamAbbrInput = new TextInputBuilder().setCustomId('teamAbbr').setLabel("Abreviatura (3 letras)").setStyle(TextInputStyle.Short).setRequired(true).setMinLength(3).setMaxLength(3);
+        const modalTitle = t('registerModalTitle', member).replace('{leagueName}', leagueName);
+        const modal = new ModalBuilder().setCustomId(`manager_request_modal_${leagueName}`).setTitle(modalTitle);
         
-        // El campo que faltaba ahora se añade al formulario
-        const teamTwitterInput = new TextInputBuilder().setCustomId('teamTwitterInput').setLabel("Twitter del equipo (opcional, sin @)").setStyle(TextInputStyle.Short).setRequired(false);
+        const vpgUsernameInput = new TextInputBuilder().setCustomId('vpgUsername').setLabel(t('vpgUsernameLabel', member)).setStyle(TextInputStyle.Short).setRequired(true);
+        const teamNameInput = new TextInputBuilder().setCustomId('teamName').setLabel(t('teamNameLabel', member)).setStyle(TextInputStyle.Short).setRequired(true);
+        const teamAbbrInput = new TextInputBuilder().setCustomId('teamAbbr').setLabel(t('teamAbbrLabel', member)).setStyle(TextInputStyle.Short).setRequired(true).setMinLength(3).setMaxLength(3);
+        const teamTwitterInput = new TextInputBuilder().setCustomId('teamTwitterInput').setLabel(t('teamTwitterLabel', member)).setStyle(TextInputStyle.Short).setRequired(false);
 
         modal.addComponents(
             new ActionRowBuilder().addComponents(vpgUsernameInput), 
             new ActionRowBuilder().addComponents(teamNameInput), 
             new ActionRowBuilder().addComponents(teamAbbrInput),
-            new ActionRowBuilder().addComponents(teamTwitterInput) // Añadido aquí
+            new ActionRowBuilder().addComponents(teamTwitterInput)
         );
         
         await interaction.showModal(modal);
