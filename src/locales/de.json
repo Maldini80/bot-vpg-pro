@@ -4,11 +4,9 @@
   "editProfileButton": "✏️ Profil aktualisieren",
   "applyToTeamButton": "✉️ Team beitreten",
   "leaveTeamButton": "🚪 Team verlassen",
-
   "managerActionsTitle": "👑 Manager-Aktionen",
   "managerActionsDescription": "Hier sind die verfügbaren Aktionen für die Team-Verwaltung.",
   "registerTeamButton": "📝 Mein Team registrieren",
-
   "rosterSubmenuTitle": "UNTERMENÜ: KADERVERWALTUNG",
   "rosterSubmenuDescription": "Verwende die Schaltflächen, um die Mitglieder und Daten deines Teams zu verwalten.",
   "invitePlayerButton": "Spieler einladen",
@@ -16,42 +14,52 @@
   "viewRosterButton": "Kader ansehen",
   "toggleRecruitmentButton": "Rekrutierung öffnen/schließen",
   "editTeamDataButton": "Teamdaten bearbeiten",
-
   "friendliesSubmenuTitle": "UNTERMENÜ: FREUNDSCHAFTSSPIELVERWALTUNG",
   "friendliesSubmenuDescription": "Organisiere Spiele, finde Gegner und überprüfe deine bestätigten Freundschaftsspiele.",
   "scheduleSearchButton": "Suche planen",
   "findRivalNowButton": "Gegner suchen (Jetzt)",
   "deleteSearchButton": "Suche löschen",
   "viewMatchesButton": "Spiele ansehen",
-
   "marketSubmenuTitle": "UNTERMENÜ: TRANSFERVERWALTUNG",
   "marketSubmenuDescription": "Veröffentliche oder verwalte das Transferangebot deines Teams.",
   "createEditOfferButton": "Angebot erstellen / bearbeiten",
   "manageOfferButton": "Bestehendes Angebot verwalten",
-
   "errorAlreadyManager": "❌ Du bist bereits Manager eines Teams, du kannst kein weiteres registrieren.",
   "errorNoLeaguesConfigured": "❌ Es sind keine Ligen von einem Administrator konfiguriert.",
   "errorAlreadyInTeam": "❌ Du gehörst bereits zum Team **{teamName}**.",
   "errorMustBeManagerOrCaptain": "❌ Du musst Manager oder Kapitän sein, um diese Menüs zu verwenden.",
-
+  "errorOnlyManagersCanInvite": "❌ Nur Manager können Spieler einladen.",
+  "errorNoEligibleMembers": "Keine berechtigten Mitglieder zum Einladen gefunden.",
+  "errorManagerCannotApply": "❌ Als Manager kannst du keine Bewerbungen an andere Teams senden.",
+  "errorApplicationPending": "❌ Du hast bereits eine ausstehende Bewerbung.",
+  "errorNoRecruitingTeams": "Derzeit gibt es keine Teams mit offener Rekrutierung.",
+  "errorNotInTeamToLeave": "❌ Du gehörst keinem Team als Spieler oder Kapitän an, um es zu verlassen.",
   "promptSelectLeagueStep1": "Der erste Schritt ist die Auswahl der Liga für dein Team:",
   "selectLeaguePlaceholder": "Wähle die Liga aus, in der dein Team antreten wird",
-  
   "registerModalTitle": "Team in {leagueName} registrieren",
   "vpgUsernameLabel": "Dein VPG-Benutzername",
   "teamNameLabel": "Name deines Teams",
   "teamAbbrLabel": "Abkürzung (3 Buchstaben)",
   "teamTwitterLabel": "Team-Twitter (optional, ohne @)",
-
   "askForLogoTitle": "✅ Daten gespeichert. Möchtest du ein Logo für dein Team hinzufügen?",
   "askForLogoDescription": "Dieser Schritt ist optional. Du kannst ein benutzerdefiniertes Logo für deinen Club hochladen oder ein von der Community bereitgestelltes generisches Logo verwenden.",
   "addLogoYesButton": "Ja, Logo hinzufügen",
   "addLogoNoButton": "Nein, Standardlogo verwenden",
-  
   "finalLogoModalTitle": "Letzter Schritt: Logo hinzufügen",
   "logoUrlLabel": "URL deines Logo-Bildes",
   "logoUrlPlaceholder": "https://i.imgur.com/logo.png",
-  
   "requestSentDefaultLogo": "✅ Perfekt! Deine Anfrage wurde mit einem Standardlogo gesendet. Ein Administrator wird sie überprüfen.",
-  "requestSentCustomLogo": "✅ Perfekt! Deine Anfrage wurde mit deinem benutzerdefinierten Logo gesendet. Ein Administrator wird sie überprüfen."
+  "requestSentCustomLogo": "✅ Perfekt! Deine Anfrage wurde mit deinem benutzerdefinierten Logo gesendet. Ein Administrator wird sie überprüfen.",
+  "invitePlayerMenuHeader": "Wähle einen Spieler aus dem Menü, um eine Einladung zu senden:",
+  "invitePlayerMenuPlaceholder": "Seite {currentPage} von {totalPages} - Wähle einen Spieler",
+  "inviteSentSuccess": "✅ Einladung an **{playerName}** gesendet.",
+  "inviteSentFail": "❌ Einladung an {playerName} konnte nicht gesendet werden. DMs sind möglicherweise geschlossen.",
+  "updateProfilePrompt": "Lass uns dein Profil aktualisieren. Bitte wähle zuerst deine Hauptposition aus.",
+  "primaryPositionPlaceholder": "Schritt 1: Wähle deine Hauptposition",
+  "primaryPositionSaved": "✅ Hauptposition gespeichert. Wähle nun deine Nebenposition.",
+  "secondaryPositionPlaceholder": "Schritt 2: Wähle deine Nebenposition",
+  "applyToTeamMenuHeader": "Wähle das Team, bei dem du dich bewerben möchtest:",
+  "applicationSentSuccess": "✅ Deine Bewerbung bei **{teamName}** wurde gesendet.",
+  "applicationSentFailManagerDMsClosed": "❌ Die Bewerbung konnte nicht gesendet werden. Der Manager des Teams hat DMs geschlossen.",
+  "leaveTeamSuccess": "Du hast das Team **{teamName}** verlassen."
 }
