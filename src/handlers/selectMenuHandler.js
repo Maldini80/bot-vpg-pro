@@ -456,9 +456,10 @@ if (customId.startsWith('admin_select_members_')) {
         return;
     }
     
-    if (customId === 'roster_management_menu') {
+        if (customId === 'roster_management_menu') {
         await interaction.deferUpdate();
         const targetId = selectedValue;
+        const member = interaction.member; // Para el traductor
         const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
         
         if(!team) {
@@ -478,19 +479,20 @@ if (customId.startsWith('admin_select_members_')) {
         
         if (isManagerAction) {
             if (isTargetCaptain) {
-                row.addComponents(new ButtonBuilder().setCustomId(`demote_captain_${targetId}`).setLabel('Degradar a Jugador').setStyle(ButtonStyle.Secondary));
+                row.addComponents(new ButtonBuilder().setCustomId(`demote_captain_${targetId}`).setLabel(t('demoteToPlayerButton', member)).setStyle(ButtonStyle.Secondary));
             } else if (managerTeam.players.includes(targetId)) {
-                row.addComponents(new ButtonBuilder().setCustomId(`promote_player_${targetId}`).setLabel('Ascender a Capitán').setStyle(ButtonStyle.Success));
+                row.addComponents(new ButtonBuilder().setCustomId(`promote_player_${targetId}`).setLabel(t('promoteToCaptainButton', member)).setStyle(ButtonStyle.Success));
             }
         }
         
         if (managerTeam.managerId !== targetId) {
-             row.addComponents(new ButtonBuilder().setCustomId(`kick_player_${targetId}`).setLabel('Expulsar del Equipo').setStyle(ButtonStyle.Danger));
+             row.addComponents(new ButtonBuilder().setCustomId(`kick_player_${targetId}`).setLabel(t('kickFromTeamButton', member)).setStyle(ButtonStyle.Danger));
         }
         
-        row.addComponents(new ButtonBuilder().setCustomId(`toggle_mute_player_${targetId}`).setLabel('Mutear/Desmutear Chat').setStyle(ButtonStyle.Secondary));
+        row.addComponents(new ButtonBuilder().setCustomId(`toggle_mute_player_${targetId}`).setLabel(t('toggleChatMuteButton', member)).setStyle(ButtonStyle.Secondary));
         
-        await interaction.editReply({ content: `Acciones para **${targetMember.user.username}**:`, components: [row] });
+        const headerText = t('actionsForPlayer', member).replace('{playerName}', targetMember.user.username);
+        await interaction.editReply({ content: headerText, components: [row] });
         return;
     }
     
