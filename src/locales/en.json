@@ -47,6 +47,7 @@
   "errorInstantChannelNotFound": "❌ Error: The instant friendlies channel was not found.",
   "errorNoPanelsToDelete": "You don't have any active search panels to delete.",
   "errorNoOfferToManage": "❌ Your team has no active transfer offer. You can create one from the transfers menu.",
+  "errorChallengeExpired": "❌ This challenge has expired because another match has already been confirmed for this time slot.",
   "promptSelectLeagueStep1": "The first step is to select the league for your team:",
   "selectLeaguePlaceholder": "Select the league your team will compete in",
   "registerModalTitle": "Register Team in {leagueName}",
@@ -136,5 +137,13 @@
   "managerGuideStep2Title": "Step 2: Keep Your Team Active",
   "managerGuideStep2Value": "Activity is key to success. From the corresponding submenus, you can:\n• **`Manage Friendlies`**: Use `Schedule Search` to announce your availability or `Find Rival (Now)` for an immediate match.\n• **`Manage Transfers`**: Use `Create / Edit Offer` to post that you are looking for players.",
   "managerGuideStep3Title": "Step 3: Administration and Tips",
-  "managerGuideStep3Value": "• **`Edit Team Data`**: Keep your team's data updated.\n• **`Open/Close Recruitment`**: Control whether your team accepts applications.\n• **You have full control**: You are ultimately responsible for your team."
+  "managerGuideStep3Value": "• **`Edit Team Data`**: Keep your team's data updated.\n• **`Open/Close Recruitment`**: Control whether your team accepts applications.\n• **You have full control**: You are ultimately responsible for your team.",
+  "challengeSent": "✅ Challenge sent!",
+  "challengeReceivedTitle": "⚔️ New Challenge!",
+  "challengeReceivedDescription": "The team **{challengerTeamName}** has challenged you to a match at **{time}**.",
+  "challengeAcceptedNotification": "✅ Congratulations! Your challenge against **{hostTeamName}** for **{time}** has been **ACCEPTED**.",
+  "challengeRejectedNotification": "Your challenge against **{hostTeamName}** for **{time}** has been **REJECTED**.",
+  "challengeLostNotification": "Sorry, your challenge against **{hostTeamName}** for **{time}** could not be accepted. The host has chosen another opponent.",
+  "hostAcceptedConfirmation": "✅ You have accepted the challenge from **{challengerTeamName}**. All teams have been notified.",
+  "hostRejectedConfirmation": "❌ You have rejected the challenge."
 }
