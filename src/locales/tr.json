@@ -24,6 +24,7 @@
   "marketSubmenuDescription": "Takımınızın transfer teklifini yayınlayın veya yönetin.",
   "createEditOfferButton": "Teklif Oluştur / Düzenle",
   "manageOfferButton": "Mevcut Teklifi Yönet",
+
   "errorAlreadyManager": "❌ Zaten bir takımın menajerisin, başka bir tane kaydedemezsin.",
   "errorNoLeaguesConfigured": "❌ Bir yönetici tarafından yapılandırılmış lig yok.",
   "errorAlreadyInTeam": "❌ Zaten **{teamName}** takımına aitsin.",
@@ -36,6 +37,10 @@
   "errorNotInTeamToLeave": "❌ Ayrılmak için bir takımda oyuncu veya kaptan olarak bulunmuyorsunuz.",
   "errorTeamNotFound": "❌ Takımın bulunamadı.",
   "errorNoMembersToManage": "Kadronda yönetecek üye yok.",
+  "errorNotInAnyTeam": "❌ Herhangi bir takıma ait değilsin.",
+  "errorTeamHasNoMembers": "Bu takımda üye yok.",
+  "errorOnlyManagersToggleRecruitment": "❌ Sadece menajerler alım durumunu değiştirebilir.",
+
   "promptSelectLeagueStep1": "İlk adım, takımınız için lig seçmektir:",
   "selectLeaguePlaceholder": "Takımınızın yarışacağı ligi seçin",
   "registerModalTitle": "{leagueName} Ligi'ne Takım Kaydet",
@@ -66,14 +71,27 @@
   "leaveTeamSuccess": "**{teamName}** takımından ayrıldınız.",
   "manageRosterHeader": "Takımınızdan bir üye seçin:",
   "manageRosterMenuPlaceholder": "Yönetmek için bir üye seçin",
+
   "actionsForPlayer": "**{playerName}** için eylemler:",
   "demoteToPlayerButton": "Oyuncuya Düşür",
   "promoteToCaptainButton": "Kaptana Yükselt",
   "kickFromTeamButton": "Takımdan At",
   "toggleChatMuteButton": "Sohbeti Sustur/Aç",
+  
   "playerKicked": "✅ **{playerName}** atıldı.",
   "playerPromoted": "✅ **{playerName}** Kaptanlığa yükseltildi.",
   "playerDemoted": "✅ **{playerName}** Oyuncuya düşürüldü.",
   "playerMuted": "🔇 **{playerName}** susturuldu.",
-  "playerUnmuted": "✅ **{playerName}**'in sesi açıldı."
+  "playerUnmuted": "✅ **{playerName}**'in sesi açıldı.",
+
+  "rosterEmbedTitle": "{teamName} Kadrosu",
+  "rosterManager": "👑 Menajer",
+  "rosterCaptains": "🛡️ Kaptanlar",
+  "rosterPlayers": "Oyuncular",
+  "rosterLeague": "Lig: {leagueName}",
+  "rosterNoMembers": "Bu takımda üye yok.",
+
+  "recruitmentStatusTitle": "✅ Alım Durumu Güncellendi",
+  "recruitmentStatusOpen": "**{teamName}** takımına katılma başvuruları şimdi **AÇIK**.",
+  "recruitmentStatusClosed": "**{teamName}** takımına katılma başvuruları şimdi **KAPALI**."
 }
