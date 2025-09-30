@@ -125,5 +125,16 @@
   "offerRequirementsField": "Exigences Actuelles",
   "editReplaceOfferButton": "Modifier / Remplacer l'Offre",
   "deleteOfferButton": "Supprimer l'Offre",
-  "offerDeletedSuccess": "✅ L'offre de transfert a été supprimée."
+  "offerDeletedSuccess": "✅ L'offre de transfert a été supprimée.",
+  "welcomeTitle": "Bienvenue dans la communauté VPG, {userName} !",
+  "welcomeDescription": "Pour participer pleinement, vous devez d'abord compléter votre profil de joueur.\n\n**Cliquez sur le bouton ci-dessous pour commencer l'enregistrement.**",
+  "startRegistrationButton": "📝 Commencer l'Enregistrement du Joueur",
+  "managerGuideTitle": "👑 Félicitations, Manager ! Votre équipe \"{teamName}\" a été approuvée.",
+  "managerGuideDescription": "Bienvenue dans l'élite de la communauté ! Voici un guide détaillé de vos nouvelles responsabilités et outils. Votre centre de commande principal est le panneau de gestion d'équipe.",
+  "managerGuideStep1Title": "Étape 1 : Construisez votre Effectif",
+  "managerGuideStep1Value": "Votre priorité est de former votre équipe. Depuis le sous-menu `Gérer l'Effectif`, vous pouvez :\n• **`Inviter un Joueur`**: Ajoutez des membres directement à votre effectif.\n• **`Promouvoir en Capitaine`**: Déléguez des responsabilités à des joueurs de confiance pour vous aider dans la gestion quotidienne.",
+  "managerGuideStep2Title": "Étape 2 : Gardez votre Équipe Active",
+  "managerGuideStep2Value": "L'activité est la clé du succès. Depuis les sous-menus correspondants, vous pouvez :\n• **`Gérer les Amicaux`**: Utilisez `Planifier la Recherche` pour annoncer votre disponibilité ou `Trouver un Rival (Maintenant)` pour un match immédiat.\n• **`Gérer les Transferts`**: Utilisez `Créer / Modifier l'Offre` pour publier que vous cherchez des joueurs.",
+  "managerGuideStep3Title": "Étape 3 : Administration et Conseils",
+  "managerGuideStep3Value": "• **`Modifier les Données de l'Équipe`**: Maintenez à jour les données de votre équipe.\n• **`Ouvrir/Fermer le Recrutement`**: Contrôlez si votre équipe accepte les candidatures.\n• **Vous avez le contrôle total**: Vous êtes le principal responsable de votre équipe."
 }
