@@ -93,5 +93,18 @@
 
   "recruitmentStatusTitle": "✅ Alım Durumu Güncellendi",
   "recruitmentStatusOpen": "**{teamName}** takımına katılma başvuruları şimdi **AÇIK**.",
-  "recruitmentStatusClosed": "**{teamName}** takımına katılma başvuruları şimdi **KAPALI**."
+  "recruitmentStatusClosed": "**{teamName}** takımına katılma başvuruları şimdi **KAPALI**.",
+
+    "errorExistingScheduledPanel": "❌ {channel} kanalında zaten aktif bir zamanlanmış arama panelin var. Yeni bir tane oluşturmadan önce onu sil.",
+  "friendlyStep1Header": "**Adım 1/2:** Sadece belirli liglerden takımların size meydan okumasını istiyorsanız, menüden onları seçin. Aksi takdirde, doğrudan devam et'e basın.",
+  "leagueFilterPlaceholder": "Lige göre filtrele (isteğe bağlı, hepsi için)",
+  "continueButtonLabel": "Devam Et (Herkese Açık Dostluk Maçı)",
+  "leaguesSelectedConfirmation": "Şu ligleri seçtiniz: **{leagues}**. Devam et'e basın.",
+  "leaguesSelectedNone": "Hiçbiri",
+  "continuePanelCreationButtonLabel": "Panel Oluşturmaya Devam Et",
+  "friendlyStep2Header": "**Adım 2/2:** Menüden takımınızın rakip arayacağı tüm zaman aralıklarını seçin.",
+  "timeSlotsPlaceholder": "Müsait olduğunuz zaman aralıklarını seçin",
+  "errorScheduledChannelNotSet": "❌ Hata: Zamanlanmış dostluk maçları kanalı yapılandırılmamış.",
+  "errorScheduledChannelNotFound": "❌ Hata: Zamanlanmış dostluk maçları kanalı bulunamadı.",
+  "scheduledPanelCreatedSuccess": "✅ Dostluk maçı arama paneliniz {channel} kanalında yayınlandı!"
 }
