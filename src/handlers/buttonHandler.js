@@ -1344,16 +1344,16 @@ if (customId.startsWith('admin_continue_no_logo_')) {
 
     // --- Lógica de Mercado de Fichajes y Perfil de Jugador ---
 
-    if (customId === 'edit_profile_button') {
+        if (customId === 'edit_profile_button') {
         const positionOptions = POSITIONS.map(p => ({ label: p, value: p }));
         
         const primaryMenu = new StringSelectMenuBuilder()
             .setCustomId('update_select_primary_position') 
-            .setPlaceholder('Paso 1: Selecciona tu posición principal')
+            .setPlaceholder(t('primaryPositionPlaceholder', member))
             .addOptions(positionOptions);
         
         await interaction.reply({ 
-            content: 'Vamos a actualizar tu perfil. Por favor, empieza seleccionando tu posición principal.',
+            content: t('updateProfilePrompt', member),
             components: [new ActionRowBuilder().addComponents(primaryMenu)],
             flags: MessageFlags.Ephemeral
         });
