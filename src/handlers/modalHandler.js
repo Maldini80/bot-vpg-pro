@@ -394,7 +394,7 @@ module.exports = async (client, interaction) => {
 
         return interaction.editReply({ content: `${responseMessage} en el canal ${channel}` });
     }
-    if (customId.startsWith('offer_add_requirements_')) {
+        if (customId.startsWith('offer_add_requirements_')) {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const parts = customId.split('_');
@@ -427,7 +427,7 @@ module.exports = async (client, interaction) => {
 
         const existingOffer = await TeamOffer.findOne({ teamId: teamId });
         let offerMessage;
-        let responseText;
+        let statusKey;
 
         const messagePayload = {
             content: `**Contacto:** <@${team.managerId}>`,
@@ -438,14 +438,14 @@ module.exports = async (client, interaction) => {
             try {
                 const oldMessage = await channel.messages.fetch(existingOffer.messageId);
                 offerMessage = await oldMessage.edit(messagePayload);
-                responseText = 'actualizada';
+                statusKey = 'offerStatusUpdated';
             } catch (error) {
                 offerMessage = await channel.send(messagePayload);
-                responseText = 're-publicada (el mensaje anterior no se encontró)';
+                statusKey = 'offerStatusRepublished';
             }
         } else {
             offerMessage = await channel.send(messagePayload);
-            responseText = 'publicada';
+            statusKey = 'offerStatusPublished';
         }
         
         await TeamOffer.findOneAndUpdate(
@@ -454,7 +454,12 @@ module.exports = async (client, interaction) => {
             { upsert: true, new: true }
         );
 
-        return interaction.editReply({ content: `✅ ¡La oferta de tu equipo ha sido ${responseText} con éxito en el canal ${channel}!` });
+        const statusText = t(statusKey, member);
+        const successMessage = t('offerPublishedSuccess', member)
+            .replace('{status}', statusText)
+            .replace('{channel}', channel.toString());
+
+        return interaction.editReply({ content: successMessage });
     }
    
     if (customId === 'create_league_modal') {
