@@ -1509,12 +1509,17 @@ if (customId.startsWith('admin_continue_no_logo_')) {
             modal.addComponents(new ActionRowBuilder().addComponents(experienceInput), new ActionRowBuilder().addComponents(seekingInput), new ActionRowBuilder().addComponents(availabilityInput));
             await interaction.showModal(modal);
         }
-                else if (customId === 'market_post_offer') {
+                        else if (customId === 'market_post_offer') {
             await interaction.deferReply({ flags: MessageFlags.Ephemeral });
             const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
             if (!team) return interaction.editReply({ content: t('errorMustBeManagerOrCaptain', member) });
             
-            const positionOptions = POSITIONS.map(p => ({ label: p, value: p }));
+            // --- CORRECCIÓN: Usamos las claves de posición y el traductor ---
+            const positionOptions = POSITION_KEYS.map(p => ({ 
+                label: t(`pos_${p}`, member), 
+                value: p 
+            }));
+
             const positionMenu = new StringSelectMenuBuilder()
                 .setCustomId(`offer_select_positions_${team._id}`)
                 .setPlaceholder(t('offerPositionsPlaceholder', member))
