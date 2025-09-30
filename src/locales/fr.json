@@ -145,5 +145,17 @@
   "challengeRejectedNotification": "Votre défi contre **{hostTeamName}** pour **{time}** a été **REFUSÉ**.",
   "challengeLostNotification": "Désolé, votre défi contre **{hostTeamName}** pour **{time}** n'a pas pu être accepté. L'hôte a choisi un autre adversaire.",
   "hostAcceptedConfirmation": "✅ Vous avez accepté le défi de **{challengerTeamName}**. Toutes les équipes ont été notifiées.",
-  "hostRejectedConfirmation": "❌ Vous avez rejeté le défi."
+  "hostRejectedConfirmation": "❌ Vous avez rejeté le défi.",
+  "captainGuideTitle": "🛡️ Félicitations ! Vous avez été promu Capitaine de \"{teamName}\".",
+  "captainGuideDescription": "Le Manager vous fait confiance pour être son bras droit. Vous avez obtenu l'accès à de nouveaux outils dans le panneau d'équipe pour aider à la gestion.",
+  "captainGuideResponsibilitiesTitle": "✅ Vos Nouvelles Responsabilités",
+  "captainGuideResponsibilitiesValue": "• **Gérer les Amicaux**: Vous êtes essentiel pour maintenir l'équipe en forme.\n• **Gérer les Transferts**: Aidez à trouver de nouveaux talents en créant des offres.\n• **Gérer les Membres**: Maintenez l'ordre. Vous pouvez expulser des joueurs (sauf les autres capitaines) et utiliser la fonction de mise en sourdine.",
+  "captainGuideLimitsTitle": "❌ Limites de Votre Rôle",
+  "captainGuideLimitsValue": "Vous ne pouvez pas modifier les données de l'équipe, inviter des joueurs, ou promouvoir/rétrograder des membres.",
+  "applicationAcceptedNotification": "Félicitations ! Votre candidature pour rejoindre **{teamName}** a été **acceptée**.",
+  "applicationRejectedNotification": "Désolé, votre candidature pour rejoindre **{teamName}** a été **rejetée**.",
+  "managerAcceptedPlayer": "Vous avez accepté **{playerName}** dans votre équipe.",
+  "managerRejectedPlayer": "Vous avez rejeté la candidature de **{playerName}**.",
+  "playerJoinedNotification": "✅ Le joueur **{playerName}** a accepté votre invitation et a rejoint **{teamName}** !",
+  "playerRejectedNotification": "❌ Le joueur **{playerName}** a rejeté votre invitation à rejoindre **{teamName}**."
 }
