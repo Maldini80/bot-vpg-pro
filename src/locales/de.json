@@ -34,6 +34,8 @@
   "errorApplicationPending": "❌ Du hast bereits eine ausstehende Bewerbung.",
   "errorNoRecruitingTeams": "Derzeit gibt es keine Teams mit offener Rekrutierung.",
   "errorNotInTeamToLeave": "❌ Du gehörst keinem Team als Spieler oder Kapitän an, um es zu verlassen.",
+  "errorTeamNotFound": "❌ Dein Team konnte nicht gefunden werden.",
+  "errorNoMembersToManage": "Es gibt keine Mitglieder in deinem Kader zu verwalten.",
   "promptSelectLeagueStep1": "Der erste Schritt ist die Auswahl der Liga für dein Team:",
   "selectLeaguePlaceholder": "Wähle die Liga aus, in der dein Team antreten wird",
   "registerModalTitle": "Team in {leagueName} registrieren",
@@ -61,5 +63,7 @@
   "applyToTeamMenuHeader": "Wähle das Team, bei dem du dich bewerben möchtest:",
   "applicationSentSuccess": "✅ Deine Bewerbung bei **{teamName}** wurde gesendet.",
   "applicationSentFailManagerDMsClosed": "❌ Die Bewerbung konnte nicht gesendet werden. Der Manager des Teams hat DMs geschlossen.",
-  "leaveTeamSuccess": "Du hast das Team **{teamName}** verlassen."
+  "leaveTeamSuccess": "Du hast das Team **{teamName}** verlassen.",
+  "manageRosterHeader": "Wähle ein Mitglied aus deinem Team:",
+  "manageRosterMenuPlaceholder": "Wähle ein Mitglied zum Verwalten"
 }
