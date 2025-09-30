@@ -410,7 +410,7 @@ if (customId.startsWith('admin_select_members_')) {
         return;
     }
     
-    if (customId.startsWith('select_league_filter_')) {
+        if (customId.startsWith('select_league_filter_')) {
         await interaction.deferUpdate();
         const panelType = customId.split('_')[3];
         const selectedLeagues = values;
@@ -418,11 +418,14 @@ if (customId.startsWith('admin_select_members_')) {
         
         const continueButton = new ButtonBuilder()
             .setCustomId(`continue_panel_creation_${panelType}_${leaguesString}`)
-            .setLabel('Continuar con la Creación del Panel')
+            .setLabel(t('continuePanelCreationButtonLabel', member))
             .setStyle(ButtonStyle.Success);
+        
+        const leaguesText = selectedLeagues.length > 0 ? selectedLeagues.join(', ') : t('leaguesSelectedNone', member);
+        const confirmationText = t('leaguesSelectedConfirmation', member).replace('{leagues}', leaguesText);
             
         await interaction.editReply({
-            content: `Has seleccionado las ligas: **${selectedLeagues.length > 0 ? selectedLeagues.join(', ') : 'Ninguna'}**. Pulsa continuar.`,
+            content: confirmationText,
             components: [new ActionRowBuilder().addComponents(continueButton)]
         });
         return;
@@ -591,20 +594,20 @@ if (customId.startsWith('admin_select_members_')) {
         return;
     }
     
-    if (customId.startsWith('select_available_times_')) {
+        if (customId.startsWith('select_available_times_')) {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const selectedTimes = values;
         const leaguesString = customId.split('_').slice(3).join('_');
-        const leagues = leaguesString === 'all' ? [] : leaguesString.split(',');
+        const leagues = leaguesString === 'all' || leaguesString === 'none' ? [] : leaguesString.split(',');
         
         const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
-        if (!team) return interaction.editReply({ content: 'No se pudo encontrar tu equipo.' });
+        if (!team) return interaction.editReply({ content: t('errorTeamNotFound', member) });
 
         const channelId = process.env.SCHEDULED_FRIENDLY_CHANNEL_ID;
-        if (!channelId) return interaction.editReply({ content: 'Error: El ID del canal de amistosos programados no está configurado.' });
+        if (!channelId) return interaction.editReply({ content: t('errorScheduledChannelNotSet', member) });
 
         const channel = await client.channels.fetch(channelId).catch(() => null);
-        if (!channel) return interaction.editReply({ content: 'Error: No se encontró el canal de amistosos programados.' });
+        if (!channel) return interaction.editReply({ content: t('errorScheduledChannelNotFound', member) });
 
         const initialEmbed = new EmbedBuilder().setTitle(`Buscando Rival - ${team.name} (Disponible)`).setColor("Greyple");
         const webhook = await getOrCreateWebhook(channel, client);
@@ -623,6 +626,7 @@ if (customId.startsWith('admin_select_members_')) {
         await panel.save();
         await updatePanelMessage(client, panel._id);
 
-        return interaction.editReply({ content: `✅ ¡Tu panel de búsqueda de amistosos ha sido publicado en ${channel}!` });
+        const successMessage = t('scheduledPanelCreatedSuccess', member).replace('{channel}', channel.toString());
+        return interaction.editReply({ content: successMessage });
     }
 };
