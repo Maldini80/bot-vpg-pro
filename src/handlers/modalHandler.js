@@ -126,18 +126,19 @@ module.exports = async (client, interaction) => {
 
         const positionOptions = POSITIONS.map(p => ({ label: p, value: p }));
         
+        // --- CORRECCIÓN: Usamos el traductor ---
         const primaryMenu = new StringSelectMenuBuilder()
             .setCustomId('register_select_primary_position')
-            .setPlaceholder('Selecciona tu Posición Principal (Obligatorio)')
+            .setPlaceholder(t('primaryPositionPlaceholder', member))
             .addOptions(positionOptions);
 
         const secondaryMenu = new StringSelectMenuBuilder()
             .setCustomId('register_select_secondary_position')
-            .setPlaceholder('Selecciona tu Posición Secundaria (Opcional)')
-            .addOptions({ label: 'Ninguna', value: 'NINGUNA' }, ...positionOptions);
+            .setPlaceholder(t('secondaryPositionPlaceholder', member))
+            .addOptions({ label: t('noSecondaryPosition', member), value: 'NINGUNA' }, ...positionOptions);
 
         return interaction.editReply({
-            content: '**Paso 2 de 2:** ¡Casi hemos terminado! Ahora selecciona tus posiciones en el campo.',
+            content: t('registrationStep2', member),
             components: [
                 new ActionRowBuilder().addComponents(primaryMenu),
                 new ActionRowBuilder().addComponents(secondaryMenu)
@@ -145,7 +146,6 @@ module.exports = async (client, interaction) => {
             flags: MessageFlags.Ephemeral
         });
     }
-
     if (customId === 'edit_profile_modal') {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
@@ -241,7 +241,7 @@ module.exports = async (client, interaction) => {
         await interaction.editReply({ embeds: [embed], components: [row], flags: MessageFlags.Ephemeral });
     }
 
-    if (customId.startsWith('final_logo_submit_')) {
+        if (customId.startsWith('final_logo_submit_')) {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const pendingTeamId = customId.split('_')[3];
@@ -256,7 +256,8 @@ module.exports = async (client, interaction) => {
         await sendApprovalRequest(interaction, client, { ...pendingTeam.toObject(), logoUrl });
         await PendingTeam.findByIdAndDelete(pendingTeamId);
         
-        await interaction.editReply({ content: '✅ ¡Perfecto! Tu solicitud ha sido enviada con tu logo personalizado. Un administrador la revisará.', components: [] });
+        // --- CORRECCIÓN: Usamos el traductor ---
+        await interaction.editReply({ content: t('requestSentCustomLogo', member), components: [] });
     }
 
     if (customId.startsWith('edit_data_modal_')) {
