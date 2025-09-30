@@ -9,10 +9,6 @@
   "managerActionsDescription": "Takım yönetimi için mevcut eylemler burada.",
   "registerTeamButton": "📝 Takımımı Kaydet",
 
-  "errorAlreadyManager": "❌ Zaten bir takımın menajerisin, başka bir tane kaydedemezsin.",
-  "errorNoLeaguesConfigured": "Bir yönetici tarafından yapılandırılmış lig yok.",
-  "promptSelectLeagueStep1": "İlk adım, takımınız için lig seçmektir:",
-
   "rosterSubmenuTitle": "ALT MENÜ: KADRO YÖNETİMİ",
   "rosterSubmenuDescription": "Takımınızın üyelerini ve verilerini yönetmek için düğmeleri kullanın.",
   "invitePlayerButton": "Oyuncu Davet Et",
@@ -33,12 +29,29 @@
   "createEditOfferButton": "Teklif Oluştur / Düzenle",
   "manageOfferButton": "Mevcut Teklifi Yönet",
 
-    "errorAlreadyInTeam": "❌ Du gehörst bereits zum Team **{teamName}**.",
-  "selectLeaguePlaceholder": "Wähle die Liga aus, in der dein Team antreten wird",
+  "errorAlreadyManager": "❌ Zaten bir takımın menajerisin, başka bir tane kaydedemezsin.",
+  "errorNoLeaguesConfigured": "❌ Bir yönetici tarafından yapılandırılmış lig yok.",
+  "errorAlreadyInTeam": "❌ Zaten **{teamName}** takımına aitsin.",
+  "errorMustBeManagerOrCaptain": "❌ Bu menüleri kullanmak için Menajer veya Kaptan olmalısınız.",
 
-    "registerModalTitle": "{leagueName} Ligi'ne Takım Kaydet",
+  "promptSelectLeagueStep1": "İlk adım, takımınız için lig seçmektir:",
+  "selectLeaguePlaceholder": "Takımınızın yarışacağı ligi seçin",
+  
+  "registerModalTitle": "{leagueName} Ligi'ne Takım Kaydet",
   "vpgUsernameLabel": "VPG kullanıcı adınız",
   "teamNameLabel": "Takımınızın adı",
   "teamAbbrLabel": "Kısaltma (3 harf)",
-  "teamTwitterLabel": "Takım Twitter'ı (isteğe bağlı, @ olmadan)"
+  "teamTwitterLabel": "Takım Twitter'ı (isteğe bağlı, @ olmadan)",
+
+  "askForLogoTitle": "✅ Veriler kaydedildi. Takımınıza bir logo eklemek ister misiniz?",
+  "askForLogoDescription": "Bu adım isteğe bağlıdır. Kulübünüz için özel bir logo yükleyebilir veya topluluk tarafından sağlanan genel bir logoyu kullanabilirsiniz.",
+  "addLogoYesButton": "Evet, logo ekle",
+  "addLogoNoButton": "Hayır, varsayılan logoyu kullan",
+  
+  "finalLogoModalTitle": "Son Adım: Logo Ekle",
+  "logoUrlLabel": "Logo resminizin URL'si",
+  "logoUrlPlaceholder": "https://i.imgur.com/logo.png",
+  
+  "requestSentDefaultLogo": "✅ Harika! İsteğiniz varsayılan bir logo ile gönderildi. Bir yönetici inceleyecektir.",
+  "requestSentCustomLogo": "✅ Harika! İsteğiniz özel logonuzla gönderildi. Bir yönetici inceleyecektir."
 }
