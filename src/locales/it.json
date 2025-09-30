@@ -125,5 +125,16 @@
   "offerRequirementsField": "Requisiti Attuali",
   "editReplaceOfferButton": "Modifica / Sostituisci Offerta",
   "deleteOfferButton": "Elimina Offerta",
-  "offerDeletedSuccess": "✅ L'offerta di trasferimento è stata eliminata."
+  "offerDeletedSuccess": "✅ L'offerta di trasferimento è stata eliminata.",
+  "welcomeTitle": "Benvenuto nella comunità VPG, {userName}!",
+  "welcomeDescription": "Per partecipare appieno, devi prima completare il tuo profilo giocatore.\n\n**Clicca il pulsante qui sotto per iniziare la registrazione.**",
+  "startRegistrationButton": "📝 Inizia Registrazione Giocatore",
+  "managerGuideTitle": "👑 Congratulazioni, Manager! La tua squadra \"{teamName}\" è stata approvata.",
+  "managerGuideDescription": "Benvenuto nell'élite della community! Ecco una guida dettagliata alle tue nuove responsabilità e strumenti. Il tuo centro di comando principale è il pannello di gestione della squadra.",
+  "managerGuideStep1Title": "Passo 1: Costruisci la tua Rosa",
+  "managerGuideStep1Value": "La tua priorità è formare la tua squadra. Dal sottomenù `Gestisci Rosa` puoi:\n• **`Invita Giocatore`**: Aggiungi membri direttamente alla tua rosa.\n• **`Promuovi a Capitano`**: Delega responsabilità a giocatori fidati per aiutarti nella gestione quotidiana.",
+  "managerGuideStep2Title": "Passo 2: Mantieni la tua Squadra Attiva",
+  "managerGuideStep2Value": "L'attività è la chiave del successo. Dai sottomenù corrispondenti puoi:\n• **`Gestisci Amichevoli`**: Usa `Programma Ricerca` per annunciare la tua disponibilità o `Trova Rivale (Ora)` per una partita immediata.\n• **`Gestisci Trasferimenti`**: Usa `Crea / Modifica Offerta` per pubblicare che stai cercando giocatori.",
+  "managerGuideStep3Title": "Passo 3: Amministrazione e Consigli",
+  "managerGuideStep3Value": "• **`Modifica Dati Squadra`**: Mantieni aggiornati i dati della tua squadra.\n• **`Apri/Chiudi Reclutamento`**: Controlla se la tua squadra accetta candidature.\n• **Hai il pieno controllo**: Sei il massimo responsabile della tua squadra."
 }
