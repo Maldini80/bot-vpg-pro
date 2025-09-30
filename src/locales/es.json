@@ -113,5 +113,9 @@
   "errorInstantChannelNotFound": "❌ Error: No se encontró el canal de amistosos instantáneos.",
   "instantPanelCreatedSuccess": "✅ ¡Tu panel de búsqueda instantánea ha sido publicado en {channel}!",
   "errorNoPanelsToDelete": "No tienes ningún panel de búsqueda activo para borrar.",
-  "panelsDeletedSuccess": "✅ {count} panel(es) de búsqueda de amistosos han sido borrados con éxito."
+  "panelsDeletedSuccess": "✅ {count} panel(es) de búsqueda de amistosos han sido borrados con éxito.",
+
+    "confirmedMatchesTitle": "🗓️ Amistosos Confirmados de {teamName}",
+  "noConfirmedMatches": "No tienes ningún partido programado.",
+  "matchInfoLine": "**🕕 {time}** vs **{opponentName}**\n> Contacto: <@{managerId}>\n\n"
 }
