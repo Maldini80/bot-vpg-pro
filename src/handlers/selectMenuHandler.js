@@ -205,9 +205,10 @@ if (customId.startsWith('admin_select_members_')) {
     return;
 }
 
-    if (customId === 'invite_player_select') {
+        if (customId === 'invite_player_select') {
         await interaction.deferUpdate();
         const targetId = selectedValue;
+        const member = interaction.member; // Para saber el idioma del mánager
 
         const team = await Team.findOne({ guildId: guild.id, managerId: user.id });
         if (!team) {
@@ -224,20 +225,25 @@ if (customId.startsWith('admin_select_members_')) {
             return interaction.editReply({ content: `❌ No puedes invitar a **${targetMember.user.tag}** porque ya es Mánager del equipo **${isManager.name}**.`, components: [] });
         }
 
-        const embed = new EmbedBuilder().setTitle(`📩 Invitación de Equipo`).setDescription(`Has sido invitado a unirte a **${team.name}**.`).setColor('Green').setThumbnail(team.logoUrl);
+        // El MD al jugador se envía bilingüe, ya que no sabemos su idioma.
+        const embed = new EmbedBuilder()
+            .setTitle(`📩 Team Invitation / Invitación de Equipo`)
+            .setDescription(`You have been invited to join **${team.name}**.\n\nHas sido invitado a unirte a **${team.name}**.`)
+            .setColor('Green').setThumbnail(team.logoUrl);
         const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId(`accept_invite_${team._id}_${targetMember.id}`).setLabel('Aceptar').setStyle(ButtonStyle.Success),
-            new ButtonBuilder().setCustomId(`reject_invite_${team._id}_${targetMember.id}`).setLabel('Rechazar').setStyle(ButtonStyle.Danger)
+            new ButtonBuilder().setCustomId(`accept_invite_${team._id}_${targetMember.id}`).setLabel('Accept / Aceptar').setStyle(ButtonStyle.Success),
+            new ButtonBuilder().setCustomId(`reject_invite_${team._id}_${targetMember.id}`).setLabel('Decline / Rechazar').setStyle(ButtonStyle.Danger)
         );
         
         try {
             await targetMember.send({ embeds: [embed], components: [row] });
-            return interaction.editReply({ content: `✅ Invitación enviada a **${targetMember.user.tag}**.`, components: [] });
+            const successMessage = t('inviteSentSuccess', member).replace('{playerName}', targetMember.user.tag);
+            return interaction.editReply({ content: successMessage, components: [] });
         } catch (error) {
-            return interaction.editReply({ content: `❌ No se pudo enviar la invitación a ${targetMember.user.tag}. Es posible que tenga los MDs cerrados.`, components: [] });
+            const failMessage = t('inviteSentFail', member).replace('{playerName}', targetMember.user.tag);
+            return interaction.editReply({ content: failMessage, components: [] });
         }
     }
-
     if (customId === 'update_select_primary_position') {
         await interaction.deferUpdate();
         const selectedPosition = values[0];
