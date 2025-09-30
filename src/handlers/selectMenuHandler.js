@@ -358,18 +358,20 @@ if (customId.startsWith('admin_select_members_')) {
         return;
     }
     
-    if (customId.startsWith('offer_select_positions_')) {
+        if (customId.startsWith('offer_select_positions_')) {
         const teamId = customId.split('_')[3];
         const selectedPositions = values;
+        const member = interaction.member; // Para el traductor
+
         const modal = new ModalBuilder()
             .setCustomId(`offer_add_requirements_${teamId}_${selectedPositions.join('-')}`)
-            .setTitle('Paso 2: Añadir Requisitos');
+            .setTitle(t('offerStep2Title', member));
         const requirementsInput = new TextInputBuilder()
             .setCustomId('requirementsInput')
-            .setLabel("Requisitos y descripción de la oferta")
+            .setLabel(t('offerRequirementsLabel', member))
             .setStyle(TextInputStyle.Paragraph)
             .setRequired(true)
-            .setPlaceholder('Ej: Buscamos jugadores comprometidos, con micro, disponibilidad L-J de 22 a 23h CET...');
+            .setPlaceholder(t('offerRequirementsPlaceholder', member));
         modal.addComponents(new ActionRowBuilder().addComponents(requirementsInput));
         await interaction.showModal(modal);
         return;
