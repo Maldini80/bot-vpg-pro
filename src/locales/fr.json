@@ -93,5 +93,18 @@
 
   "recruitmentStatusTitle": "✅ Recrutement Mis à Jour",
   "recruitmentStatusOpen": "Les candidatures pour rejoindre **{teamName}** sont maintenant **OUVERTES**.",
-  "recruitmentStatusClosed": "Les candidatures pour rejoindre **{teamName}** sont maintenant **FERMÉES**."
+  "recruitmentStatusClosed": "Les candidatures pour rejoindre **{teamName}** sont maintenant **FERMÉES**.",
+
+    "errorExistingScheduledPanel": "❌ Vous avez déjà un panneau de recherche planifiée actif dans le canal {channel}. Supprimez-le avant d'en créer un nouveau.",
+  "friendlyStep1Header": "**Étape 1/2 :** Si vous souhaitez que seules les équipes de certaines ligues puissent vous défier, sélectionnez-les dans le menu. Sinon, appuyez directement sur continuer.",
+  "leagueFilterPlaceholder": "Filtrer par ligue (optionnel, pour tous)",
+  "continueButtonLabel": "Continuer (Amical Ouvert à Tous)",
+  "leaguesSelectedConfirmation": "Vous avez sélectionné les ligues : **{leagues}**. Appuyez sur continuer.",
+  "leaguesSelectedNone": "Aucune",
+  "continuePanelCreationButtonLabel": "Continuer la Création du Panneau",
+  "friendlyStep2Header": "**Étape 2/2 :** Sélectionnez dans le menu tous les créneaux horaires où votre équipe cherchera un rival.",
+  "timeSlotsPlaceholder": "Sélectionnez les créneaux où vous êtes disponible",
+  "errorScheduledChannelNotSet": "❌ Erreur : Le canal des matchs amicaux planifiés n'est pas configuré.",
+  "errorScheduledChannelNotFound": "❌ Erreur : Le canal des matchs amicaux planifiés n'a pas été trouvé.",
+  "scheduledPanelCreatedSuccess": "✅ Votre panneau de recherche de match amical a été publié dans {channel} !"
 }
