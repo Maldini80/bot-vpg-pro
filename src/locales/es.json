@@ -4,11 +4,9 @@
   "editProfileButton": "✏️ Actualizar Perfil",
   "applyToTeamButton": "✉️ Unirme a un Equipo",
   "leaveTeamButton": "🚪 Abandonar Equipo",
-
   "managerActionsTitle": "👑 Acciones de Mánager",
   "managerActionsDescription": "Aquí tienes las acciones disponibles para la gestión de equipos.",
   "registerTeamButton": "📝 Registrar mi Equipo",
-
   "rosterSubmenuTitle": "SUBMENÚ: GESTIÓN DE PLANTILLA",
   "rosterSubmenuDescription": "Utiliza los botones para gestionar los miembros y datos de tu equipo.",
   "invitePlayerButton": "Invitar Jugador",
@@ -16,42 +14,52 @@
   "viewRosterButton": "Ver Plantilla",
   "toggleRecruitmentButton": "Abrir/Cerrar Reclutamiento",
   "editTeamDataButton": "Editar Datos del Equipo",
-
   "friendliesSubmenuTitle": "SUBMENÚ: GESTIÓN DE AMISTOSOS",
   "friendliesSubmenuDescription": "Organiza partidos, busca rivales y consulta tus amistosos confirmados.",
   "scheduleSearchButton": "Programar Búsqueda",
   "findRivalNowButton": "Buscar Rival (Ahora)",
   "deleteSearchButton": "Borrar Búsqueda",
   "viewMatchesButton": "Ver Partidos",
-
   "marketSubmenuTitle": "SUBMENÚ: GESTIÓN DE FICHAJES",
   "marketSubmenuDescription": "Publica o gestiona la oferta de fichajes de tu equipo.",
   "createEditOfferButton": "Crear / Editar Oferta",
   "manageOfferButton": "Gestionar Oferta Existente",
-
   "errorAlreadyManager": "❌ Ya eres mánager de un equipo, no puedes registrar otro.",
   "errorNoLeaguesConfigured": "❌ No hay ligas configuradas por un administrador.",
   "errorAlreadyInTeam": "❌ Ya perteneces al equipo **{teamName}**.",
   "errorMustBeManagerOrCaptain": "❌ Debes ser Mánager o Capitán para usar estos menús.",
-
+  "errorOnlyManagersCanInvite": "❌ Solo los mánagers pueden invitar jugadores.",
+  "errorNoEligibleMembers": "No se encontraron miembros elegibles para invitar.",
+  "errorManagerCannotApply": "❌ Como Mánager, no puedes enviar solicitudes a otros equipos.",
+  "errorApplicationPending": "❌ Ya tienes una solicitud de aplicación pendiente.",
+  "errorNoRecruitingTeams": "No hay equipos con reclutamiento abierto en este momento.",
+  "errorNotInTeamToLeave": "❌ No perteneces a un equipo como jugador o capitán para poder abandonarlo.",
   "promptSelectLeagueStep1": "El primer paso es seleccionar la liga para tu equipo:",
   "selectLeaguePlaceholder": "Selecciona la liga en la que competirá tu equipo",
-  
   "registerModalTitle": "Registrar Equipo en {leagueName}",
   "vpgUsernameLabel": "Tu nombre de usuario en VPG",
   "teamNameLabel": "Nombre de tu equipo",
   "teamAbbrLabel": "Abreviatura (3 letras)",
   "teamTwitterLabel": "Twitter del equipo (opcional, sin @)",
-
   "askForLogoTitle": "✅ Datos guardados. ¿Quieres añadir un logo a tu equipo?",
   "askForLogoDescription": "Este paso es opcional. Puedes subir un logo personalizado para tu club o usar uno genérico proporcionado por la comunidad.",
   "addLogoYesButton": "Sí, añadir logo",
   "addLogoNoButton": "No, usar logo por defecto",
-  
   "finalLogoModalTitle": "Paso Final: Añadir Logo",
   "logoUrlLabel": "URL de la imagen de tu logo",
   "logoUrlPlaceholder": "https://i.imgur.com/logo.png",
-  
   "requestSentDefaultLogo": "✅ ¡Perfecto! Tu solicitud ha sido enviada con un logo por defecto. Un administrador la revisará.",
-  "requestSentCustomLogo": "✅ ¡Perfecto! Tu solicitud ha sido enviada con tu logo personalizado. Un administrador la revisará."
+  "requestSentCustomLogo": "✅ ¡Perfecto! Tu solicitud ha sido enviada con tu logo personalizado. Un administrador la revisará.",
+  "invitePlayerMenuHeader": "Selecciona un jugador del menú para enviarle una invitación:",
+  "invitePlayerMenuPlaceholder": "Página {currentPage} de {totalPages} - Selecciona un jugador",
+  "inviteSentSuccess": "✅ Invitación enviada a **{playerName}**.",
+  "inviteSentFail": "❌ No se pudo enviar la invitación a {playerName}. Es posible que tenga los MDs cerrados.",
+  "updateProfilePrompt": "Vamos a actualizar tu perfil. Por favor, empieza seleccionando tu posición principal.",
+  "primaryPositionPlaceholder": "Paso 1: Selecciona tu posición principal",
+  "primaryPositionSaved": "✅ Posición principal guardada. Ahora, selecciona tu posición secundaria.",
+  "secondaryPositionPlaceholder": "Paso 2: Selecciona tu posición secundaria",
+  "applyToTeamMenuHeader": "Selecciona el equipo al que quieres aplicar:",
+  "applicationSentSuccess": "✅ Tu solicitud para **{teamName}** ha sido enviada.",
+  "applicationSentFailManagerDMsClosed": "❌ No se pudo enviar la solicitud. El mánager del equipo tiene los MDs cerrados.",
+  "leaveTeamSuccess": "Has abandonado el equipo **{teamName}**."
 }
