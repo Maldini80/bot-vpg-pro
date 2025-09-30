@@ -34,6 +34,8 @@
   "errorApplicationPending": "❌ You already have a pending application.",
   "errorNoRecruitingTeams": "There are no teams with open recruitment at the moment.",
   "errorNotInTeamToLeave": "❌ You do not belong to a team as a player or captain to leave it.",
+  "errorTeamNotFound": "❌ Your team could not be found.",
+  "errorNoMembersToManage": "There are no members in your roster to manage.",
   "promptSelectLeagueStep1": "The first step is to select the league for your team:",
   "selectLeaguePlaceholder": "Select the league your team will compete in",
   "registerModalTitle": "Register Team in {leagueName}",
@@ -61,5 +63,7 @@
   "applyToTeamMenuHeader": "Select the team you want to apply to:",
   "applicationSentSuccess": "✅ Your application to **{teamName}** has been sent.",
   "applicationSentFailManagerDMsClosed": "❌ Could not send the application. The team's manager has DMs closed.",
-  "leaveTeamSuccess": "You have left the team **{teamName}**."
+  "leaveTeamSuccess": "You have left the team **{teamName}**.",
+  "manageRosterHeader": "Select a member from your team:",
+  "manageRosterMenuPlaceholder": "Select a member to manage"
 }
