@@ -10,6 +10,7 @@ const TeamOffer = require('../models/teamOffer.js');
 const Ticket = require('../models/ticket.js');
 const TicketConfig = require('../models/ticketConfig.js');
 const PendingTeam = require('../models/pendingTeam.js');
+const t = require('../utils/translator.js');
 
 const POSITIONS = ['POR', 'DFC', 'CARR', 'MCD', 'MV', 'MCO', 'DC'];
 
@@ -671,12 +672,19 @@ if (customId.startsWith('admin_continue_no_logo_')) {
     
     if (customId === 'player_actions_button') {
         const canLeaveTeam = member.roles.cache.has(process.env.PLAYER_ROLE_ID) || member.roles.cache.has(process.env.CAPTAIN_ROLE_ID);
-        const subMenuEmbed = new EmbedBuilder().setTitle('👤 Acciones de Jugador').setDescription('Gestiona tu perfil y tu pertenencia a equipos.').setColor('Blue');
+        
+        // Usamos la función 't' para obtener los textos en el idioma del usuario
+        const subMenuEmbed = new EmbedBuilder()
+            .setTitle(t('playerActionsTitle', member))
+            .setDescription(t('playerActionsDescription', member))
+            .setColor('Blue');
+            
         const subMenuRow = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('edit_profile_button').setLabel('✏️ Actualizar Perfil').setStyle(ButtonStyle.Primary),
-            new ButtonBuilder().setCustomId('apply_to_team_button').setLabel('✉️ Unirme a un Equipo').setStyle(ButtonStyle.Secondary),
-            new ButtonBuilder().setCustomId('leave_team_button').setLabel('🚪 Abandonar Equipo').setStyle(ButtonStyle.Danger).setDisabled(!canLeaveTeam)
+            new ButtonBuilder().setCustomId('edit_profile_button').setLabel(t('editProfileButton', member)).setStyle(ButtonStyle.Primary),
+            new ButtonBuilder().setCustomId('apply_to_team_button').setLabel(t('applyToTeamButton', member)).setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder().setCustomId('leave_team_button').setLabel(t('leaveTeamButton', member)).setStyle(ButtonStyle.Danger).setDisabled(!canLeaveTeam)
         );
+        
         return interaction.reply({ embeds: [subMenuEmbed], components: [subMenuRow], flags: MessageFlags.Ephemeral });
     }
 
