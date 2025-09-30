@@ -891,31 +891,34 @@ if (customId.startsWith('admin_continue_no_logo_')) {
         return;
     }
     
-    if (customId === 'team_manage_roster_button') {
+        if (customId === 'team_manage_roster_button') {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
-        if (!team) return interaction.editReply({ content: 'No se ha encontrado tu equipo.' });
+        if (!team) {
+            return interaction.editReply({ content: t('errorTeamNotFound', member) });
+        }
         
         const isManager = team.managerId === user.id;
         let memberIds = isManager ? [...team.captains, ...team.players] : team.players;
 
         if (memberIds.length === 0) {
-            return interaction.editReply({ content: 'No hay miembros en tu plantilla que puedas gestionar.' });
+            return interaction.editReply({ content: t('errorNoMembersToManage', member) });
         }
 
         const memberObjects = await guild.members.fetch({ user: memberIds });
         const memberOptions = memberObjects.map(m => ({ label: m.displayName, description: `ID: ${m.id}`, value: m.id }));
 
         if (memberOptions.length === 0) {
+            // Este es un error técnico, lo dejamos sin traducir por ahora
             return interaction.editReply({ content: 'No se encontraron miembros válidos en el servidor.' });
         }
 
         const selectMenu = new StringSelectMenuBuilder()
             .setCustomId('roster_management_menu')
-            .setPlaceholder('Selecciona un miembro para gestionar')
+            .setPlaceholder(t('manageRosterMenuPlaceholder', member))
             .addOptions(memberOptions);
 
-        await interaction.editReply({ content: 'Selecciona un miembro de tu equipo:', components: [new ActionRowBuilder().addComponents(selectMenu)] });
+        await interaction.editReply({ content: t('manageRosterHeader', member), components: [new ActionRowBuilder().addComponents(selectMenu)] });
         return;
     }
 
