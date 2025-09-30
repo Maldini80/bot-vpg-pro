@@ -9,7 +9,7 @@ const TeamOffer = require('../models/teamOffer.js');
 const PendingTeam = require('../models/pendingTeam.js');
 const t = require('../utils/translator.js');
 
-const POSITIONS = ['POR', 'DFC', 'CARR', 'MCD', 'MV', 'MCO', 'DC'];
+const POSITION_KEYS = ['GK', 'CB', 'WB', 'CDM', 'CM', 'CAM', 'ST'];
 
 async function sendApprovalRequest(interaction, client, { vpgUsername, teamName, teamAbbr, teamTwitter, leagueName, logoUrl }) {
     const approvalChannelId = process.env.APPROVAL_CHANNEL_ID;
@@ -110,7 +110,7 @@ module.exports = async (client, interaction) => {
     });
     return;
 }
-    if (customId === 'player_registration_modal') {
+        if (customId === 'player_registration_modal') {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral }); 
 
         const vpgUsername = fields.getTextInputValue('vpgUsernameInput');
@@ -124,9 +124,11 @@ module.exports = async (client, interaction) => {
             { upsert: true, new: true }
         );
 
-        const positionOptions = POSITIONS.map(p => ({ label: p, value: p }));
+        const positionOptions = POSITION_KEYS.map(p => ({ 
+            label: t(`pos_${p}`, member), 
+            value: p 
+        }));
         
-        // --- CORRECCIÓN: Usamos el traductor ---
         const primaryMenu = new StringSelectMenuBuilder()
             .setCustomId('register_select_primary_position')
             .setPlaceholder(t('primaryPositionPlaceholder', member))
@@ -141,7 +143,7 @@ module.exports = async (client, interaction) => {
             content: t('registrationStep2', member),
             components: [
                 new ActionRowBuilder().addComponents(primaryMenu),
-                new ActionRowBuilder().addComponents(secondaryMenu)
+                new ActionRowRowBuilder().addComponents(secondaryMenu)
             ],
             flags: MessageFlags.Ephemeral
         });
