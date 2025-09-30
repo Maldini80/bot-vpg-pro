@@ -3,5 +3,33 @@
   "playerActionsDescription": "Profilini ve takım üyeliğini yönet.",
   "editProfileButton": "✏️ Profili Güncelle",
   "applyToTeamButton": "✉️ Takıma Katıl",
-  "leaveTeamButton": "🚪 Takımdan Ayrıl"
+  "leaveTeamButton": "🚪 Takımdan Ayrıl",
+
+  "managerActionsTitle": "👑 Menajer Eylemleri",
+  "managerActionsDescription": "Takım yönetimi için mevcut eylemler burada.",
+  "registerTeamButton": "📝 Takımımı Kaydet",
+
+  "errorAlreadyManager": "❌ Zaten bir takımın menajerisin, başka bir tane kaydedemezsin.",
+  "errorNoLeaguesConfigured": "Bir yönetici tarafından yapılandırılmış lig yok.",
+  "promptSelectLeagueStep1": "İlk adım, takımınız için lig seçmektir:",
+
+  "rosterSubmenuTitle": "ALT MENÜ: KADRO YÖNETİMİ",
+  "rosterSubmenuDescription": "Takımınızın üyelerini ve verilerini yönetmek için düğmeleri kullanın.",
+  "invitePlayerButton": "Oyuncu Davet Et",
+  "manageMembersButton": "Üyeleri Yönet",
+  "viewRosterButton": "Kadro Görüntüle",
+  "toggleRecruitmentButton": "Alımı Aç/Kapat",
+  "editTeamDataButton": "Takım Verilerini Düzenle",
+
+  "friendliesSubmenuTitle": "ALT MENÜ: DOSTLUK MAÇI YÖNETİMİ",
+  "friendliesSubmenuDescription": "Maçlar düzenleyin, rakip bulun ve onaylanmış dostluk maçlarınızı kontrol edin.",
+  "scheduleSearchButton": "Arama Planla",
+  "findRivalNowButton": "Rakip Bul (Şimdi)",
+  "deleteSearchButton": "Aramayı Sil",
+  "viewMatchesButton": "Maçları Görüntüle",
+
+  "marketSubmenuTitle": "ALT MENÜ: TRANSFER YÖNETİMİ",
+  "marketSubmenuDescription": "Takımınızın transfer teklifini yayınlayın veya yönetin.",
+  "createEditOfferButton": "Teklif Oluştur / Düzenle",
+  "manageOfferButton": "Mevcut Teklifi Yönet"
 }
