@@ -456,7 +456,7 @@ if (customId.startsWith('admin_select_members_')) {
         return;
     }
     
-        if (customId === 'roster_management_menu') {
+            if (customId === 'roster_management_menu') {
         await interaction.deferUpdate();
         const targetId = selectedValue;
         const member = interaction.member; // Para el traductor
@@ -465,6 +465,7 @@ if (customId.startsWith('admin_select_members_')) {
         if(!team) {
             const adminTeam = await Team.findOne({ 'players': targetId });
             if (!adminTeam || !interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+                // Error interno, no necesita traducción por ahora
                 return interaction.editReply({content: "No tienes permisos sobre este equipo.", components: []});
             }
         }
