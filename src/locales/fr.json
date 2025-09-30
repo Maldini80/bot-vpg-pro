@@ -113,5 +113,9 @@
   "errorInstantChannelNotFound": "❌ Erreur : Le canal des matchs amicaux instantanés n'a pas été trouvé.",
   "instantPanelCreatedSuccess": "✅ Votre panneau de recherche instantanée a été publié dans {channel} !",
   "errorNoPanelsToDelete": "Vous n'avez aucun panneau de recherche actif à supprimer.",
-  "panelsDeletedSuccess": "✅ {count} panneau(x) de recherche d'amicaux ont été supprimés avec succès."
+  "panelsDeletedSuccess": "✅ {count} panneau(x) de recherche d'amicaux ont été supprimés avec succès.",
+
+    "confirmedMatchesTitle": "🗓️ Matchs Amicaux Confirmés de {teamName}",
+  "noConfirmedMatches": "Vous n'avez aucun match programmé.",
+  "matchInfoLine": "**🕕 {time}** vs **{opponentName}**\n> Contact : <@{managerId}>\n\n"
 }
