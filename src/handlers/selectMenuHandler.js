@@ -244,39 +244,44 @@ if (customId.startsWith('admin_select_members_')) {
             return interaction.editReply({ content: failMessage, components: [] });
         }
     }
-    if (customId === 'update_select_primary_position') {
+        if (customId === 'update_select_primary_position') {
         await interaction.deferUpdate();
         const selectedPosition = values[0];
+        const member = interaction.member; // Necesario para el traductor
         await VPGUser.findOneAndUpdate({ discordId: user.id }, { primaryPosition: selectedPosition }, { upsert: true });
 
         const positionOptions = POSITIONS.map(p => ({ label: p, value: p }));
         const secondaryMenu = new StringSelectMenuBuilder()
             .setCustomId('update_select_secondary_position')
-            .setPlaceholder('Paso 2: Selecciona tu posición secundaria')
+            .setPlaceholder(t('secondaryPositionPlaceholder', member))
+            // La etiqueta 'Ninguna' la traduciremos en el futuro si es necesario, de momento es funcional
             .addOptions({ label: 'Ninguna', value: 'NINGUNA' }, ...positionOptions);
 
         await interaction.editReply({
-            content: '✅ Posición principal guardada. Ahora, selecciona tu posición secundaria.',
+            content: t('primaryPositionSaved', member),
             components: [new ActionRowBuilder().addComponents(secondaryMenu)]
         });
         return;
     }
     
-    if (customId === 'update_select_secondary_position') {
+        if (customId === 'update_select_secondary_position') {
         const selectedPosition = values[0];
+        const member = interaction.member; // Necesario para el traductor
         await VPGUser.findOneAndUpdate({ discordId: user.id }, { secondaryPosition: selectedPosition === 'NINGUNA' ? null : selectedPosition }, { upsert: true });
 
         const userProfile = await VPGUser.findOne({ discordId: user.id }).lean();
+        
+        // El título del modal lo traduciremos más adelante, ya que es un flujo complejo
         const modal = new ModalBuilder().setCustomId('edit_profile_modal').setTitle('Actualizar Perfil (Paso final)');
 
-        const vpgUsernameInput = new TextInputBuilder().setCustomId('vpgUsernameInput').setLabel("Tu nombre de usuario en VPG").setStyle(TextInputStyle.Short).setRequired(false).setValue(userProfile.vpgUsername || '');
-        const twitterInput = new TextInputBuilder().setCustomId('twitterInput').setLabel("Tu Twitter (sin @)").setStyle(TextInputStyle.Short).setRequired(false).setValue(userProfile.twitterHandle || '');
+        const vpgUsernameInput = new TextInputBuilder().setCustomId('vpgUsernameInput').setLabel(t('vpgUsernameLabel', member)).setStyle(TextInputStyle.Short).setRequired(false).setValue(userProfile.vpgUsername || '');
+        const twitterInput = new TextInputBuilder().setCustomId('twitterInput').setLabel(t('teamTwitterLabel', member)).setStyle(TextInputStyle.Short).setRequired(false).setValue(userProfile.twitterHandle || '');
         const psnIdInput = new TextInputBuilder().setCustomId('psnIdInput').setLabel("Tu ID de PlayStation Network (PSN)").setStyle(TextInputStyle.Short).setRequired(false).setValue(userProfile.psnId || '');
         const eaIdInput = new TextInputBuilder().setCustomId('eaIdInput').setLabel("Tu ID de EA Sports FC").setStyle(TextInputStyle.Short).setRequired(false).setValue(userProfile.eaId || '');
 
         modal.addComponents(
             new ActionRowBuilder().addComponents(vpgUsernameInput),
-            new ActionRowBuilder().addComponents(twitterInput),
+            new ActionRowRowBuilder().addComponents(twitterInput),
             new ActionRowBuilder().addComponents(psnIdInput),
             new ActionRowBuilder().addComponents(eaIdInput)
         );
