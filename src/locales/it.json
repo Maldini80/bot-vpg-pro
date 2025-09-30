@@ -34,5 +34,11 @@
   "manageOfferButton": "Gestisci Offerta Esistente",
 
      "errorAlreadyInTeam": "❌ Appartieni già alla squadra **{teamName}**.",
-  "selectLeaguePlaceholder": "Seleziona il campionato in cui competerà la tua squadra"
+  "selectLeaguePlaceholder": "Seleziona il campionato in cui competerà la tua squadra",
+
+   "registerModalTitle": "Registra Squadra in {leagueName}",
+  "vpgUsernameLabel": "Il tuo nome utente VPG",
+  "teamNameLabel": "Nome della tua squadra",
+  "teamAbbrLabel": "Abbreviazione (3 lettere)",
+  "teamTwitterLabel": "Twitter della squadra (opzionale, senza @)"
 }
