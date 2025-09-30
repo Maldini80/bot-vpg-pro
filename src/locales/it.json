@@ -113,5 +113,9 @@
   "errorInstantChannelNotFound": "❌ Errore: Il canale delle amichevoli istantanee non è stato trovato.",
   "instantPanelCreatedSuccess": "✅ Il tuo pannello di ricerca istantanea è stato pubblicato in {channel}!",
   "errorNoPanelsToDelete": "Non hai pannelli di ricerca attivi da eliminare.",
-  "panelsDeletedSuccess": "✅ {count} pannello/i di ricerca amichevoli sono stati eliminati con successo."
+  "panelsDeletedSuccess": "✅ {count} pannello/i di ricerca amichevoli sono stati eliminati con successo.",
+
+    "confirmedMatchesTitle": "🗓️ Amichevoli Confermate di {teamName}",
+  "noConfirmedMatches": "Non hai partite in programma.",
+  "matchInfoLine": "**🕕 {time}** vs **{opponentName}**\n> Contatto: <@{managerId}>\n\n"
 }
