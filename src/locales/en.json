@@ -24,6 +24,7 @@
   "marketSubmenuDescription": "Post or manage your team's transfer offer.",
   "createEditOfferButton": "Create / Edit Offer",
   "manageOfferButton": "Manage Existing Offer",
+
   "errorAlreadyManager": "❌ You are already a manager of a team, you cannot register another one.",
   "errorNoLeaguesConfigured": "❌ There are no leagues configured by an administrator.",
   "errorAlreadyInTeam": "❌ You already belong to the team **{teamName}**.",
@@ -36,6 +37,10 @@
   "errorNotInTeamToLeave": "❌ You do not belong to a team as a player or captain to leave it.",
   "errorTeamNotFound": "❌ Your team could not be found.",
   "errorNoMembersToManage": "There are no members in your roster to manage.",
+  "errorNotInAnyTeam": "❌ You do not belong to any team.",
+  "errorTeamHasNoMembers": "This team has no members.",
+  "errorOnlyManagersToggleRecruitment": "❌ Only managers can change the recruitment status.",
+
   "promptSelectLeagueStep1": "The first step is to select the league for your team:",
   "selectLeaguePlaceholder": "Select the league your team will compete in",
   "registerModalTitle": "Register Team in {leagueName}",
@@ -66,14 +71,27 @@
   "leaveTeamSuccess": "You have left the team **{teamName}**.",
   "manageRosterHeader": "Select a member from your team:",
   "manageRosterMenuPlaceholder": "Select a member to manage",
+
   "actionsForPlayer": "Actions for **{playerName}**:",
   "demoteToPlayerButton": "Demote to Player",
   "promoteToCaptainButton": "Promote to Captain",
   "kickFromTeamButton": "Kick from Team",
   "toggleChatMuteButton": "Mute/Unmute Chat",
+  
   "playerKicked": "✅ **{playerName}** has been kicked.",
   "playerPromoted": "✅ **{playerName}** promoted to Captain.",
   "playerDemoted": "✅ **{playerName}** demoted to Player.",
   "playerMuted": "🔇 **{playerName}** has been muted.",
-  "playerUnmuted": "✅ **{playerName}** has been unmuted."
+  "playerUnmuted": "✅ **{playerName}** has been unmuted.",
+
+  "rosterEmbedTitle": "Roster of {teamName}",
+  "rosterManager": "👑 Manager",
+  "rosterCaptains": "🛡️ Captains",
+  "rosterPlayers": "Players",
+  "rosterLeague": "League: {leagueName}",
+  "rosterNoMembers": "This team has no members.",
+
+  "recruitmentStatusTitle": "✅ Recruitment Updated",
+  "recruitmentStatusOpen": "Applications to join **{teamName}** are now **OPEN**.",
+  "recruitmentStatusClosed": "Applications to join **{teamName}** are now **CLOSED**."
 }
