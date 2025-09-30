@@ -24,6 +24,7 @@
   "marketSubmenuDescription": "Veröffentliche oder verwalte das Transferangebot deines Teams.",
   "createEditOfferButton": "Angebot erstellen / bearbeiten",
   "manageOfferButton": "Bestehendes Angebot verwalten",
+
   "errorAlreadyManager": "❌ Du bist bereits Manager eines Teams, du kannst kein weiteres registrieren.",
   "errorNoLeaguesConfigured": "❌ Es sind keine Ligen von einem Administrator konfiguriert.",
   "errorAlreadyInTeam": "❌ Du gehörst bereits zum Team **{teamName}**.",
@@ -36,6 +37,10 @@
   "errorNotInTeamToLeave": "❌ Du gehörst keinem Team als Spieler oder Kapitän an, um es zu verlassen.",
   "errorTeamNotFound": "❌ Dein Team konnte nicht gefunden werden.",
   "errorNoMembersToManage": "Es gibt keine Mitglieder in deinem Kader zu verwalten.",
+  "errorNotInAnyTeam": "❌ Du gehörst keinem Team an.",
+  "errorTeamHasNoMembers": "Dieses Team hat keine Mitglieder.",
+  "errorOnlyManagersToggleRecruitment": "❌ Nur Manager können den Rekrutierungsstatus ändern.",
+
   "promptSelectLeagueStep1": "Der erste Schritt ist die Auswahl der Liga für dein Team:",
   "selectLeaguePlaceholder": "Wähle die Liga aus, in der dein Team antreten wird",
   "registerModalTitle": "Team in {leagueName} registrieren",
@@ -66,14 +71,27 @@
   "leaveTeamSuccess": "Du hast das Team **{teamName}** verlassen.",
   "manageRosterHeader": "Wähle ein Mitglied aus deinem Team:",
   "manageRosterMenuPlaceholder": "Wähle ein Mitglied zum Verwalten",
+
   "actionsForPlayer": "Aktionen für **{playerName}**:",
   "demoteToPlayerButton": "Zum Spieler degradieren",
   "promoteToCaptainButton": "Zum Kapitän befördern",
   "kickFromTeamButton": "Aus dem Team werfen",
   "toggleChatMuteButton": "Chat stummschalten/aktivieren",
+  
   "playerKicked": "✅ **{playerName}** wurde rausgeworfen.",
   "playerPromoted": "✅ **{playerName}** zum Kapitän befördert.",
   "playerDemoted": "✅ **{playerName}** zum Spieler degradiert.",
   "playerMuted": "🔇 **{playerName}** wurde stummgeschaltet.",
-  "playerUnmuted": "✅ **{playerName}** wurde entstummt."
+  "playerUnmuted": "✅ **{playerName}** wurde entstummt.",
+
+  "rosterEmbedTitle": "Kader von {teamName}",
+  "rosterManager": "👑 Manager",
+  "rosterCaptains": "🛡️ Kapitäne",
+  "rosterPlayers": "Spieler",
+  "rosterLeague": "Liga: {leagueName}",
+  "rosterNoMembers": "Dieses Team hat keine Mitglieder.",
+
+  "recruitmentStatusTitle": "✅ Rekrutierung Aktualisiert",
+  "recruitmentStatusOpen": "Bewerbungen für **{teamName}** sind jetzt **OFFEN**.",
+  "recruitmentStatusClosed": "Bewerbungen für **{teamName}** sind jetzt **GESCHLOSSEN**."
 }
