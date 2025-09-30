@@ -3,5 +3,33 @@
   "playerActionsDescription": "Manage your profile and team membership.",
   "editProfileButton": "✏️ Update Profile",
   "applyToTeamButton": "✉️ Join a Team",
-  "leaveTeamButton": "🚪 Leave Team"
+  "leaveTeamButton": "🚪 Leave Team",
+
+  "managerActionsTitle": "👑 Manager Actions",
+  "managerActionsDescription": "Here are the available actions for team management.",
+  "registerTeamButton": "📝 Register my Team",
+
+  "errorAlreadyManager": "❌ You are already a manager of a team, you cannot register another one.",
+  "errorNoLeaguesConfigured": "There are no leagues configured by an administrator.",
+  "promptSelectLeagueStep1": "The first step is to select the league for your team:",
+
+  "rosterSubmenuTitle": "SUBMENU: ROSTER MANAGEMENT",
+  "rosterSubmenuDescription": "Use the buttons to manage your team's members and data.",
+  "invitePlayerButton": "Invite Player",
+  "manageMembersButton": "Manage Members",
+  "viewRosterButton": "View Roster",
+  "toggleRecruitmentButton": "Open/Close Recruitment",
+  "editTeamDataButton": "Edit Team Data",
+
+  "friendliesSubmenuTitle": "SUBMENU: FRIENDLIES MANAGEMENT",
+  "friendliesSubmenuDescription": "Organize matches, find opponents, and check your confirmed friendlies.",
+  "scheduleSearchButton": "Schedule Search",
+  "findRivalNowButton": "Find Rival (Now)",
+  "deleteSearchButton": "Delete Search",
+  "viewMatchesButton": "View Matches",
+
+  "marketSubmenuTitle": "SUBMENU: TRANSFER MANAGEMENT",
+  "marketSubmenuDescription": "Post or manage your team's transfer offer.",
+  "createEditOfferButton": "Create / Edit Offer",
+  "manageOfferButton": "Manage Existing Offer"
 }
