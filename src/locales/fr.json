@@ -3,5 +3,33 @@
   "playerActionsDescription": "Gérez votre profil et votre appartenance à une équipe.",
   "editProfileButton": "✏️ Mettre à jour le Profil",
   "applyToTeamButton": "✉️ Rejoindre une Équipe",
-  "leaveTeamButton": "🚪 Quitter l'Équipe"
+  "leaveTeamButton": "🚪 Quitter l'Équipe",
+
+  "managerActionsTitle": "👑 Actions du Manager",
+  "managerActionsDescription": "Voici les actions disponibles pour la gestion d'équipe.",
+  "registerTeamButton": "📝 Enregistrer mon Équipe",
+
+  "errorAlreadyManager": "❌ Vous êtes déjà manager d'une équipe, vous ne pouvez pas en enregistrer une autre.",
+  "errorNoLeaguesConfigured": "Aucune ligue n'est configurée par un administrateur.",
+  "promptSelectLeagueStep1": "La première étape consiste à sélectionner la ligue pour votre équipe:",
+
+  "rosterSubmenuTitle": "SOUS-MENU: GESTION DE L'EFFECTIF",
+  "rosterSubmenuDescription": "Utilisez les boutons pour gérer les membres et les données de votre équipe.",
+  "invitePlayerButton": "Inviter un Joueur",
+  "manageMembersButton": "Gérer les Membres",
+  "viewRosterButton": "Voir l'Effectif",
+  "toggleRecruitmentButton": "Ouvrir/Fermer le Recrutement",
+  "editTeamDataButton": "Modifier les Données de l'Équipe",
+
+  "friendliesSubmenuTitle": "SOUS-MENU: GESTION DES AMICAUX",
+  "friendliesSubmenuDescription": "Organisez des matchs, trouvez des adversaires et consultez vos matchs amicaux confirmés.",
+  "scheduleSearchButton": "Planifier la Recherche",
+  "findRivalNowButton": "Trouver un Rival (Maintenant)",
+  "deleteSearchButton": "Supprimer la Recherche",
+  "viewMatchesButton": "Voir les Matchs",
+
+  "marketSubmenuTitle": "SOUS-MENU: GESTION DES TRANSFERTS",
+  "marketSubmenuDescription": "Publiez ou gérez l'offre de transfert de votre équipe.",
+  "createEditOfferButton": "Créer / Modifier l'Offre",
+  "manageOfferButton": "Gérer l'Offre Existante"
 }
