@@ -34,6 +34,8 @@
   "errorApplicationPending": "❌ Hai già una candidatura in sospeso.",
   "errorNoRecruitingTeams": "Al momento non ci sono squadre con reclutamento aperto.",
   "errorNotInTeamToLeave": "❌ Non appartieni a una squadra come giocatore o capitano per poterla abbandonare.",
+  "errorTeamNotFound": "❌ La tua squadra non è stata trovata.",
+  "errorNoMembersToManage": "Non ci sono membri nella tua rosa da gestire.",
   "promptSelectLeagueStep1": "Il primo passo è selezionare il campionato per la tua squadra:",
   "selectLeaguePlaceholder": "Seleziona il campionato in cui competerà la tua squadra",
   "registerModalTitle": "Registra Squadra in {leagueName}",
@@ -61,5 +63,7 @@
   "applyToTeamMenuHeader": "Seleziona la squadra a cui vuoi candidarti:",
   "applicationSentSuccess": "✅ La tua candidatura per **{teamName}** è stata inviata.",
   "applicationSentFailManagerDMsClosed": "❌ Impossibile inviare la candidatura. Il manager della squadra ha i DM chiusi.",
-  "leaveTeamSuccess": "Hai abbandonato la squadra **{teamName}**."
+  "leaveTeamSuccess": "Hai abbandonato la squadra **{teamName}**.",
+  "manageRosterHeader": "Seleziona un membro della tua squadra:",
+  "manageRosterMenuPlaceholder": "Seleziona un membro da gestire"
 }
