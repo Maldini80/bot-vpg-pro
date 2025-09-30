@@ -167,5 +167,13 @@
   "applyToTeamModalTitle": "Für ein Team bewerben",
   "applicationPresentationLabel": "Schreibe eine kurze Vorstellung",
   "registrationStep2": "**Schritt 2 von 2:** Fast geschafft! Wähle nun deine Positionen auf dem Spielfeld aus.",
-  "noSecondaryPosition": "Keine"
+  "noSecondaryPosition": "Keine",
+
+  "pos_GK": "GK",
+  "pos_CB": "CB",
+  "pos_WB": "WB",
+  "pos_CDM": "CDM",
+  "pos_CM": "CM",
+  "pos_CAM": "CAM",
+  "pos_ST": "ST"
 }
