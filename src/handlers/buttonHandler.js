@@ -1382,15 +1382,25 @@ if (customId.startsWith('admin_continue_no_logo_')) {
     if (customId === 'leave_team_button') {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const teamToLeave = await Team.findOne({ guildId: guild.id, $or: [{ captains: user.id }, { players: user.id }] });
-        if (!teamToLeave) return interaction.editReply({ content: 'No perteneces a un equipo como jugador o capitán.' });
+        if (!teamToLeave) {
+            return interaction.editReply({ content: t('errorNotInTeamToLeave', member) });
+        }
+        
         teamToLeave.players = teamToLeave.players.filter(p => p !== user.id);
         teamToLeave.captains = teamToLeave.captains.filter(c => c !== user.id);
         await teamToLeave.save();
+        
         await member.roles.remove([process.env.PLAYER_ROLE_ID, process.env.CAPTAIN_ROLE_ID, process.env.MUTED_ROLE_ID]).catch(() => {});
         if (member.id !== guild.ownerId) await member.setNickname(member.user.username).catch(()=>{});
-        await interaction.editReply({ content: `Has abandonado el equipo **${teamToLeave.name}**.` });
+        
+        const successMessage = t('leaveTeamSuccess', member).replace('{teamName}', teamToLeave.name);
+        await interaction.editReply({ content: successMessage });
+        
+        // El MD al mánager se envía bilingüe, ya que no sabemos su idioma.
         const manager = await client.users.fetch(teamToLeave.managerId).catch(() => null);
-        if (manager) await manager.send(`El jugador **${user.tag}** ha abandonado tu equipo.`);
+        if (manager) {
+            await manager.send(`The player **${user.tag}** has left your team.\nEl jugador **${user.tag}** ha abandonado tu equipo.`);
+        }
         return;
     }
     
