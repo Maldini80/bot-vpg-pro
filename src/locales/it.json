@@ -9,10 +9,6 @@
   "managerActionsDescription": "Ecco le azioni disponibili per la gestione della squadra.",
   "registerTeamButton": "📝 Registra la mia Squadra",
 
-  "errorAlreadyManager": "❌ Sei già manager di una squadra, non puoi registrarne un'altra.",
-  "errorNoLeaguesConfigured": "Nessun campionato configurato da un amministratore.",
-  "promptSelectLeagueStep1": "Il primo passo è selezionare il campionato per la tua squadra:",
-
   "rosterSubmenuTitle": "SOTTOMENÙ: GESTIONE ROSA",
   "rosterSubmenuDescription": "Usa i pulsanti per gestire i membri e i dati della tua squadra.",
   "invitePlayerButton": "Invita Giocatore",
@@ -33,12 +29,29 @@
   "createEditOfferButton": "Crea / Modifica Offerta",
   "manageOfferButton": "Gestisci Offerta Esistente",
 
-     "errorAlreadyInTeam": "❌ Appartieni già alla squadra **{teamName}**.",
-  "selectLeaguePlaceholder": "Seleziona il campionato in cui competerà la tua squadra",
+  "errorAlreadyManager": "❌ Sei già manager di una squadra, non puoi registrarne un'altra.",
+  "errorNoLeaguesConfigured": "❌ Nessun campionato configurato da un amministratore.",
+  "errorAlreadyInTeam": "❌ Appartieni già alla squadra **{teamName}**.",
+  "errorMustBeManagerOrCaptain": "❌ Devi essere un Manager o Capitano per usare questi menù.",
 
-   "registerModalTitle": "Registra Squadra in {leagueName}",
+  "promptSelectLeagueStep1": "Il primo passo è selezionare il campionato per la tua squadra:",
+  "selectLeaguePlaceholder": "Seleziona il campionato in cui competerà la tua squadra",
+  
+  "registerModalTitle": "Registra Squadra in {leagueName}",
   "vpgUsernameLabel": "Il tuo nome utente VPG",
   "teamNameLabel": "Nome della tua squadra",
   "teamAbbrLabel": "Abbreviazione (3 lettere)",
-  "teamTwitterLabel": "Twitter della squadra (opzionale, senza @)"
+  "teamTwitterLabel": "Twitter della squadra (opzionale, senza @)",
+
+  "askForLogoTitle": "✅ Dati salvati. Vuoi aggiungere un logo alla tua squadra?",
+  "askForLogoDescription": "Questo passaggio è facoltativo. Puoi caricare un logo personalizzato per il tuo club o usarne uno generico fornito dalla community.",
+  "addLogoYesButton": "Sì, aggiungi logo",
+  "addLogoNoButton": "No, usa logo predefinito",
+  
+  "finalLogoModalTitle": "Passo Finale: Aggiungi Logo",
+  "logoUrlLabel": "URL dell'immagine del tuo logo",
+  "logoUrlPlaceholder": "https://i.imgur.com/logo.png",
+  
+  "requestSentDefaultLogo": "✅ Perfetto! La tua richiesta è stata inviata con un logo predefinito. Un amministratore la esaminerà.",
+  "requestSentCustomLogo": "✅ Perfetto! La tua richiesta è stata inviata con il tuo logo personalizzato. Un amministratore la esaminerà."
 }
