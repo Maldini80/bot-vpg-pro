@@ -9,10 +9,6 @@
   "managerActionsDescription": "Here are the available actions for team management.",
   "registerTeamButton": "📝 Register my Team",
 
-  "errorAlreadyManager": "❌ You are already a manager of a team, you cannot register another one.",
-  "errorNoLeaguesConfigured": "There are no leagues configured by an administrator.",
-  "promptSelectLeagueStep1": "The first step is to select the league for your team:",
-
   "rosterSubmenuTitle": "SUBMENU: ROSTER MANAGEMENT",
   "rosterSubmenuDescription": "Use the buttons to manage your team's members and data.",
   "invitePlayerButton": "Invite Player",
@@ -33,12 +29,29 @@
   "createEditOfferButton": "Create / Edit Offer",
   "manageOfferButton": "Manage Existing Offer",
 
+  "errorAlreadyManager": "❌ You are already a manager of a team, you cannot register another one.",
+  "errorNoLeaguesConfigured": "❌ There are no leagues configured by an administrator.",
   "errorAlreadyInTeam": "❌ You already belong to the team **{teamName}**.",
-  "selectLeaguePlaceholder": "Select the league your team will compete in",
+  "errorMustBeManagerOrCaptain": "❌ You must be a Manager or Captain to use these menus.",
 
+  "promptSelectLeagueStep1": "The first step is to select the league for your team:",
+  "selectLeaguePlaceholder": "Select the league your team will compete in",
+  
   "registerModalTitle": "Register Team in {leagueName}",
-"vpgUsernameLabel": "Your VPG username",
-"teamNameLabel": "Your team's name",
-"teamAbbrLabel": "Abbreviation (3 letters)",
-"teamTwitterLabel": "Team Twitter (optional, without @)"
+  "vpgUsernameLabel": "Your VPG username",
+  "teamNameLabel": "Your team's name",
+  "teamAbbrLabel": "Abbreviation (3 letters)",
+  "teamTwitterLabel": "Team Twitter (optional, without @)",
+
+  "askForLogoTitle": "✅ Data saved. Do you want to add a logo to your team?",
+  "askForLogoDescription": "This step is optional. You can upload a custom logo for your club or use a generic one provided by the community.",
+  "addLogoYesButton": "Yes, add logo",
+  "addLogoNoButton": "No, use default logo",
+  
+  "finalLogoModalTitle": "Final Step: Add Logo",
+  "logoUrlLabel": "URL of your logo image",
+  "logoUrlPlaceholder": "https://i.imgur.com/logo.png",
+  
+  "requestSentDefaultLogo": "✅ Perfect! Your request has been sent with a default logo. An administrator will review it.",
+  "requestSentCustomLogo": "✅ Perfect! Your request has been sent with your custom logo. An administrator will review it."
 }
