@@ -93,5 +93,18 @@
 
   "recruitmentStatusTitle": "✅ Rekrutierung Aktualisiert",
   "recruitmentStatusOpen": "Bewerbungen für **{teamName}** sind jetzt **OFFEN**.",
-  "recruitmentStatusClosed": "Bewerbungen für **{teamName}** sind jetzt **GESCHLOSSEN**."
+  "recruitmentStatusClosed": "Bewerbungen für **{teamName}** sind jetzt **GESCHLOSSEN**.",
+
+    "errorExistingScheduledPanel": "❌ Du hast bereits ein aktives geplantes Suchpanel im Kanal {channel}. Lösche es, bevor du ein neues erstellst.",
+  "friendlyStep1Header": "**Schritt 1/2:** Wenn du möchtest, dass nur Teams aus bestimmten Ligen dich herausfordern können, wähle sie im Menü aus. Andernfalls klicke direkt auf Weiter.",
+  "leagueFilterPlaceholder": "Nach Liga filtern (optional, für alle)",
+  "continueButtonLabel": "Weiter (Freundschaftsspiel für alle offen)",
+  "leaguesSelectedConfirmation": "Du hast die Ligen ausgewählt: **{leagues}**. Klicke auf Weiter.",
+  "leaguesSelectedNone": "Keine",
+  "continuePanelCreationButtonLabel": "Mit der Panel-Erstellung fortfahren",
+  "friendlyStep2Header": "**Schritt 2/2:** Wähle im Menü alle Zeitfenster aus, in denen dein Team nach einem Gegner suchen wird.",
+  "timeSlotsPlaceholder": "Wähle die verfügbaren Zeitfenster",
+  "errorScheduledChannelNotSet": "❌ Fehler: Der Kanal für geplante Freundschaftsspiele ist nicht konfiguriert.",
+  "errorScheduledChannelNotFound": "❌ Fehler: Der Kanal für geplante Freundschaftsspiele wurde nicht gefunden.",
+  "scheduledPanelCreatedSuccess": "✅ Dein Freundschaftsspiel-Suchpanel wurde in {channel} veröffentlicht!"
 }
