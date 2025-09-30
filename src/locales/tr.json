@@ -32,4 +32,7 @@
   "marketSubmenuDescription": "Takımınızın transfer teklifini yayınlayın veya yönetin.",
   "createEditOfferButton": "Teklif Oluştur / Düzenle",
   "manageOfferButton": "Mevcut Teklifi Yönet"
+
+    "errorAlreadyInTeam": "❌ Du gehörst bereits zum Team **{teamName}**.",
+  "selectLeaguePlaceholder": "Wähle die Liga aus, in der dein Team antreten wird"
 }
