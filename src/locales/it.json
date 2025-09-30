@@ -106,5 +106,12 @@
   "timeSlotsPlaceholder": "Seleziona le fasce orarie in cui sei disponibile",
   "errorScheduledChannelNotSet": "❌ Errore: Il canale delle amichevoli programmate non è configurato.",
   "errorScheduledChannelNotFound": "❌ Errore: Il canale delle amichevoli programmate non è stato trovato.",
-  "scheduledPanelCreatedSuccess": "✅ Il tuo pannello di ricerca amichevoli è stato pubblicato in {channel}!"
+  "scheduledPanelCreatedSuccess": "✅ Il tuo pannello di ricerca amichevoli è stato pubblicato in {channel}!",
+
+    "errorExistingInstantPanel": "❌ Hai già un pannello di ricerca istantanea attivo in {channel}.",
+  "errorInstantChannelNotSet": "❌ Errore: Canale amichevoli istantanee non configurato.",
+  "errorInstantChannelNotFound": "❌ Errore: Il canale delle amichevoli istantanee non è stato trovato.",
+  "instantPanelCreatedSuccess": "✅ Il tuo pannello di ricerca istantanea è stato pubblicato in {channel}!",
+  "errorNoPanelsToDelete": "Non hai pannelli di ricerca attivi da eliminare.",
+  "panelsDeletedSuccess": "✅ {count} pannello/i di ricerca amichevoli sono stati eliminati con successo."
 }
