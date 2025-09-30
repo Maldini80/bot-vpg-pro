@@ -47,6 +47,7 @@
   "errorInstantChannelNotFound": "❌ Errore: Il canale delle amichevoli istantanee non è stato trovato.",
   "errorNoPanelsToDelete": "Non hai pannelli di ricerca attivi da eliminare.",
   "errorNoOfferToManage": "❌ La tua squadra non ha offerte di trasferimento attive. Puoi crearne una dal menu trasferimenti.",
+  "errorChallengeExpired": "❌ Questa sfida è scaduta perché un'altra partita è già stata confermata per questo orario.",
   "promptSelectLeagueStep1": "Il primo passo è selezionare il campionato per la tua squadra:",
   "selectLeaguePlaceholder": "Seleziona il campionato in cui competerà la tua squadra",
   "registerModalTitle": "Registra Squadra in {leagueName}",
@@ -136,5 +137,13 @@
   "managerGuideStep2Title": "Passo 2: Mantieni la tua Squadra Attiva",
   "managerGuideStep2Value": "L'attività è la chiave del successo. Dai sottomenù corrispondenti puoi:\n• **`Gestisci Amichevoli`**: Usa `Programma Ricerca` per annunciare la tua disponibilità o `Trova Rivale (Ora)` per una partita immediata.\n• **`Gestisci Trasferimenti`**: Usa `Crea / Modifica Offerta` per pubblicare che stai cercando giocatori.",
   "managerGuideStep3Title": "Passo 3: Amministrazione e Consigli",
-  "managerGuideStep3Value": "• **`Modifica Dati Squadra`**: Mantieni aggiornati i dati della tua squadra.\n• **`Apri/Chiudi Reclutamento`**: Controlla se la tua squadra accetta candidature.\n• **Hai il pieno controllo**: Sei il massimo responsabile della tua squadra."
+  "managerGuideStep3Value": "• **`Modifica Dati Squadra`**: Mantieni aggiornati i dati della tua squadra.\n• **`Apri/Chiudi Reclutamento`**: Controlla se la tua squadra accetta candidature.\n• **Hai il pieno controllo**: Sei il massimo responsabile della tua squadra.",
+  "challengeSent": "✅ Sfida inviata!",
+  "challengeReceivedTitle": "⚔️ Nuova Sfida!",
+  "challengeReceivedDescription": "La squadra **{challengerTeamName}** ti ha sfidato a una partita alle **{time}**.",
+  "challengeAcceptedNotification": "✅ Congratulazioni! La tua sfida contro **{hostTeamName}** per le **{time}** è stata **ACCETTATA**.",
+  "challengeRejectedNotification": "La tua sfida contro **{hostTeamName}** per le **{time}** è stata **RIFIUTATA**.",
+  "challengeLostNotification": "Spiacenti, la tua sfida contro **{hostTeamName}** per le **{time}** non è stata accettata. L'ospite ha scelto un altro avversario.",
+  "hostAcceptedConfirmation": "✅ Hai accettato la sfida di **{challengerTeamName}**. Tutte le squadre sono state notificate.",
+  "hostRejectedConfirmation": "❌ Hai rifiutato la sfida."
 }
