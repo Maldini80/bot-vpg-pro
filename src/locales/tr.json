@@ -34,5 +34,11 @@
   "manageOfferButton": "Mevcut Teklifi Yönet",
 
     "errorAlreadyInTeam": "❌ Du gehörst bereits zum Team **{teamName}**.",
-  "selectLeaguePlaceholder": "Wähle die Liga aus, in der dein Team antreten wird"
+  "selectLeaguePlaceholder": "Wähle die Liga aus, in der dein Team antreten wird",
+
+    "registerModalTitle": "{leagueName} Ligi'ne Takım Kaydet",
+  "vpgUsernameLabel": "VPG kullanıcı adınız",
+  "teamNameLabel": "Takımınızın adı",
+  "teamAbbrLabel": "Kısaltma (3 harf)",
+  "teamTwitterLabel": "Takım Twitter'ı (isteğe bağlı, @ olmadan)"
 }
