@@ -1451,21 +1451,21 @@ if (customId.startsWith('admin_continue_no_logo_')) {
             modal.addComponents(new ActionRowBuilder().addComponents(experienceInput), new ActionRowBuilder().addComponents(seekingInput), new ActionRowBuilder().addComponents(availabilityInput));
             await interaction.showModal(modal);
         }
-        else if (customId === 'market_post_offer') {
+                else if (customId === 'market_post_offer') {
             await interaction.deferReply({ flags: MessageFlags.Ephemeral });
             const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
-            if (!team) return interaction.editReply({ content: '❌ Solo los Mánagers o Capitanes pueden publicar ofertas.' });
+            if (!team) return interaction.editReply({ content: t('errorMustBeManagerOrCaptain', member) });
             
             const positionOptions = POSITIONS.map(p => ({ label: p, value: p }));
             const positionMenu = new StringSelectMenuBuilder()
                 .setCustomId(`offer_select_positions_${team._id}`)
-                .setPlaceholder('Selecciona las posiciones que buscas')
+                .setPlaceholder(t('offerPositionsPlaceholder', member))
                 .addOptions(positionOptions)
                 .setMinValues(1)
                 .setMaxValues(positionOptions.length);
 
             await interaction.editReply({
-                content: '**Paso 1 de 2:** Selecciona del menú todas las posiciones que tu equipo necesita cubrir.',
+                content: t('offerStep1Header', member),
                 components: [new ActionRowBuilder().addComponents(positionMenu)],
             });
         }
