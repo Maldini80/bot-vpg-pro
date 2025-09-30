@@ -106,5 +106,12 @@
   "timeSlotsPlaceholder": "Müsait olduğunuz zaman aralıklarını seçin",
   "errorScheduledChannelNotSet": "❌ Hata: Zamanlanmış dostluk maçları kanalı yapılandırılmamış.",
   "errorScheduledChannelNotFound": "❌ Hata: Zamanlanmış dostluk maçları kanalı bulunamadı.",
-  "scheduledPanelCreatedSuccess": "✅ Dostluk maçı arama paneliniz {channel} kanalında yayınlandı!"
+  "scheduledPanelCreatedSuccess": "✅ Dostluk maçı arama paneliniz {channel} kanalında yayınlandı!",
+
+  "errorExistingInstantPanel": "❌ {channel} kanalında zaten aktif bir anlık arama panelin var.",
+  "errorInstantChannelNotSet": "❌ Hata: Anlık dostluk maçları kanalı yapılandırılmamış.",
+  "errorInstantChannelNotFound": "❌ Hata: Anlık dostluk maçları kanalı bulunamadı.",
+  "instantPanelCreatedSuccess": "✅ Anlık arama panelin {channel} kanalında yayınlandı!",
+  "errorNoPanelsToDelete": "Silecek aktif arama panelin yok.",
+  "panelsDeletedSuccess": "✅ {count} dostluk maçı arama paneli başarıyla silindi."
 }
