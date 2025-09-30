@@ -264,24 +264,24 @@ if (customId.startsWith('admin_select_members_')) {
         return;
     }
     
-        if (customId === 'update_select_secondary_position') {
+            if (customId === 'update_select_secondary_position') {
         const selectedPosition = values[0];
-        const member = interaction.member; // Necesario para el traductor
+        const member = interaction.member; 
         await VPGUser.findOneAndUpdate({ discordId: user.id }, { secondaryPosition: selectedPosition === 'NINGUNA' ? null : selectedPosition }, { upsert: true });
 
         const userProfile = await VPGUser.findOne({ discordId: user.id }).lean();
         
-        // El título del modal lo traduciremos más adelante, ya que es un flujo complejo
-        const modal = new ModalBuilder().setCustomId('edit_profile_modal').setTitle('Actualizar Perfil (Paso final)');
+        const modal = new ModalBuilder().setCustomId('edit_profile_modal').setTitle(t('updateProfileModalTitle', member));
 
         const vpgUsernameInput = new TextInputBuilder().setCustomId('vpgUsernameInput').setLabel(t('vpgUsernameLabel', member)).setStyle(TextInputStyle.Short).setRequired(false).setValue(userProfile.vpgUsername || '');
-        const twitterInput = new TextInputBuilder().setCustomId('twitterInput').setLabel(t('teamTwitterLabel', member)).setStyle(TextInputStyle.Short).setRequired(false).setValue(userProfile.twitterHandle || '');
-        const psnIdInput = new TextInputBuilder().setCustomId('psnIdInput').setLabel("Tu ID de PlayStation Network (PSN)").setStyle(TextInputStyle.Short).setRequired(false).setValue(userProfile.psnId || '');
-        const eaIdInput = new TextInputBuilder().setCustomId('eaIdInput').setLabel("Tu ID de EA Sports FC").setStyle(TextInputStyle.Short).setRequired(false).setValue(userProfile.eaId || '');
+        const twitterInput = new TextInputBuilder().setCustomId('twitterInput').setLabel(t('playerTwitterLabel', member)).setStyle(TextInputStyle.Short).setRequired(false).setValue(userProfile.twitterHandle || '');
+        const psnIdInput = new TextInputBuilder().setCustomId('psnIdInput').setLabel(t('psnIdLabel', member)).setStyle(TextInputStyle.Short).setRequired(false).setValue(userProfile.psnId || '');
+        const eaIdInput = new TextInputBuilder().setCustomId('eaIdInput').setLabel(t('eaIdLabel', member)).setStyle(TextInputStyle.Short).setRequired(false).setValue(userProfile.eaId || '');
 
         modal.addComponents(
             new ActionRowBuilder().addComponents(vpgUsernameInput),
-            new ActionRowRowBuilder().addComponents(twitterInput),
+            // --- CORRECCIÓN: Se ha corregido el typo "ActionRowRowBuilder" a "ActionRowBuilder" ---
+            new ActionRowBuilder().addComponents(twitterInput),
             new ActionRowBuilder().addComponents(psnIdInput),
             new ActionRowBuilder().addComponents(eaIdInput)
         );
@@ -377,10 +377,12 @@ if (customId.startsWith('admin_select_members_')) {
         return;
     }
     
-    if (customId === 'apply_to_team_select') {
+        if (customId === 'apply_to_team_select') {
         const teamId = selectedValue;
-        const modal = new ModalBuilder().setCustomId(`application_modal_${teamId}`).setTitle('Aplicar a Equipo');
-        const presentationInput = new TextInputBuilder().setCustomId('presentation').setLabel('Escribe una breve presentación').setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(200);
+        const member = interaction.member;
+        // --- CORRECCIÓN: Usamos el traductor ---
+        const modal = new ModalBuilder().setCustomId(`application_modal_${teamId}`).setTitle(t('applyToTeamModalTitle', member));
+        const presentationInput = new TextInputBuilder().setCustomId('presentation').setLabel(t('applicationPresentationLabel', member)).setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(200);
         modal.addComponents(new ActionRowBuilder().addComponents(presentationInput));
         await interaction.showModal(modal);
         return;
