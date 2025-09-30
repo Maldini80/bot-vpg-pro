@@ -167,5 +167,13 @@
   "applyToTeamModalTitle": "Aplicar a Equipo",
   "applicationPresentationLabel": "Escribe una breve presentación",
   "registrationStep2": "**Paso 2 de 2:** ¡Casi hemos terminado! Ahora selecciona tus posiciones en el campo.",
-  "noSecondaryPosition": "Ninguna"
+  "noSecondaryPosition": "Ninguna",
+
+  "pos_GK": "GK",
+  "pos_CB": "CB",
+  "pos_WB": "WB",
+  "pos_CDM": "CDM",
+  "pos_CM": "CM",
+  "pos_CAM": "CAM",
+  "pos_ST": "ST"
 }
