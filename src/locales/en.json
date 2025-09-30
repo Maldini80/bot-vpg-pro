@@ -113,5 +113,9 @@
   "errorInstantChannelNotFound": "❌ Error: The instant friendlies channel was not found.",
   "instantPanelCreatedSuccess": "✅ Your instant search panel has been published in {channel}!",
   "errorNoPanelsToDelete": "You don't have any active search panels to delete.",
-  "panelsDeletedSuccess": "✅ {count} friendly search panel(s) have been successfully deleted."
+  "panelsDeletedSuccess": "✅ {count} friendly search panel(s) have been successfully deleted.",
+
+    "confirmedMatchesTitle": "🗓️ Confirmed Friendlies for {teamName}",
+  "noConfirmedMatches": "You have no scheduled matches.",
+  "matchInfoLine": "**🕕 {time}** vs **{opponentName}**\n> Contact: <@{managerId}>\n\n"
 }
