@@ -470,15 +470,16 @@ if (customId.startsWith('admin_continue_no_logo_')) {
     // ===========================================================================
     
     // Panel de Solicitud General
-    if (customId === 'start_player_registration') {
+        if (customId === 'start_player_registration') {
+        // --- CORRECCIÓN: Usamos el traductor para el título y las etiquetas del formulario ---
         const modal = new ModalBuilder()
             .setCustomId('player_registration_modal')
-            .setTitle('Registro de Perfil de Jugador (1/2)');
+            .setTitle(t('playerRegistrationTitle', member)); // Título traducido
 
-        const vpgUsernameInput = new TextInputBuilder().setCustomId('vpgUsernameInput').setLabel("Tu nombre de usuario en VPG").setStyle(TextInputStyle.Short).setRequired(true);
-        const twitterInput = new TextInputBuilder().setCustomId('twitterInput').setLabel("Tu Twitter (usuario sin @, opcional)").setStyle(TextInputStyle.Short).setRequired(false);
-        const psnIdInput = new TextInputBuilder().setCustomId('psnIdInput').setLabel("Tu ID de PlayStation Network (PSN)").setStyle(TextInputStyle.Short).setRequired(false);
-        const eaIdInput = new TextInputBuilder().setCustomId('eaIdInput').setLabel("Tu ID de EA Sports FC").setStyle(TextInputStyle.Short).setRequired(false);
+        const vpgUsernameInput = new TextInputBuilder().setCustomId('vpgUsernameInput').setLabel(t('vpgUsernameLabel', member)).setStyle(TextInputStyle.Short).setRequired(true);
+        const twitterInput = new TextInputBuilder().setCustomId('twitterInput').setLabel(t('playerTwitterLabel', member)).setStyle(TextInputStyle.Short).setRequired(false);
+        const psnIdInput = new TextInputBuilder().setCustomId('psnIdLabel', member).setLabel(t('psnIdLabel', member)).setStyle(TextInputStyle.Short).setRequired(false);
+        const eaIdInput = new TextInputBuilder().setCustomId('eaIdLabel', member).setLabel(t('eaIdLabel', member)).setStyle(TextInputStyle.Short).setRequired(false);
 
         modal.addComponents(
             new ActionRowBuilder().addComponents(vpgUsernameInput),
@@ -535,28 +536,28 @@ if (customId.startsWith('admin_continue_no_logo_')) {
         return interaction.editReply({ content: t('promptSelectLeagueStep1', member), components: [new ActionRowBuilder().addComponents(selectMenu)]});
     }
 
-    if (customId.startsWith('ask_logo_yes_')) {
+        if (customId.startsWith('ask_logo_yes_')) {
         const pendingTeamId = customId.split('_')[3];
+        // --- CORRECCIÓN: Usamos el traductor ---
         const modal = new ModalBuilder()
             .setCustomId(`final_logo_submit_${pendingTeamId}`)
-            .setTitle(t('finalLogoModalTitle', member)); // Traducido
+            .setTitle(t('finalLogoModalTitle', member));
         const teamLogoUrlInput = new TextInputBuilder()
             .setCustomId('teamLogoUrlInput')
-            .setLabel(t('logoUrlLabel', member)) // Traducido
+            .setLabel(t('logoUrlLabel', member))
             .setStyle(TextInputStyle.Short)
             .setRequired(true)
-            .setPlaceholder(t('logoUrlPlaceholder', member)); // Traducido
+            .setPlaceholder(t('logoUrlPlaceholder', member));
         modal.addComponents(new ActionRowBuilder().addComponents(teamLogoUrlInput));
         return interaction.showModal(modal);
     }
     
-    if (customId.startsWith('ask_logo_no_')) {
+        if (customId.startsWith('ask_logo_no_')) {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const pendingTeamId = customId.split('_')[3];
 
         const pendingTeam = await PendingTeam.findById(pendingTeamId);
         if (!pendingTeam || pendingTeam.userId !== user.id) {
-            // Este es un mensaje de error interno, lo traduciremos más adelante si es necesario
             return interaction.editReply({ content: 'Esta solicitud ha expirado o no es tuya.', components: [] });
         }
 
@@ -564,7 +565,7 @@ if (customId.startsWith('admin_continue_no_logo_')) {
         await sendApprovalRequest(interaction, client, { ...pendingTeam.toObject(), logoUrl: defaultLogo });
         await PendingTeam.findByIdAndDelete(pendingTeamId);
 
-        // Mensaje de confirmación traducido
+        // --- CORRECCIÓN: Usamos el traductor ---
         return interaction.editReply({ content: t('requestSentDefaultLogo', member), components: [] });
     }
     
