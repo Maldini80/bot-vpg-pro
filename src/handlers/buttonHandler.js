@@ -12,7 +12,7 @@ const TicketConfig = require('../models/ticketConfig.js');
 const PendingTeam = require('../models/pendingTeam.js');
 const t = require('../utils/translator.js');
 
-const POSITIONS = ['POR', 'DFC', 'CARR', 'MCD', 'MV', 'MCO', 'DC'];
+const POSITION_KEYS = ['GK', 'CB', 'WB', 'CDM', 'CM', 'CAM', 'ST'];
 
 // ===========================================================================
 // =================== FUNCIONES DE UTILIDAD (NO CAMBIAN) ====================
