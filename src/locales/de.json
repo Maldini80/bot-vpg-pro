@@ -145,5 +145,17 @@
   "challengeRejectedNotification": "Deine Herausforderung gegen **{hostTeamName}** um **{time}** wurde **ABGELEHNT**.",
   "challengeLostNotification": "Entschuldigung, deine Herausforderung gegen **{hostTeamName}** um **{time}** konnte nicht angenommen werden. Der Gastgeber hat einen anderen Gegner gewählt.",
   "hostAcceptedConfirmation": "✅ Du hast die Herausforderung von **{challengerTeamName}** angenommen. Alle Teams wurden benachrichtigt.",
-  "hostRejectedConfirmation": "❌ Du hast die Herausforderung abgelehnt."
+  "hostRejectedConfirmation": "❌ Du hast die Herausforderung abgelehnt.",
+  "captainGuideTitle": "🛡️ Herzlichen Glückwunsch! Du wurdest zum Kapitän von \"{teamName}\" befördert.",
+  "captainGuideDescription": "Der Manager vertraut dir als seine rechte Hand. Du hast Zugriff auf neue Werkzeuge im Team-Panel erhalten, um bei der Verwaltung zu helfen.",
+  "captainGuideResponsibilitiesTitle": "✅ Deine neuen Verantwortlichkeiten",
+  "captainGuideResponsibilitiesValue": "• **Freundschaftsspiele verwalten**: Du bist entscheidend, um das Team in Form zu halten.\n• **Transfers verwalten**: Hilf bei der Suche nach neuen Talenten, indem du Angebote erstellst.\n• **Mitglieder verwalten**: Sorge für Ordnung. Du kannst Spieler rauswerfen (außer andere Kapitäne) und die Stummschaltfunktion verwenden.",
+  "captainGuideLimitsTitle": "❌ Grenzen deiner Rolle",
+  "captainGuideLimitsValue": "Du kannst keine Teamdaten bearbeiten, Spieler einladen oder Mitglieder befördern/degradieren.",
+  "applicationAcceptedNotification": "Herzlichen Glückwunsch! Deine Bewerbung bei **{teamName}** wurde **angenommen**.",
+  "applicationRejectedNotification": "Entschuldigung, deine Bewerbung bei **{teamName}** wurde **abgelehnt**.",
+  "managerAcceptedPlayer": "Du hast **{playerName}** in dein Team aufgenommen.",
+  "managerRejectedPlayer": "Du hast die Bewerbung von **{playerName}** abgelehnt.",
+  "playerJoinedNotification": "✅ Der Spieler **{playerName}** hat deine Einladung angenommen und ist **{teamName}** beigetreten!",
+  "playerRejectedNotification": "❌ Der Spieler **{playerName}** hat deine Einladung, **{teamName}** beizutreten, abgelehnt."
 }
