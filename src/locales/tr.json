@@ -157,5 +157,15 @@
   "managerAcceptedPlayer": "**{playerName}** adlı oyuncuyu takımına kabul ettin.",
   "managerRejectedPlayer": "**{playerName}** adlı oyuncunun başvurusunu reddettin.",
   "playerJoinedNotification": "✅ **{playerName}** adlı oyuncu davetini kabul etti ve **{teamName}** takımına katıldı!",
-  "playerRejectedNotification": "❌ **{playerName}** adlı oyuncu **{teamName}** takımına katılma davetini reddetti."
+  "playerRejectedNotification": "❌ **{playerName}** adlı oyuncu **{teamName}** takımına katılma davetini reddetti.",
+
+  "playerRegistrationTitle": "Oyuncu Profili Kaydı (1/2)",
+  "playerTwitterLabel": "Twitter'ınız (@ olmadan kullanıcı adı, isteğe bağlı)",
+  "psnIdLabel": "PlayStation Network ID'niz (PSN)",
+  "eaIdLabel": "EA Sports FC ID'niz",
+  "updateProfileModalTitle": "Profili Güncelle (Son adım)",
+  "applyToTeamModalTitle": "Takıma Başvur",
+  "applicationPresentationLabel": "Kısa bir tanıtım yazın",
+  "registrationStep2": "**Adım 2/2:** Neredeyse bitti! Şimdi sahadaki pozisyonlarınızı seçin.",
+  "noSecondaryPosition": "Hiçbiri"
 }
