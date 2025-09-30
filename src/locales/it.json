@@ -32,4 +32,7 @@
   "marketSubmenuDescription": "Pubblica o gestisci l'offerta di trasferimento della tua squadra.",
   "createEditOfferButton": "Crea / Modifica Offerta",
   "manageOfferButton": "Gestisci Offerta Esistente"
+
+     "errorAlreadyInTeam": "❌ Appartieni già alla squadra **{teamName}**.",
+  "selectLeaguePlaceholder": "Seleziona il campionato in cui competerà la tua squadra"
 }
