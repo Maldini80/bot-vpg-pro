@@ -934,21 +934,21 @@ if (customId.startsWith('admin_continue_no_logo_')) {
         return;
     }
 
-    if (customId === 'team_view_roster_button') {
+        if (customId === 'team_view_roster_button') {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const teamToView = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }, { players: user.id }] });
-        if (!teamToView) return interaction.editReply({ content: 'No perteneces a ningún equipo.' });
+        if (!teamToView) return interaction.editReply({ content: t('errorNotInAnyTeam', member) });
         
         const allMemberIds = [teamToView.managerId, ...teamToView.captains, ...teamToView.players].filter(id => id);
-        if (allMemberIds.length === 0) return interaction.editReply({ content: 'Tu equipo no tiene miembros.' });
+        if (allMemberIds.length === 0) return interaction.editReply({ content: t('errorTeamHasNoMembers', member) });
         
         const memberProfiles = await VPGUser.find({ discordId: { $in: allMemberIds } }).lean();
         const memberMap = new Map(memberProfiles.map(p => [p.discordId, p]));
         
         let rosterString = '';
-        const fetchMemberInfo = async (ids, roleName) => {
+        const fetchMemberInfo = async (ids, roleNameKey) => {
             if (!ids || ids.length === 0) return;
-            rosterString += `\n**${roleName}**\n`;
+            rosterString += `\n**${t(roleNameKey, member)}**\n`; // Usamos la clave de traducción
             for (const memberId of ids) {
                 try {
                    const memberData = await guild.members.fetch(memberId);
@@ -958,11 +958,20 @@ if (customId.startsWith('admin_continue_no_logo_')) {
             }
         };
         
-        await fetchMemberInfo([teamToView.managerId].filter(Boolean), '👑 Mánager');
-        await fetchMemberInfo(teamToView.captains, '🛡️ Capitanes');
-        await fetchMemberInfo(teamToView.players, 'Jugadores');
+        await fetchMemberInfo([teamToView.managerId].filter(Boolean), 'rosterManager');
+        await fetchMemberInfo(teamToView.captains, 'rosterCaptains');
+        await fetchMemberInfo(teamToView.players, 'rosterPlayers');
         
-        const embed = new EmbedBuilder().setTitle(`Plantilla de ${teamToView.name}`).setDescription(rosterString.trim() || 'Este equipo no tiene miembros.').setColor('#3498db').setThumbnail(teamToView.logoUrl).setFooter({ text: `Liga: ${teamToView.league}` });
+        const embedTitle = t('rosterEmbedTitle', member).replace('{teamName}', teamToView.name);
+        const embedFooter = t('rosterLeague', member).replace('{leagueName}', teamToView.league);
+
+        const embed = new EmbedBuilder()
+            .setTitle(embedTitle)
+            .setDescription(rosterString.trim() || t('rosterNoMembers', member))
+            .setColor('#3498db')
+            .setThumbnail(teamToView.logoUrl)
+            .setFooter({ text: embedFooter });
+            
         return interaction.editReply({ embeds: [embed] });
     }
 
