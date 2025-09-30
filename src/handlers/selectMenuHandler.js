@@ -10,7 +10,7 @@ const t = require('../utils/translator.js');
 const { updatePanelMessage, getOrCreateWebhook } = require('./buttonHandler.js');
 
 
-const POSITIONS = ['POR', 'DFC', 'CARR', 'MCD', 'MV', 'MCO', 'DC'];
+const POSITION_KEYS = ['GK', 'CB', 'WB', 'CDM', 'CM', 'CAM', 'ST'];
 
 module.exports = async (client, interaction) => {
     const { customId, values, guild, user } = interaction;
@@ -247,15 +247,18 @@ if (customId.startsWith('admin_select_members_')) {
         if (customId === 'update_select_primary_position') {
         await interaction.deferUpdate();
         const selectedPosition = values[0];
-        const member = interaction.member; // Necesario para el traductor
+        const member = interaction.member;
         await VPGUser.findOneAndUpdate({ discordId: user.id }, { primaryPosition: selectedPosition }, { upsert: true });
 
-        const positionOptions = POSITIONS.map(p => ({ label: p, value: p }));
+        const positionOptions = POSITION_KEYS.map(p => ({ 
+            label: t(`pos_${p}`, member), 
+            value: p 
+        }));
+
         const secondaryMenu = new StringSelectMenuBuilder()
             .setCustomId('update_select_secondary_position')
             .setPlaceholder(t('secondaryPositionPlaceholder', member))
-            // La etiqueta 'Ninguna' la traduciremos en el futuro si es necesario, de momento es funcional
-            .addOptions({ label: 'Ninguna', value: 'NINGUNA' }, ...positionOptions);
+            .addOptions({ label: t('noSecondaryPosition', member), value: 'NINGUNA' }, ...positionOptions);
 
         await interaction.editReply({
             content: t('primaryPositionSaved', member),
