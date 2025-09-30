@@ -1433,7 +1433,10 @@ if (customId.startsWith('admin_continue_no_logo_')) {
     // --- Lógica de Mercado de Fichajes y Perfil de Jugador ---
 
         if (customId === 'edit_profile_button') {
-        const positionOptions = POSITIONS.map(p => ({ label: p, value: p }));
+        const positionOptions = POSITION_KEYS.map(p => ({ 
+            label: t(`pos_${p}`, member), 
+            value: p 
+        }));
         
         const primaryMenu = new StringSelectMenuBuilder()
             .setCustomId('update_select_primary_position') 
