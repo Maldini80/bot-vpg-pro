@@ -3,5 +3,33 @@
   "playerActionsDescription": "Gerencie seu perfil e sua participação em equipes.",
   "editProfileButton": "✏️ Atualizar Perfil",
   "applyToTeamButton": "✉️ Entrar em uma Equipe",
-  "leaveTeamButton": "🚪 Sair da Equipe"
+  "leaveTeamButton": "🚪 Sair da Equipe",
+
+  "managerActionsTitle": "👑 Ações de Manager",
+  "managerActionsDescription": "Aqui estão as ações disponíveis para a gestão de equipes.",
+  "registerTeamButton": "📝 Registrar minha Equipe",
+
+  "errorAlreadyManager": "❌ Você já é manager de uma equipe, não pode registrar outra.",
+  "errorNoLeaguesConfigured": "Não há ligas configuradas por um administrador.",
+  "promptSelectLeagueStep1": "O primeiro passo é selecionar a liga para sua equipe:",
+
+  "rosterSubmenuTitle": "SUBMENU: GERENCIAMENTO DE ELENCO",
+  "rosterSubmenuDescription": "Use os botões para gerenciar os membros e dados da sua equipe.",
+  "invitePlayerButton": "Convidar Jogador",
+  "manageMembersButton": "Gerenciar Membros",
+  "viewRosterButton": "Ver Elenco",
+  "toggleRecruitmentButton": "Abrir/Fechar Recrutamento",
+  "editTeamDataButton": "Editar Dados da Equipe",
+
+  "friendliesSubmenuTitle": "SUBMENU: GERENCIAMENTO DE AMISTOSOS",
+  "friendliesSubmenuDescription": "Organize partidas, encontre adversários e verifique seus amistosos confirmados.",
+  "scheduleSearchButton": "Agendar Busca",
+  "findRivalNowButton": "Procurar Rival (Agora)",
+  "deleteSearchButton": "Excluir Busca",
+  "viewMatchesButton": "Ver Partidas",
+
+  "marketSubmenuTitle": "SUBMENU: GERENCIAMENTO DE TRANSFERÊNCIAS",
+  "marketSubmenuDescription": "Publique ou gerencie a oferta de transferência da sua equipe.",
+  "createEditOfferButton": "Criar / Editar Oferta",
+  "manageOfferButton": "Gerenciar Oferta Existente"
 }
