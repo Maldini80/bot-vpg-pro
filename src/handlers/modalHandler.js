@@ -7,6 +7,7 @@ const VPGUser = require('../models/user.js');
 const FreeAgent = require('../models/freeAgent.js');
 const TeamOffer = require('../models/teamOffer.js');
 const PendingTeam = require('../models/pendingTeam.js');
+const t = require('../utils/translator.js');
 
 const POSITIONS = ['POR', 'DFC', 'CARR', 'MCD', 'MV', 'MCO', 'DC'];
 
