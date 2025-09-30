@@ -65,5 +65,15 @@
   "applicationSentFailManagerDMsClosed": "❌ Başvuru gönderilemedi. Takım menajerinin DM'leri kapalı.",
   "leaveTeamSuccess": "**{teamName}** takımından ayrıldınız.",
   "manageRosterHeader": "Takımınızdan bir üye seçin:",
-  "manageRosterMenuPlaceholder": "Yönetmek için bir üye seçin"
+  "manageRosterMenuPlaceholder": "Yönetmek için bir üye seçin",
+  "actionsForPlayer": "**{playerName}** için eylemler:",
+  "demoteToPlayerButton": "Oyuncuya Düşür",
+  "promoteToCaptainButton": "Kaptana Yükselt",
+  "kickFromTeamButton": "Takımdan At",
+  "toggleChatMuteButton": "Sohbeti Sustur/Aç",
+  "playerKicked": "✅ **{playerName}** atıldı.",
+  "playerPromoted": "✅ **{playerName}** Kaptanlığa yükseltildi.",
+  "playerDemoted": "✅ **{playerName}** Oyuncuya düşürüldü.",
+  "playerMuted": "🔇 **{playerName}** susturuldu.",
+  "playerUnmuted": "✅ **{playerName}**'in sesi açıldı."
 }
