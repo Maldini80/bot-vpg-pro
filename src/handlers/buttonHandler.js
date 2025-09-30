@@ -19,23 +19,30 @@ const POSITIONS = ['POR', 'DFC', 'CARR', 'MCD', 'MV', 'MCO', 'DC'];
 // ===========================================================================
 
 async function sendPaginatedPlayerMenu(interaction, members, page) {
+    const member = interaction.member; // Necesario para obtener el idioma
     const ITEMS_PER_PAGE = 25;
     const totalPages = Math.ceil(members.length / ITEMS_PER_PAGE);
     const startIndex = page * ITEMS_PER_PAGE;
     const endIndex = startIndex + ITEMS_PER_PAGE;
     const currentMembers = members.slice(startIndex, endIndex);
-    if (currentMembers.length === 0) { return interaction.editReply({ content: 'No se encontraron jugadores elegibles en esta página.', components: [] }); }
+    if (currentMembers.length === 0) { return interaction.editReply({ content: t('errorNoEligibleMembers', member), components: [] }); }
+    
     const memberOptions = currentMembers.map(m => ({ label: m.user.username, description: m.nickname || m.user.id, value: m.id }));
-    const selectMenu = new StringSelectMenuBuilder().setCustomId('invite_player_select').setPlaceholder(`Página ${page + 1} de ${totalPages} - Selecciona un jugador a invitar`).addOptions(memberOptions);
+    
+    const placeholder = t('invitePlayerMenuPlaceholder', member)
+        .replace('{currentPage}', page + 1)
+        .replace('{totalPages}', totalPages);
+
+    const selectMenu = new StringSelectMenuBuilder().setCustomId('invite_player_select').setPlaceholder(placeholder).addOptions(memberOptions);
+    
+    // Dejamos los botones de navegación sin traducir ya que son universales
     const navigationRow = new ActionRowBuilder().addComponents(
-        // --- CORRECCIÓN REALIZADA AQUÍ ---
         new ButtonBuilder().setCustomId(`paginate_invitePlayer_${page - 1}`).setLabel('◀️ Anterior').setStyle(ButtonStyle.Secondary).setDisabled(page === 0),
-        // --- Y CORRECCIÓN REALIZADA AQUÍ ---
         new ButtonBuilder().setCustomId(`paginate_invitePlayer_${page + 1}`).setLabel('Siguiente ▶️').setStyle(ButtonStyle.Secondary).setDisabled(page >= totalPages - 1)
     );
     const components = [new ActionRowBuilder().addComponents(selectMenu)];
     if (totalPages > 1) { components.push(navigationRow); }
-    await interaction.editReply({ content: 'Selecciona un jugador del menú para enviarle una invitación:', components });
+    await interaction.editReply({ content: t('invitePlayerMenuHeader', member), components });
 }
 
 async function sendPaginatedTeamMenu(interaction, teams, baseCustomId, paginationId, page, contentMessage) {
@@ -862,11 +869,11 @@ if (customId.startsWith('admin_continue_no_logo_')) {
     }
     
     // --- Lógica para los botones de GESTIÓN DE PLANTILLA ---
-    if (customId === 'team_invite_player_button') {
+        if (customId === 'team_invite_player_button') {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const team = await Team.findOne({ guildId: guild.id, managerId: user.id });
         if (!team) {
-            return interaction.editReply({ content: 'Solo los mánagers pueden invitar jugadores.' });
+            return interaction.editReply({ content: t('errorOnlyManagersCanInvite', member) });
         }
 
         const allMembers = await guild.members.fetch();
@@ -876,7 +883,7 @@ if (customId.startsWith('admin_continue_no_logo_')) {
         const eligibleMembers = allMembers.filter(m => !m.user.bot && !playersInTeams.has(m.id));
 
         if (eligibleMembers.size === 0) {
-            return interaction.editReply({ content: 'No se encontraron miembros elegibles para invitar.' });
+            return interaction.editReply({ content: t('errorNoEligibleMembers', member) });
         }
 
         const sortedMembers = Array.from(eligibleMembers.values()).sort((a, b) => a.user.username.localeCompare(b.user.username));
