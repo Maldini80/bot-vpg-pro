@@ -145,5 +145,17 @@
   "challengeRejectedNotification": "Seu desafio contra **{hostTeamName}** para as **{time}** foi **REJEITADO**.",
   "challengeLostNotification": "Desculpe, seu desafio contra **{hostTeamName}** para as **{time}** não pôde ser aceito. O anfitrião escolheu outro adversário.",
   "hostAcceptedConfirmation": "✅ Você aceitou o desafio de **{challengerTeamName}**. Todas as equipes foram notificadas.",
-  "hostRejectedConfirmation": "❌ Você rejeitou o desafio."
+  "hostRejectedConfirmation": "❌ Você rejeitou o desafio.",
+  "captainGuideTitle": "🛡️ Parabéns! Você foi promovido a Capitão de \"{teamName}\".",
+  "captainGuideDescription": "O Manager confia em você para ser seu braço direito. Você ganhou acesso a novas ferramentas no painel da equipe para auxiliar na gestão.",
+  "captainGuideResponsibilitiesTitle": "✅ Suas Novas Responsabilidades",
+  "captainGuideResponsibilitiesValue": "• **Gerenciar Amistosos**: Você é fundamental para manter a equipe em forma.\n• **Gerenciar Transferências**: Ajude a encontrar novos talentos criando ofertas.\n• **Gerenciar Membros**: Mantenha a ordem. Você pode expulsar jogadores (exceto outros capitães) e usar a função de silenciar.",
+  "captainGuideLimitsTitle": "❌ Limites do seu Papel",
+  "captainGuideLimitsValue": "Você não pode editar dados da equipe, convidar jogadores ou promover/rebaixar membros.",
+  "applicationAcceptedNotification": "Parabéns! Sua candidatura para se juntar à **{teamName}** foi **aceita**.",
+  "applicationRejectedNotification": "Desculpe, sua candidatura para se juntar à **{teamName}** foi **rejeitada**.",
+  "managerAcceptedPlayer": "Você aceitou **{playerName}** em sua equipe.",
+  "managerRejectedPlayer": "Você rejeitou a candidatura de **{playerName}**.",
+  "playerJoinedNotification": "✅ O jogador **{playerName}** aceitou seu convite e se juntou à **{teamName}**!",
+  "playerRejectedNotification": "❌ O jogador **{playerName}** rejeitou seu convite para se juntar à **{teamName}**."
 }
