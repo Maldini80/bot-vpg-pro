@@ -24,6 +24,7 @@
   "marketSubmenuDescription": "Pubblica o gestisci l'offerta di trasferimento della tua squadra.",
   "createEditOfferButton": "Crea / Modifica Offerta",
   "manageOfferButton": "Gestisci Offerta Esistente",
+
   "errorAlreadyManager": "❌ Sei già manager di una squadra, non puoi registrarne un'altra.",
   "errorNoLeaguesConfigured": "❌ Nessun campionato configurato da un amministratore.",
   "errorAlreadyInTeam": "❌ Appartieni già alla squadra **{teamName}**.",
@@ -36,6 +37,10 @@
   "errorNotInTeamToLeave": "❌ Non appartieni a una squadra come giocatore o capitano per poterla abbandonare.",
   "errorTeamNotFound": "❌ La tua squadra non è stata trovata.",
   "errorNoMembersToManage": "Non ci sono membri nella tua rosa da gestire.",
+  "errorNotInAnyTeam": "❌ Non appartieni a nessuna squadra.",
+  "errorTeamHasNoMembers": "Questa squadra non ha membri.",
+  "errorOnlyManagersToggleRecruitment": "❌ Solo i manager possono cambiare lo stato del reclutamento.",
+
   "promptSelectLeagueStep1": "Il primo passo è selezionare il campionato per la tua squadra:",
   "selectLeaguePlaceholder": "Seleziona il campionato in cui competerà la tua squadra",
   "registerModalTitle": "Registra Squadra in {leagueName}",
@@ -66,14 +71,27 @@
   "leaveTeamSuccess": "Hai abbandonato la squadra **{teamName}**.",
   "manageRosterHeader": "Seleziona un membro della tua squadra:",
   "manageRosterMenuPlaceholder": "Seleziona un membro da gestire",
+
   "actionsForPlayer": "Azioni per **{playerName}**:",
   "demoteToPlayerButton": "Declassa a Giocatore",
   "promoteToCaptainButton": "Promuovi a Capitano",
   "kickFromTeamButton": "Espelli dalla Squadra",
   "toggleChatMuteButton": "Silenzia/Riattiva Chat",
+  
   "playerKicked": "✅ **{playerName}** è stato espulso.",
   "playerPromoted": "✅ **{playerName}** promosso a Capitano.",
   "playerDemoted": "✅ **{playerName}** declassato a Giocatore.",
   "playerMuted": "🔇 **{playerName}** è stato silenziato.",
-  "playerUnmuted": "✅ **{playerName}** è stato riattivato."
+  "playerUnmuted": "✅ **{playerName}** è stato riattivato.",
+
+  "rosterEmbedTitle": "Rosa di {teamName}",
+  "rosterManager": "👑 Manager",
+  "rosterCaptains": "🛡️ Capitani",
+  "rosterPlayers": "Giocatori",
+  "rosterLeague": "Campionato: {leagueName}",
+  "rosterNoMembers": "Questa squadra non ha membri.",
+
+  "recruitmentStatusTitle": "✅ Reclutamento Aggiornato",
+  "recruitmentStatusOpen": "Le candidature per unirsi a **{teamName}** sono ora **APERTE**.",
+  "recruitmentStatusClosed": "Le candidature per unirsi a **{teamName}** sono ora **CHIUSE**."
 }
