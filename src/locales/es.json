@@ -3,5 +3,33 @@
   "playerActionsDescription": "Gestiona tu perfil y tu pertenencia a equipos.",
   "editProfileButton": "✏️ Actualizar Perfil",
   "applyToTeamButton": "✉️ Unirme a un Equipo",
-  "leaveTeamButton": "🚪 Abandonar Equipo"
+  "leaveTeamButton": "🚪 Abandonar Equipo",
+
+  "managerActionsTitle": "👑 Acciones de Mánager",
+  "managerActionsDescription": "Aquí tienes las acciones disponibles para la gestión de equipos.",
+  "registerTeamButton": "📝 Registrar mi Equipo",
+
+  "errorAlreadyManager": "❌ Ya eres mánager de un equipo, no puedes registrar otro.",
+  "errorNoLeaguesConfigured": "No hay ligas configuradas por un administrador.",
+  "promptSelectLeagueStep1": "El primer paso es seleccionar la liga para tu equipo:",
+
+  "rosterSubmenuTitle": "SUBMENÚ: GESTIÓN DE PLANTILLA",
+  "rosterSubmenuDescription": "Utiliza los botones para gestionar los miembros y datos de tu equipo.",
+  "invitePlayerButton": "Invitar Jugador",
+  "manageMembersButton": "Gestionar Miembros",
+  "viewRosterButton": "Ver Plantilla",
+  "toggleRecruitmentButton": "Abrir/Cerrar Reclutamiento",
+  "editTeamDataButton": "Editar Datos del Equipo",
+
+  "friendliesSubmenuTitle": "SUBMENÚ: GESTIÓN DE AMISTOSOS",
+  "friendliesSubmenuDescription": "Organiza partidos, busca rivales y consulta tus amistosos confirmados.",
+  "scheduleSearchButton": "Programar Búsqueda",
+  "findRivalNowButton": "Buscar Rival (Ahora)",
+  "deleteSearchButton": "Borrar Búsqueda",
+  "viewMatchesButton": "Ver Partidos",
+
+  "marketSubmenuTitle": "SUBMENÚ: GESTIÓN DE FICHAJES",
+  "marketSubmenuDescription": "Publica o gestiona la oferta de fichajes de tu equipo.",
+  "createEditOfferButton": "Crear / Editar Oferta",
+  "manageOfferButton": "Gestionar Oferta Existente"
 }
