@@ -34,6 +34,8 @@
   "errorApplicationPending": "❌ Você já tem uma candidatura pendente.",
   "errorNoRecruitingTeams": "Não há equipes com recrutamento aberto no momento.",
   "errorNotInTeamToLeave": "❌ Você não pertence a uma equipe como jogador ou capitão para poder sair.",
+  "errorTeamNotFound": "❌ Sua equipe não foi encontrada.",
+  "errorNoMembersToManage": "Não há membros em seu elenco para gerenciar.",
   "promptSelectLeagueStep1": "O primeiro passo é selecionar a liga para sua equipe:",
   "selectLeaguePlaceholder": "Selecione a liga em que sua equipe competirá",
   "registerModalTitle": "Registrar Equipe em {leagueName}",
@@ -61,5 +63,7 @@
   "applyToTeamMenuHeader": "Selecione a equipe para a qual deseja se candidatar:",
   "applicationSentSuccess": "✅ Sua candidatura para **{teamName}** foi enviada.",
   "applicationSentFailManagerDMsClosed": "❌ Não foi possível enviar a candidatura. O manager da equipe está com as DMs fechadas.",
-  "leaveTeamSuccess": "Você deixou a equipe **{teamName}**."
+  "leaveTeamSuccess": "Você deixou a equipe **{teamName}**.",
+  "manageRosterHeader": "Selecione um membro da sua equipe:",
+  "manageRosterMenuPlaceholder": "Selecione um membro para gerenciar"
 }
