@@ -65,5 +65,15 @@
   "applicationSentFailManagerDMsClosed": "❌ Could not send the application. The team's manager has DMs closed.",
   "leaveTeamSuccess": "You have left the team **{teamName}**.",
   "manageRosterHeader": "Select a member from your team:",
-  "manageRosterMenuPlaceholder": "Select a member to manage"
+  "manageRosterMenuPlaceholder": "Select a member to manage",
+  "actionsForPlayer": "Actions for **{playerName}**:",
+  "demoteToPlayerButton": "Demote to Player",
+  "promoteToCaptainButton": "Promote to Captain",
+  "kickFromTeamButton": "Kick from Team",
+  "toggleChatMuteButton": "Mute/Unmute Chat",
+  "playerKicked": "✅ **{playerName}** has been kicked.",
+  "playerPromoted": "✅ **{playerName}** promoted to Captain.",
+  "playerDemoted": "✅ **{playerName}** demoted to Player.",
+  "playerMuted": "🔇 **{playerName}** has been muted.",
+  "playerUnmuted": "✅ **{playerName}** has been unmuted."
 }
