@@ -1544,37 +1544,38 @@ if (customId.startsWith('admin_continue_no_logo_')) {
         return;
     }
     
-    if (customId === 'team_manage_offer_button') {
+        if (customId === 'team_manage_offer_button') {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         
         const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
-        if (!team) return interaction.editReply({ content: 'No se pudo encontrar tu equipo.' });
+        if (!team) return interaction.editReply({ content: t('errorTeamNotFound', member) });
         
         const existingOffer = await TeamOffer.findOne({ teamId: team._id });
 
         if (!existingOffer) {
-            return interaction.editReply({ content: '❌ Tu equipo no tiene ninguna oferta de fichajes activa. Puedes crear una desde el menú de fichajes.' });
+            return interaction.editReply({ content: t('errorNoOfferToManage', member) });
         }
 
+        const embedTitle = t('manageOfferEmbedTitle', member).replace('{teamName}', team.name);
         const embed = new EmbedBuilder()
-            .setTitle(`Gestión de Oferta de Fichajes de ${team.name}`)
-            .setDescription('Aquí está tu oferta actual. Puedes editarla (reemplazarla por una nueva) o borrarla.')
+            .setTitle(embedTitle)
+            .setDescription(t('manageOfferEmbedDescription', member))
             .addFields(
-                { name: 'Posiciones Buscadas', value: `\`${existingOffer.positions.join(', ')}\`` },
-                { name: 'Requisitos Actuales', value: existingOffer.requirements }
+                { name: t('offerPositionsField', member), value: `\`${existingOffer.positions.join(', ')}\`` },
+                { name: t('offerRequirementsField', member), value: existingOffer.requirements }
             )
             .setColor('Purple');
 
         const managementRow = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId(`market_post_offer`).setLabel('Editar / Reemplazar Oferta').setStyle(ButtonStyle.Primary),
-            new ButtonBuilder().setCustomId(`delete_team_offer_button_${existingOffer._id}`).setLabel('Borrar Oferta').setStyle(ButtonStyle.Danger) 
+            new ButtonBuilder().setCustomId(`market_post_offer`).setLabel(t('editReplaceOfferButton', member)).setStyle(ButtonStyle.Primary),
+            new ButtonBuilder().setCustomId(`delete_team_offer_button_${existingOffer._id}`).setLabel(t('deleteOfferButton', member)).setStyle(ButtonStyle.Danger) 
         );
         
         await interaction.editReply({ embeds: [embed], components: [managementRow] });
         return;
     }
 
-    if (customId.startsWith('delete_team_offer_button_')) {
+        if (customId.startsWith('delete_team_offer_button_')) {
         await interaction.deferUpdate();
         const offerId = customId.split('_')[4];
 
@@ -1594,7 +1595,7 @@ if (customId.startsWith('admin_continue_no_logo_')) {
         await TeamOffer.findByIdAndDelete(offerId);
         
         await interaction.editReply({
-            content: '✅ La oferta de fichajes ha sido borrada.',
+            content: t('offerDeletedSuccess', member),
             embeds: [],
             components: []
         });
