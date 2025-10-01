@@ -236,6 +236,7 @@
   "ticketPanelHowToValue": "1. \"Bilet Aç\" düğmesine basın.\n2. Sizin ve personel için özel bir kanal oluşturulacaktır.\n3. Sorununuzu yeni kanalda açıklayın.",
   "ticketPanelFooter": "Lütfen sistemi kötüye kullanmayın.",
   "ticketPanelButton": "➕ Bilet Aç",
+  "ticketCreatedSuccess": "Biletiniz oluşturuldu: <#{channelId}>",
   "pos_GK": "KL",
   "pos_CB": "STP",
   "pos_WB": "B",
