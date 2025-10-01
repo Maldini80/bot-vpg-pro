@@ -298,21 +298,22 @@ module.exports = async (client, interaction) => {
                     const logChannel = await client.channels.fetch(logChannelId);
                     
                     const changes = [];
-                    if (oldData.name !== newName) changes.push(`**Nombre:** \`\`\`diff\n- ${oldData.name}\n+ ${newName}\`\`\``);
-                    if (oldData.abbreviation !== newAbbr) changes.push(`**Abreviatura:** \`\`\`diff\n- ${oldData.abbreviation}\n+ ${newAbbr}\`\`\``);
-                    if (oldData.logoUrl !== newLogo) changes.push(`**Logo:** Se ha cambiado la URL del logo.`);
-                    if ((oldData.twitterHandle || '') !== (newTwitter || '')) changes.push(`**Twitter:** \`\`\`diff\n- ${oldData.twitterHandle || 'Ninguno'}\n+ ${newTwitter || 'Ninguno'}\`\`\``);
+                    const noneText = t('logValueNone', member);
+if (oldData.name !== newName) changes.push(`**${t('logFieldName', member)}:** \`\`\`diff\n- ${oldData.name}\n+ ${newName}\`\`\``);
+if (oldData.abbreviation !== newAbbr) changes.push(`**${t('logFieldAbbreviation', member)}:** \`\`\`diff\n- ${oldData.abbreviation}\n+ ${newAbbr}\`\`\``);
+if (oldData.logoUrl !== newLogo) changes.push(`**${t('logFieldLogo', member)}:** ${t('logFieldLogoChanged', member)}`);
+if ((oldData.twitterHandle || '') !== (newTwitter || '')) changes.push(`**${t('logFieldTwitter', member)}:** \`\`\`diff\n- ${oldData.twitterHandle || noneText}\n+ ${newTwitter || noneText}\`\`\``);
 
                     if (changes.length > 0) {
                         const logEmbed = new EmbedBuilder()
-                            .setTitle(`📢 Notificación: Datos de "${team.name}" Editados`)
-                            .setColor('Blue')
-                            .setAuthor({ name: `Realizado por: ${user.tag}`, iconURL: user.displayAvatarURL() })
-                            .setDescription(`El mánager ha actualizado los siguientes datos:\n\n${changes.join('\n')}`)
-                            .setThumbnail(newLogo && newLogo.startsWith('http') ? newLogo : null)
-                            .setFooter({ text: `ID del Equipo: ${team._id}` })
-                            .setTimestamp();
-                        await logChannel.send({ embeds: [logEmbed] });
+    .setTitle(t('logTeamDataEditedTitle', member).replace('{teamName}', team.name))
+    .setColor('Blue')
+    .setAuthor({ name: t('logActionMadeBy', member).replace('{userTag}', user.tag), iconURL: user.displayAvatarURL() })
+    .setDescription(`${t('logManagerUpdatedFollowing', member)}\n\n${changes.join('\n')}`)
+    .setThumbnail(newLogo && newLogo.startsWith('http') ? newLogo : null)
+    .setFooter({ text: `ID del Equipo: ${team._id}` })
+    .setTimestamp();
+await logChannel.send({ embeds: [logEmbed] });
                     }
                 }
             } catch (error) {
