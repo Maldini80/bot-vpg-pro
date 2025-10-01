@@ -1673,72 +1673,75 @@ if (customId.startsWith('admin_continue_no_logo_')) {
 
     // --- SISTEMA DE TICKETS ---
     if (customId === 'create_ticket_button') {
-        await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ ephemeral: true });
 
-        const ticketConfig = await TicketConfig.findOne({ guildId: guild.id });
-        if (!ticketConfig) {
-            return interaction.editReply({ content: t('errorTicketsNotConfigured', member) });
-        }
-
-        const existingTicket = await Ticket.findOne({ userId: user.id, status: { $in: ['open', 'claimed'] } });
-        if (existingTicket) {
-            return interaction.editReply({ content: t('errorTicketAlreadyOpen', member).replace('{channelId}', existingTicket.channelId) });
-        }
-
-        try {
-            const ticketChannel = await guild.channels.create({
-                name: `ticket-${user.username.replace(/[^a-z0-9-]/g, '')}`,
-                type: ChannelType.GuildText,
-                parent: process.env.TICKET_CATEGORY_ID || null,
-                permissionOverwrites: [
-                    { id: guild.id, deny: [PermissionFlagsBits.ViewChannel] },
-                    { id: user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] },
-                    { id: ticketConfig.supportRoleId, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] },
-                ],
-            });
-
-            const ticketEmbed = new EmbedBuilder()
-    .setTitle('🇪🇸 Ticket de Soporte / 🇬🇧 Support Ticket')
-    .setDescription(`¡Hola <@${user.id}>! Tu ticket ha sido creado.\n\nPor favor, describe tu problema o duda con el mayor detalle posible. Un miembro del staff te atenderá pronto.\n\nHello <@${user.id}>! Your ticket has been created.\n\nPlease describe your problem or question in as much detail as possible. A staff member will assist you shortly.`)
-    .setColor('Blue')
-    .setFooter({ text: 'Puedes cerrar este ticket en cualquier momento pulsando el botón 🔒. / You can close this ticket at any time by pressing the 🔒 button.' });
-
-const ticketButtons = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId(`attend_ticket`).setLabel('Atender / Handle').setStyle(ButtonStyle.Primary).setEmoji('✅'),
-    new ButtonBuilder().setCustomId(`close_ticket`).setLabel('Cerrar / Close').setStyle(ButtonStyle.Danger).setEmoji('🔒')
-);
-
-            const ticketMessage = await ticketChannel.send({ embeds: [ticketEmbed], components: [ticketButtons] });
-
-            const newTicket = new Ticket({ userId: user.id, channelId: ticketChannel.id, guildId: guild.id, messageId: ticketMessage.id, status: 'open' });
-
-            const logChannel = await guild.channels.fetch(ticketConfig.logChannelId);
-            if (logChannel) {
-                const staffNotificationEmbed = new EmbedBuilder()
-    .setTitle(t('ticketLogNewTitle', member))
-    .setDescription(t('ticketLogNewDescription', member).replace('{userId}', user.id))
-    .addFields(
-        { name: t('ticketLogFieldTicket', member), value: `<#${ticketChannel.id}>`, inline: true }, 
-        { name: t('ticketLogFieldStatus', member), value: t('ticketLogStatusOpen', member), inline: true }
-    )
-    .setColor('Green').setTimestamp();
-                
-                const staffNotificationButtons = new ActionRowBuilder().addComponents(new ButtonBuilder().setLabel(t('ticketLogGoToButton', member)).setStyle(ButtonStyle.Link).setURL(ticketChannel.url));
-                const logMessage = await logChannel.send({ embeds: [staffNotificationEmbed], components: [staffNotificationButtons] });
-                
-                newTicket.logMessageId = logMessage.id;
-            }
-
-            await newTicket.save();
-            await interaction.editReply({ content: `✅ ${t('ticketCreatedSuccess', member).replace('{channelId}', ticketChannel.id)}` });
-
-        } catch (error) {
-            console.error('Error al crear el ticket:', error);
-            await interaction.editReply({ content: '❌ Hubo un error al intentar crear tu ticket. Por favor, inténtalo de nuevo más tarde.' });
-        }
-        return;
+    const ticketConfig = await TicketConfig.findOne({ guildId: guild.id });
+    if (!ticketConfig) {
+        return interaction.editReply({ content: t('errorTicketsNotConfigured', member) });
     }
 
+    const existingTicket = await Ticket.findOne({ userId: user.id, status: { $in: ['open', 'claimed'] } });
+    if (existingTicket) {
+        return interaction.editReply({ content: t('errorTicketAlreadyOpen', member).replace('{channelId}', existingTicket.channelId) });
+    }
+
+    try {
+        const ticketChannel = await guild.channels.create({
+            name: `ticket-${user.username.replace(/[^a-z0-9-]/g, '')}`,
+            type: ChannelType.GuildText,
+            parent: process.env.TICKET_CATEGORY_ID || null,
+            permissionOverwrites: [
+                { id: guild.id, deny: [PermissionFlagsBits.ViewChannel] },
+                { id: user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] },
+                { id: ticketConfig.supportRoleId, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] },
+            ],
+        });
+
+        // --- CONTENIDO BILINGÜE Y FIJO PARA EL TICKET ---
+        const ticketEmbed = new EmbedBuilder()
+            .setTitle('🇪🇸 Ticket de Soporte / 🇬🇧 Support Ticket')
+            .setDescription(`¡Hola <@${user.id}>! Tu ticket ha sido creado.\n\nPor favor, describe tu problema o duda con el mayor detalle posible. Un miembro del staff te atenderá pronto.\n\n---\n\nHello <@${user.id}>! Your ticket has been created.\n\nPlease describe your problem or question in as much detail as possible. A staff member will assist you shortly.`)
+            .setColor('Blue')
+            .setFooter({ text: 'Puedes cerrar este ticket en cualquier momento pulsando el botón 🔒. / You can close this ticket at any time by pressing the 🔒 button.' });
+
+        const ticketButtons = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId(`attend_ticket`).setLabel('Atender / Handle').setStyle(ButtonStyle.Primary).setEmoji('✅'),
+            new ButtonBuilder().setCustomId(`close_ticket`).setLabel('Cerrar / Close').setStyle(ButtonStyle.Danger).setEmoji('🔒')
+        );
+        // --------------------------------------------------
+
+        const ticketMessage = await ticketChannel.send({ embeds: [ticketEmbed], components: [ticketButtons] });
+        const newTicket = new Ticket({ userId: user.id, channelId: ticketChannel.id, guildId: guild.id, messageId: ticketMessage.id, status: 'open' });
+
+        const logChannel = await guild.channels.fetch(ticketConfig.logChannelId);
+        if (logChannel) {
+            // El log también es mejor que sea bilingüe
+            const staffNotificationEmbed = new EmbedBuilder()
+                .setTitle('🔔 Nuevo Ticket Abierto / New Ticket Opened')
+                .setDescription(`Abierto por / Opened by <@${user.id}>.`)
+                .addFields(
+                    { name: 'Ticket', value: `<#${ticketChannel.id}>`, inline: true }, 
+                    { name: 'Estado / Status', value: 'Abierto / Open', inline: true }
+                )
+                .setColor('Green').setTimestamp();
+            
+            const staffNotificationButtons = new ActionRowBuilder().addComponents(new ButtonBuilder().setLabel('Ir al Ticket / Go to Ticket').setStyle(ButtonStyle.Link).setURL(ticketChannel.url));
+            const logMessage = await logChannel.send({ embeds: [staffNotificationEmbed], components: [staffNotificationButtons] });
+            
+            newTicket.logMessageId = logMessage.id;
+        }
+
+        await newTicket.save();
+
+        // --- RESPUESTA EFÍMERA TRADUCIDA ---
+        await interaction.editReply({ content: `✅ ${t('ticketCreatedSuccess', member).replace('{channelId}', ticketChannel.id)}` });
+
+    } catch (error) {
+        console.error('Error al crear el ticket:', error);
+        await interaction.editReply({ content: '❌ Hubo un error al intentar crear tu ticket. Por favor, inténtalo de nuevo más tarde.' });
+    }
+    return;
+}
     if (customId === 'attend_ticket') {
     await interaction.deferReply({ ephemeral: true });
     const ticket = await Ticket.findOne({ channelId: interaction.channel.id });
