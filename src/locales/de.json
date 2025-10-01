@@ -253,6 +253,7 @@
 "profileReminderField3Title": "Schritt 3: Vervollständige dein Profil",
 "profileReminderField3Value": "Drücke im erscheinenden Menü auf **\"Profil aktualisieren\"** und fülle alle deine Daten aus.",
 "profileReminderFooter": "Nach Abschluss erhältst du automatisch die Spielerrolle.",
+  "errorNoTeamsRegistered": "Es sind keine Teams registriert.",
   "pos_GK": "TW",
   "pos_CB": "IV",
   "pos_WB": "AV",
