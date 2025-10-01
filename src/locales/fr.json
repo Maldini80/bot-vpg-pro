@@ -277,6 +277,8 @@
   "errorInviteNotForYou": "Cette invitation n'est pas pour vous.",
   "errorUserNotInServer": "Il semble que vous ne soyez plus sur le serveur de l'équipe.",
   "errorApplicationInvalid": "Cette candidature n'est plus valide ou a déjà été traitée.",
+  "paginationPrevious": "Précédent",
+"paginationNext": "Suivant",
   "pos_GK": "G",
   "pos_CB": "DC",
   "pos_WB": "DL/G",
