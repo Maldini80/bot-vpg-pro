@@ -37,9 +37,9 @@ async function sendPaginatedPlayerMenu(interaction, members, page) {
     
     // Dejamos los botones de navegación sin traducir ya que son universales
     const navigationRow = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId(`paginate_invitePlayer_${page - 1}`).setLabel('◀️ Anterior').setStyle(ButtonStyle.Secondary).setDisabled(page === 0),
-        new ButtonBuilder().setCustomId(`paginate_invitePlayer_${page + 1}`).setLabel('Siguiente ▶️').setStyle(ButtonStyle.Secondary).setDisabled(page >= totalPages - 1)
-    );
+    new ButtonBuilder().setCustomId(`paginate_invitePlayer_${page - 1}`).setLabel(`◀️ ${t('paginationPrevious', member)}`).setStyle(ButtonStyle.Secondary).setDisabled(page === 0),
+    new ButtonBuilder().setCustomId(`paginate_invitePlayer_${page + 1}`).setLabel(`${t('paginationNext', member)} ▶️`).setStyle(ButtonStyle.Secondary).setDisabled(page >= totalPages - 1)
+);
     const components = [new ActionRowBuilder().addComponents(selectMenu)];
     if (totalPages > 1) { components.push(navigationRow); }
     await interaction.editReply({ content: t('invitePlayerMenuHeader', member), components });
@@ -56,9 +56,9 @@ async function sendPaginatedTeamMenu(interaction, teams, baseCustomId, paginatio
     const placeholder = t('paginationSelectTeamPlaceholder', interaction.member).replace('{currentPage}', page + 1).replace('{totalPages}', totalPages);
     const selectMenu = new StringSelectMenuBuilder().setCustomId(baseCustomId).setPlaceholder(placeholder).addOptions(teamOptions);
     const navigationRow = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId(`paginate_${paginationId}_${page - 1}`).setLabel('◀️ Anterior').setStyle(ButtonStyle.Secondary).setDisabled(page === 0),
-        new ButtonBuilder().setCustomId(`paginate_${paginationId}_${page + 1}`).setLabel('Siguiente ▶️').setStyle(ButtonStyle.Secondary).setDisabled(page >= totalPages - 1)
-    );
+    new ButtonBuilder().setCustomId(`paginate_${paginationId}_${page - 1}`).setLabel(`◀️ ${t('paginationPrevious', interaction.member)}`).setStyle(ButtonStyle.Secondary).setDisabled(page === 0),
+    new ButtonBuilder().setCustomId(`paginate_${paginationId}_${page + 1}`).setLabel(`${t('paginationNext', interaction.member)} ▶️`).setStyle(ButtonStyle.Secondary).setDisabled(page >= totalPages - 1)
+);
     const components = [new ActionRowBuilder().addComponents(selectMenu)];
     if (totalPages > 1) { components.push(navigationRow); }
     if (interaction.deferred || interaction.replied) { await interaction.editReply({ content: contentMessage, components }); }
