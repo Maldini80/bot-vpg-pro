@@ -522,40 +522,50 @@ if (customId.startsWith('admin_select_members_')) {
     }
     
     if (customId === 'view_team_roster_select') {
-        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-        const team = await Team.findById(selectedValue).lean();
-        if (!team) return interaction.editReply({ content: t('errorTeamNoLongerExists', member) });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    const team = await Team.findById(selectedValue).lean();
+    if (!team) return interaction.editReply({ content: t('errorTeamNoLongerExists', member) });
+    
+    const allMemberIds = [team.managerId, ...team.captains, ...team.players].filter(id => id);
+    if (allMemberIds.length === 0) return interaction.editReply({ content: t('errorTeamHasNoMembers', member) });
+    
+    const memberProfiles = await VPGUser.find({ discordId: { $in: allMemberIds } }).lean();
+    const memberMap = new Map(memberProfiles.map(p => [p.discordId, p]));
+    
+    let rosterString = '';
+    const fetchMemberInfo = async (ids, roleName) => {
+        if (!ids || ids.length === 0) return;
+        rosterString += `\n**${roleName}**\n`;
+        for (const memberId of ids) {
+            try {
+               const memberData = await guild.members.fetch(memberId);
+               const profile = memberMap.get(memberId);
+               let positionString = profile?.primaryPosition ? ` - ${profile.primaryPosition}` : '';
+               if (profile?.secondaryPosition) { positionString += ` / ${profile.secondaryPosition}`; }
+               const vpgUsername = profile?.vpgUsername || 'N/A';
+               const twitterInfo = profile?.twitterHandle ? ` (@${profile.twitterHandle})` : '';
+               rosterString += `> ${memberData.user.username} (${vpgUsername})${positionString}${twitterInfo}\n`;
+            } catch (error) { rosterString += `> *Usuario no encontrado (ID: ${memberId})*\n`; }
+        }
+    };
+    
+    // --- LÍNEAS CORREGIDAS ---
+    await fetchMemberInfo([team.managerId].filter(Boolean), t('rosterManager', member));
+    await fetchMemberInfo(team.captains, t('rosterCaptains', member));
+    await fetchMemberInfo(team.players, t('rosterPlayers', member));
+    
+    const embedTitle = t('rosterEmbedTitle', member).replace('{teamName}', team.name);
+    const embedFooter = t('rosterLeague', member).replace('{leagueName}', team.league);
+
+    const embed = new EmbedBuilder()
+        .setTitle(embedTitle)
+        .setDescription(rosterString.trim() || t('rosterNoMembers', member))
+        .setColor('#3498db')
+        .setThumbnail(team.logoUrl)
+        .setFooter({ text: embedFooter });
         
-        const allMemberIds = [team.managerId, ...team.captains, ...team.players].filter(id => id);
-        if (allMemberIds.length === 0) return interaction.editReply({ content: 'Este equipo no tiene miembros.' });
-        
-        const memberProfiles = await VPGUser.find({ discordId: { $in: allMemberIds } }).lean();
-        const memberMap = new Map(memberProfiles.map(p => [p.discordId, p]));
-        
-        let rosterString = '';
-        const fetchMemberInfo = async (ids, roleName) => {
-            if (!ids || ids.length === 0) return;
-            rosterString += `\n**${roleName}**\n`;
-            for (const memberId of ids) {
-                try {
-                   const memberData = await guild.members.fetch(memberId);
-                   const profile = memberMap.get(memberId);
-                   let positionString = profile?.primaryPosition ? ` - ${profile.primaryPosition}` : '';
-                   if (profile?.secondaryPosition) { positionString += ` / ${profile.secondaryPosition}`; }
-                   const vpgUsername = profile?.vpgUsername || 'N/A';
-                   const twitterInfo = profile?.twitterHandle ? ` (@${profile.twitterHandle})` : '';
-                   rosterString += `> ${memberData.user.username} (${vpgUsername})${positionString}${twitterInfo}\n`;
-                } catch (error) { rosterString += `> *Usuario no encontrado (ID: ${memberId})*\n`; }
-            }
-        };
-        
-        await fetchMemberInfo([team.managerId].filter(Boolean), t('rosterManager', member));
-        await fetchMemberInfo(team.captains, t('rosterCaptains', member));
-        await fetchMemberInfo(team.players, t('rosterPlayers', member));
-        
-        const embed = new EmbedBuilder().setTitle(`Plantilla de ${team.name} (${team.abbreviation})`).setDescription(rosterString.trim() || 'Este equipo no tiene miembros.').setColor('#3498db').setThumbnail(team.logoUrl).setFooter({ text: `Liga: ${team.league}` });
-        return interaction.editReply({ embeds: [embed] });
-    }
+    return interaction.editReply({ embeds: [embed] });
+}
     
     if (customId === 'delete_league_select_menu') {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
