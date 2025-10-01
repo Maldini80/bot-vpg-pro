@@ -13,7 +13,7 @@ const { updatePanelMessage, getOrCreateWebhook } = require('./buttonHandler.js')
 const POSITION_KEYS = ['GK', 'CB', 'WB', 'CDM', 'CM', 'CAM', 'ST'];
 
 module.exports = async (client, interaction) => {
-    const { customId, values, guild, user } = interaction;
+    const { customId, values, guild, user, member } = interaction;
     const selectedValue = values[0];
 
     if (customId.startsWith('admin_select_new_manager_')) {
