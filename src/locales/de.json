@@ -236,6 +236,7 @@
   "ticketPanelHowToValue": "1. Drücke die Schaltfläche \"Ticket öffnen\".\n2. Ein privater Kanal wird für dich und das Personal erstellt.\n3. Erkläre dein Problem im neuen Kanal.",
   "ticketPanelFooter": "Bitte missbrauche das System nicht.",
   "ticketPanelButton": "➕ Ticket öffnen",
+  "ticketCreatedSuccess": "Dein Ticket wurde erstellt: <#{channelId}>",
   "pos_GK": "TW",
   "pos_CB": "IV",
   "pos_WB": "AV",
