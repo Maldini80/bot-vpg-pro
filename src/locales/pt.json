@@ -236,6 +236,7 @@
   "ticketPanelHowToValue": "1. Pressione o botão \"Abrir Ticket\".\n2. Um canal privado será criado para você e a equipe.\n3. Explique seu problema no novo canal.",
   "ticketPanelFooter": "Por favor, não abuse do sistema.",
   "ticketPanelButton": "➕ Abrir Ticket",
+  "ticketCreatedSuccess": "Seu ticket foi criado: <#{channelId}>",
   "pos_GK": "GOL",
   "pos_CB": "ZAG",
   "pos_WB": "LE/LD",
