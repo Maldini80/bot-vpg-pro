@@ -524,7 +524,7 @@ if (customId.startsWith('admin_select_members_')) {
     if (customId === 'view_team_roster_select') {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const team = await Team.findById(selectedValue).lean();
-        if (!team) return interaction.editReply({ content: 'Este equipo ya no existe.' });
+        if (!team) return interaction.editReply({ content: t('errorTeamNoLongerExists', member) });
         
         const allMemberIds = [team.managerId, ...team.captains, ...team.players].filter(id => id);
         if (allMemberIds.length === 0) return interaction.editReply({ content: 'Este equipo no tiene miembros.' });
@@ -561,7 +561,7 @@ if (customId.startsWith('admin_select_members_')) {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const leaguesToDelete = values;
         const result = await League.deleteMany({ guildId: guild.id, name: { $in: leaguesToDelete } });
-        return interaction.editReply({ content: `✅ Se han eliminado ${result.deletedCount} ligas.` });
+        return interaction.editReply({ content: t('leaguesDeletedSuccess', member).replace('{count}', result.deletedCount) });
     }
     
     if (customId === 'register_select_primary_position' || customId === 'register_select_secondary_position') {
