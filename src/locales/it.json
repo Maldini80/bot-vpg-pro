@@ -237,6 +237,7 @@
   "ticketPanelFooter": "Per favore, non abusare del sistema.",
   "ticketPanelButton": "➕ Apri Ticket",
   "ticketCreatedSuccess": "Il tuo ticket è stato creato: <#{channelId}>",
+  "errorNoTeamsRegistered": "Non ci sono squadre registrate.",
   "pos_GK": "POR",
   "pos_CB": "DC",
   "pos_WB": "TS/TD",
