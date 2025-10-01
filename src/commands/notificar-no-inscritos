@@ -57,7 +57,6 @@ module.exports = {
 
             let notifiedCount = 0;
             let failedCount = 0;
-            const TORNEOS_STATUS_CHANNEL_ID = process.env.TORNEOS_STATUS_CHANNEL_ID;
 
             for (const user of usersToNotify) {
                 try {
@@ -75,15 +74,13 @@ module.exports = {
                         .setImage('https://i.imgur.com/jw4PnKN.jpeg');
 
                     const actionRow = new ActionRowBuilder();
-                    if (TORNEOS_STATUS_CHANNEL_ID) {
-                        actionRow.addComponents(
-                            new ButtonBuilder()
-                                .setLabel(t('unregisteredNotificationButton', member))
-                                .setStyle(ButtonStyle.Link)
-                                .setURL(`https://discord.com/channels/${interaction.guild.id}/${TORNEOS_STATUS_CHANNEL_ID}`)
-                                .setEmoji('➡️')
-                        );
-                    }
+actionRow.addComponents(
+    new ButtonBuilder()
+        .setLabel(t('unregisteredNotificationButton', member))
+        .setStyle(ButtonStyle.Link)
+        .setURL(`https://discord.com/channels/${interaction.guild.id}/1413906746258362398`)
+        .setEmoji('➡️')
+);
 
                     // Envía el MD
                     await member.send({ embeds: [guideEmbed], components: actionRow.components.length > 0 ? [actionRow] : [] });
