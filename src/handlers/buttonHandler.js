@@ -51,9 +51,10 @@ async function sendPaginatedTeamMenu(interaction, teams, baseCustomId, paginatio
     const startIndex = page * ITEMS_PER_PAGE;
     const endIndex = startIndex + ITEMS_PER_PAGE;
     const currentTeams = teams.slice(startIndex, endIndex);
-    if (currentTeams.length === 0) { return interaction.editReply({ content: 'No se encontraron equipos en esta página.', components: [] }); }
+    if (currentTeams.length === 0) { return interaction.editReply({ content: t('paginationNoTeamsOnPage', interaction.member), components: [] }); }
     const teamOptions = currentTeams.map(t => ({ label: `${t.name} (${t.abbreviation})`.substring(0, 100), value: t._id.toString() }));
-    const selectMenu = new StringSelectMenuBuilder().setCustomId(baseCustomId).setPlaceholder(`Página ${page + 1} de ${totalPages} - Selecciona un equipo`).addOptions(teamOptions);
+    const placeholder = t('paginationSelectTeamPlaceholder', interaction.member).replace('{currentPage}', page + 1).replace('{totalPages}', totalPages);
+    const selectMenu = new StringSelectMenuBuilder().setCustomId(baseCustomId).setPlaceholder(placeholder).addOptions(teamOptions);
     const navigationRow = new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId(`paginate_${paginationId}_${page - 1}`).setLabel('◀️ Anterior').setStyle(ButtonStyle.Secondary).setDisabled(page === 0),
         new ButtonBuilder().setCustomId(`paginate_${paginationId}_${page + 1}`).setLabel('Siguiente ▶️').setStyle(ButtonStyle.Secondary).setDisabled(page >= totalPages - 1)
