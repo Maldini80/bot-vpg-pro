@@ -278,6 +278,8 @@
 "viewTeamsPrompt": "Elige un equipo para ver su plantilla:",
 "deleteLeaguesPrompt": "Selecciona una o más ligas del menú para borrarlas permanentemente.",
 "leaguesDeletedSuccess": "✅ Se han eliminado {count} ligas.",
+  "paginationPrevious": "Anterior",
+"paginationNext": "Siguiente",
   "pos_GK": "POR",
   "pos_CB": "DFC",
   "pos_WB": "LD/LI",
