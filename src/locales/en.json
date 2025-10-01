@@ -254,6 +254,8 @@
 "profileReminderField3Value": "In the menu that appears, press **\"Update Profile\"** and fill in all your details.",
 "profileReminderFooter": "Once completed, you will automatically receive the Player role.",
   "errorNoTeamsRegistered": "There are no teams registered.",
+  "paginationNoTeamsOnPage": "No teams found on this page.",
+"paginationSelectTeamPlaceholder": "Page {currentPage} of {totalPages} - Select a team",
   "pos_GK": "GK",
   "pos_CB": "CB",
   "pos_WB": "WB",
