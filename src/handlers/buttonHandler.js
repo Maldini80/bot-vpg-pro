@@ -748,7 +748,7 @@ if (customId.startsWith('admin_continue_no_logo_')) {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const teams = await Team.find({ guildId: guild.id }).sort({ name: 1 }).lean();
         if (teams.length === 0) {
-            return interaction.editReply({ content: 'No hay equipos registrados.' });
+            return interaction.editReply({ content: t('errorNoTeamsRegistered', member) });
         }
         await sendPaginatedTeamMenu(interaction, teams, 'view_team_roster_select', 'view', 0, 'Elige un equipo para ver su plantilla:');
         return;
