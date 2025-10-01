@@ -250,7 +250,7 @@ module.exports = async (client, interaction) => {
         
         const pendingTeam = await PendingTeam.findById(pendingTeamId);
         if (!pendingTeam || pendingTeam.userId !== user.id) {
-            return interaction.editReply({ content: 'Esta solicitud ha expirado o no es tuya.', components: [] });
+            return interaction.editReply({ content: t('errorRequestExpired', member), components: [] });
         }
         
         const logoUrl = fields.getTextInputValue('teamLogoUrlInput');
@@ -267,11 +267,11 @@ module.exports = async (client, interaction) => {
 
         const teamId = customId.split('_')[3];
         const team = await Team.findById(teamId);
-        if (!team) return interaction.editReply({ content: 'El equipo ya no existe.' });
+        if (!team) return interaction.editReply({ content: t('errorTeamNoLongerExists', member) });
 
         const isManager = team.managerId === user.id;
         const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
-        if (!isManager && !isAdmin) return interaction.editReply({ content: 'No tienes permiso.' });
+        if (!isManager && !isAdmin) return interaction.editReply({ content: t('errorNoPermission', member) });
 
         const oldData = {
             name: team.name,
