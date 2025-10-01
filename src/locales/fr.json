@@ -269,6 +269,7 @@
 "profileReminderField3Title": "Passo 3: Completa il tuo profilo",
 "profileReminderField3Value": "Nel menu che appare, premi **\"Aggiorna Profilo\"** e compila tutti i tuoi dati.",
 "profileReminderFooter": "Una volta completato, riceverai automaticamente il ruolo di Giocatore.",
+  "errorNoTeamsRegistered": "Aucune équipe n'est enregistrée.",
   "pos_GK": "G",
   "pos_CB": "DC",
   "pos_WB": "DL/G",
