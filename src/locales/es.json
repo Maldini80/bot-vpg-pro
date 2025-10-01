@@ -285,6 +285,8 @@
   "unregisteredNotificationHowToValue": "Es muy fácil. Pulsa el botón de abajo para ir al canal de inscripción y vuelve a pulsar el botón verde de \"Inscribirse\". ¡Ahora el sistema te reconocerá y podrás completar tu registro en el draft!",
   "unregisteredNotificationButton": "Ir al Canal de Inscripción",
   "unifiedRegistrationComplete": "✅ ¡Registro y verificación completados! Has recibido los roles de Jugador y Jugador Verificado. ¡Ya puedes inscribirte a los drafts!",
+  "profileReminderField4Title": "Fecha y Hora Límite",
+  "profileReminderField4Value": "Recuerda que tienes hasta el **{fecha}** a las **{hora}** para completar tu inscripción.",
   "pos_GK": "POR",
   "pos_CB": "DFC",
   "pos_WB": "LD/LI",
