@@ -278,6 +278,8 @@
 "viewTeamsPrompt": "Choose a team to view its roster:",
 "deleteLeaguesPrompt": "Select one or more leagues from the menu to permanently delete them.",
 "leaguesDeletedSuccess": "✅ {count} leagues have been deleted.",
+  "paginationPrevious": "Previous",
+"paginationNext": "Next",
   "pos_GK": "GK",
   "pos_CB": "CB",
   "pos_WB": "WB",
