@@ -259,5 +259,6 @@
   "profileReminderField2Value": "**\"Oyuncu Eylemleri\"** düğmesine bas.",
   "profileReminderField3Title": "Adım 3: Profilini tamamla",
   "profileReminderField3Value": "Görünen menüde, **\"Profili Güncelle\"**'ye bas ve tüm bilgilerini doldur.",
-  "profileReminderFooter": "Tamamladıktan sonra, Oyuncu rolünü otomatik olarak alacaksın."
+  "profileReminderFooter": "Tamamladıktan sonra, Oyuncu rolünü otomatik olarak alacaksın.",
+  tr.json: "errorNoTeamsRegistered": "Kayıtlı takım yok."
 }
