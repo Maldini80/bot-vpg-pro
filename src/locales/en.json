@@ -236,6 +236,7 @@
   "ticketPanelHowToValue": "1. Press the \"Open Ticket\" button.\n2. A private channel will be created for you and the staff.\n3. Explain your issue in the new channel.",
   "ticketPanelFooter": "Please do not abuse the system.",
   "ticketPanelButton": "➕ Open Ticket",
+  "ticketCreatedSuccess": "Your ticket has been created: <#{channelId}>",
   "pos_GK": "GK",
   "pos_CB": "CB",
   "pos_WB": "WB",
