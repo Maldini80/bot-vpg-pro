@@ -236,6 +236,7 @@
   "ticketPanelHowToValue": "1. Premi il pulsante \"Apri Ticket\".\n2. Verrà creato un canale privato per te e lo staff.\n3. Spiega il tuo problema nel nuovo canale.",
   "ticketPanelFooter": "Per favore, non abusare del sistema.",
   "ticketPanelButton": "➕ Apri Ticket",
+  "ticketCreatedSuccess": "Il tuo ticket è stato creato: <#{channelId}>",
   "pos_GK": "POR",
   "pos_CB": "DC",
   "pos_WB": "TS/TD",
