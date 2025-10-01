@@ -277,6 +277,8 @@
   "viewTeamsPrompt": "Scegli una squadra per visualizzare la sua rosa:",
   "deleteLeaguesPrompt": "Seleziona uno o più campionati dal menu per eliminarli permanentemente.",
   "leaguesDeletedSuccess": "✅ {count} campionati sono stati eliminati.",
+  "paginationPrevious": "Precedente",
+"paginationNext": "Successivo",
   "pos_GK": "POR",
   "pos_CB": "DC",
   "pos_WB": "TS/TD",
