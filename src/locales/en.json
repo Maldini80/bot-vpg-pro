@@ -285,6 +285,8 @@
 "unregisteredNotificationHowToValue": "It's easy. Press the button below to go to the enrollment channel and press the green \"Enroll\" button again. The system will now recognize you and you can complete your draft registration!",
 "unregisteredNotificationButton": "Go to Enrollment Channel",
 "paginationNext": "Next",
+  "profileReminderField4Title": "Deadline",
+"profileReminderField4Value": "Remember that you have until **{fecha}** at **{hora}** to complete your registration.",
   "pos_GK": "GK",
   "pos_CB": "CB",
   "pos_WB": "WB",
