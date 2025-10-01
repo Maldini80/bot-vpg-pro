@@ -277,6 +277,8 @@
   "errorInviteNotForYou": "Este convite não é para você.",
   "errorUserNotInServer": "Parece que você não está mais no servidor da equipe.",
   "errorApplicationInvalid": "Esta candidatura não é mais válida ou já foi tratada.",
+  "paginationPrevious": "Anterior",
+"paginationNext": "Próximo",
   "pos_GK": "GOL",
   "pos_CB": "ZAG",
   "pos_WB": "LE/LD",
