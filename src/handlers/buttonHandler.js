@@ -751,7 +751,7 @@ if (customId.startsWith('admin_continue_no_logo_')) {
         if (teams.length === 0) {
             return interaction.editReply({ content: t('errorNoTeamsRegistered', member) });
         }
-        await sendPaginatedTeamMenu(interaction, teams, 'view_team_roster_select', 'view', 0, 'Elige un equipo para ver su plantilla:');
+        await sendPaginatedTeamMenu(interaction, teams, 'view_team_roster_select', 'view', 0, t('viewTeamsPrompt', member));
         return;
     }
     
@@ -828,7 +828,7 @@ if (customId.startsWith('admin_continue_no_logo_')) {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const leagues = await League.find({ guildId: guild.id });
         if (leagues.length === 0) {
-            return interaction.editReply({ content: 'No hay ligas para borrar.' });
+            return interaction.editReply({ content: t('errorNoLeaguesToDelete', member) });
         }
         const leagueOptions = leagues.map(l => ({ label: l.name, value: l.name }));
         const selectMenu = new StringSelectMenuBuilder()
@@ -837,7 +837,7 @@ if (customId.startsWith('admin_continue_no_logo_')) {
             .addOptions(leagueOptions)
             .setMinValues(1)
             .setMaxValues(leagues.length);
-        return interaction.editReply({ content: 'Selecciona una o más ligas del menú para borrarlas permanentemente.', components: [new ActionRowBuilder().addComponents(selectMenu)] });
+        return interaction.editReply({ content: t('deleteLeaguesPrompt', member), components: [new ActionRowBuilder().addComponents(selectMenu)] });
     }
 
     if (customId === 'admin_manage_team_button') {
@@ -968,7 +968,7 @@ if (customId.startsWith('admin_continue_no_logo_')) {
 
         if (memberOptions.length === 0) {
             // Este es un error técnico, lo dejamos sin traducir por ahora
-            return interaction.editReply({ content: 'No se encontraron miembros válidos en el servidor.' });
+            return interaction.editReply({ content: t('errorNoValidMembers', member) });
         }
 
         const selectMenu = new StringSelectMenuBuilder()
