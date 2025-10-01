@@ -1697,16 +1697,15 @@ if (customId.startsWith('admin_continue_no_logo_')) {
                 ],
             });
 
-            const ticketDescription = t('ticketDescription', member).replace('{userId}', user.id);
-const ticketEmbed = new EmbedBuilder()
-    .setTitle(t('ticketTitle', member))
-    .setDescription(ticketDescription)
+            const ticketEmbed = new EmbedBuilder()
+    .setTitle('🇪🇸 Ticket de Soporte / 🇬🇧 Support Ticket')
+    .setDescription(`¡Hola <@${user.id}>! Tu ticket ha sido creado.\n\nPor favor, describe tu problema o duda con el mayor detalle posible. Un miembro del staff te atenderá pronto.\n\nHello <@${user.id}>! Your ticket has been created.\n\nPlease describe your problem or question in as much detail as possible. A staff member will assist you shortly.`)
     .setColor('Blue')
-    .setFooter({ text: t('ticketFooter', member) });
+    .setFooter({ text: 'Puedes cerrar este ticket en cualquier momento pulsando el botón 🔒. / You can close this ticket at any time by pressing the 🔒 button.' });
 
-            const ticketButtons = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId(`attend_ticket`).setLabel(t('attendTicketButton', member)).setStyle(ButtonStyle.Primary).setEmoji('✅'),
-    new ButtonBuilder().setCustomId(`close_ticket`).setLabel(t('closeTicketButton', member)).setStyle(ButtonStyle.Danger).setEmoji('🔒')
+const ticketButtons = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId(`attend_ticket`).setLabel('Atender / Handle').setStyle(ButtonStyle.Primary).setEmoji('✅'),
+    new ButtonBuilder().setCustomId(`close_ticket`).setLabel('Cerrar / Close').setStyle(ButtonStyle.Danger).setEmoji('🔒')
 );
 
             const ticketMessage = await ticketChannel.send({ embeds: [ticketEmbed], components: [ticketButtons] });
@@ -1731,7 +1730,7 @@ const ticketEmbed = new EmbedBuilder()
             }
 
             await newTicket.save();
-            await interaction.editReply({ content: `✅ ${t('registrationComplete', member).replace('**¡Registro completado!**', `Tu ticket ha sido creado: <#${ticketChannel.id}>`)}` });
+            await interaction.editReply({ content: `✅ ${t('ticketCreatedSuccess', member).replace('{channelId}', ticketChannel.id)}` });
 
         } catch (error) {
             console.error('Error al crear el ticket:', error);
