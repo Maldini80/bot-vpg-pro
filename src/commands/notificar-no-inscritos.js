@@ -76,7 +76,7 @@ module.exports = {
             let failedCount = 0;
             let processedCount = 0;
 
-            const draftImage = 'https://i.imgur.com/abcdef.png';
+            const draftImage = 'https://i.imgur.com/ynXi5SI.png';
 
             for (const user of usersToNotify) {
                 processedCount++;
