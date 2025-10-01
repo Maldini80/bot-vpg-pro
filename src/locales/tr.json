@@ -277,6 +277,8 @@
   "errorInviteNotForYou": "Bu davetiye sizin için değil.",
   "errorUserNotInServer": "Görünüşe göre artık takımın sunucusunda değilsiniz.",
   "errorApplicationInvalid": "Bu başvuru artık geçerli değil veya zaten işleme alınmış.",
+  "paginationPrevious": "Önceki",
+"paginationNext": "Sonraki",
   "pos_GK": "KL",
   "pos_CB": "STP",
   "pos_WB": "BEK",
