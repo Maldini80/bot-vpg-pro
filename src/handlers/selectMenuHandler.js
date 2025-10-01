@@ -549,9 +549,9 @@ if (customId.startsWith('admin_select_members_')) {
             }
         };
         
-        await fetchMemberInfo([team.managerId].filter(Boolean), '👑 Mánager');
-        await fetchMemberInfo(team.captains, '🛡️ Capitanes');
-        await fetchMemberInfo(team.players, 'Jugadores');
+        await fetchMemberInfo([team.managerId].filter(Boolean), t('rosterManager', member));
+        await fetchMemberInfo(team.captains, t('rosterCaptains', member));
+        await fetchMemberInfo(team.players, t('rosterPlayers', member));
         
         const embed = new EmbedBuilder().setTitle(`Plantilla de ${team.name} (${team.abbreviation})`).setDescription(rosterString.trim() || 'Este equipo no tiene miembros.').setColor('#3498db').setThumbnail(team.logoUrl).setFooter({ text: `Liga: ${team.league}` });
         return interaction.editReply({ embeds: [embed] });
