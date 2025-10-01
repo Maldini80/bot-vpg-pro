@@ -1232,6 +1232,7 @@ if (customId.startsWith('admin_continue_no_logo_')) {
     const savedChallenge = updatedSlot.pendingChallenges.find(c => c.userId === user.id && c.teamId.equals(challengerTeam._id));
 
     if (!savedChallenge) {
+        // Este es un mensaje de error interno, no necesita traducción.
         return interaction.editReply({ content: 'Hubo un error al procesar tu desafío. Inténtalo de nuevo.' });
     }
     
@@ -1241,6 +1242,7 @@ if (customId.startsWith('admin_continue_no_logo_')) {
     const recipients = [hostManagerId, ...hostCaptains.captains];
     const uniqueRecipients = [...new Set(recipients)];
 
+    // Botones bilingües para el MD, ya que no sabemos el idioma del receptor con certeza.
     const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId(`accept_challenge_${panel._id}_${time}_${savedChallenge._id}`).setLabel('Accept / Aceptar').setStyle(ButtonStyle.Success),
         new ButtonBuilder().setCustomId(`reject_challenge_${panel._id}_${time}_${savedChallenge._id}`).setLabel('Decline / Rechazar').setStyle(ButtonStyle.Danger)
@@ -1250,6 +1252,7 @@ if (customId.startsWith('admin_continue_no_logo_')) {
     for(const recipientId of uniqueRecipients) {
         try {
             const recipientUser = await client.users.fetch(recipientId);
+            // Obtenemos el 'member' para traducir el MD a su idioma.
             const recipientMember = await guild.members.fetch(recipientId);
             
             const embed = new EmbedBuilder()
@@ -1307,8 +1310,7 @@ if (customId.startsWith('admin_continue_no_logo_')) {
     for (const challenge of challengesToNotify) {
         const userToNotify = await client.users.fetch(challenge.userId).catch(() => null);
         if (userToNotify) {
-            // Este mensaje se envía por MD a otros usuarios, pero no tenemos su 'member' object.
-            // Usar un texto bilingüe aquí es una solución simple y efectiva.
+            // Mensaje bilingüe fijo para el MD, es la solución más robusta.
             await userToNotify.send(`The team **${panel.teamId.name}** has cancelled all their pending challenges, including yours.\nEl equipo **${panel.teamId.name}** ha cancelado todas sus peticiones de desafío pendientes, incluyendo la tuya.`).catch(() => {});
         }
     }
@@ -1333,6 +1335,14 @@ if (customId.startsWith('admin_continue_no_logo_')) {
     
     const otherTeamId = isHost ? slot.challengerTeamId : panel.teamId;
     const otherTeam = await Team.findById(otherTeamId);
+    if (!otherTeam) {
+         // Si el otro equipo no existe, simplemente limpiamos nuestro panel.
+        slot.status = 'AVAILABLE';
+        slot.challengerTeamId = null;
+        await panel.save();
+        await updatePanelMessage(client, panel._id);
+        return interaction.editReply({ content: t('successMatchAbandoned', member) });
+    }
     
     slot.status = 'AVAILABLE';
     slot.challengerTeamId = null;
@@ -1360,7 +1370,7 @@ if (customId.startsWith('admin_continue_no_logo_')) {
                 const otherLeaderMember = await guild.members.fetch(leaderId);
                 const notification = t('dmMatchAbandonedNotification', otherLeaderMember).replace('{teamName}', userTeam.name).replace('{time}', time);
                 await otherLeader.send(notification).catch(()=>{});
-            } catch (e) { /* El miembro ya no está en el servidor */ }
+            } catch (e) { /* El miembro ya no está en el servidor, ignorar */ }
         }
     }
     return;
