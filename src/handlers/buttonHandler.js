@@ -248,7 +248,7 @@ const handler = async (client, interaction) => {
         } else if (customId.startsWith('accept_application_') || customId.startsWith('reject_application_')) {
             const applicationId = customId.split('_')[2];
             const application = await PlayerApplication.findById(applicationId).populate('teamId');
-            if(!application || application.status !== 'pending') return interaction.editReply({ content: 'Esta solicitud ya no es válida o ya ha sido gestionada.', components: [], embeds: [] });
+            if(!application || application.status !== 'pending') return interaction.editReply({ content: 'This application is no longer valid or has already been handled. / Esta solicitud ya no es válida o ya ha sido gestionada.', components: [], embeds: [] });
             
             const guild = await client.guilds.fetch(application.teamId.guildId);
             const applicantUser = await client.users.fetch(application.userId).catch(()=>null);
@@ -291,12 +291,12 @@ const handler = async (client, interaction) => {
             const playerId = parts[3];
 
             if (interaction.user.id !== playerId) {
-                return interaction.followUp({ content: 'Esta invitación no es para ti.', flags: MessageFlags.Ephemeral });
+               return interaction.followUp({ content: 'This invitation is not for you. / Esta invitación no es para ti.', flags: MessageFlags.Ephemeral });
             }
 
             const team = await Team.findById(teamId);
             if (!team) {
-                return interaction.editReply({ content: 'Este equipo ya no existe.', components: [], embeds: [] });
+                return interaction.editReply({ content: 'This team no longer exists. / Este equipo ya no existe.', components: [], embeds: [] });
             }
 
             const guild = await client.guilds.fetch(team.guildId);
@@ -307,7 +307,7 @@ const handler = async (client, interaction) => {
 
             if (action === 'accept') {
                 if (!playerMember) {
-                    return interaction.editReply({ content: 'Parece que ya no estás en el servidor del equipo.', components: [], embeds: [] });
+                    return interaction.editReply({ content: 'It seems you are no longer in the team\'s server. / Parece que ya no estás en el servidor del equipo.', components: [], embeds: [] });
                 }
 
                 const existingTeam = await Team.findOne({ guildId: team.guildId, $or: [{ managerId: playerId }, { captains: playerId }, { players: playerId }] });
