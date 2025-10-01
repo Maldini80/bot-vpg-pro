@@ -68,7 +68,7 @@ module.exports = {
             
             // --- IMAGEN DINÁMICA ---
             // El bot buscará un campo "imageUrl" en el draft. Si no existe, usará la imagen por defecto.
-            const draftImage = 'https://i.imgur.com/abcdef.png';
+            const draftImage = 'https://i.imgur.com/wqGYXo8.jpeg';
             // -----------------------
 
             for (const user of usersToNotify) {
