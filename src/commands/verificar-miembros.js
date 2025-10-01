@@ -12,7 +12,7 @@ module.exports = {
         .setDescription('Busca miembros sin rol de jugador o perfil incompleto y les envía un recordatorio por MD.')
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
-    async execute(interaction) {async execute(interaction) {
+    async execute(interaction) {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const exclusionRoles = [
