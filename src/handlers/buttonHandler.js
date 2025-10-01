@@ -1671,12 +1671,12 @@ if (customId.startsWith('admin_continue_no_logo_')) {
 
         const ticketConfig = await TicketConfig.findOne({ guildId: guild.id });
         if (!ticketConfig) {
-            return interaction.editReply({ content: '❌ El sistema de tickets no ha sido configurado. Por favor, contacta a un administrador.' });
+            return interaction.editReply({ content: t('errorTicketsNotConfigured', member) });
         }
 
         const existingTicket = await Ticket.findOne({ userId: user.id, status: { $in: ['open', 'claimed'] } });
         if (existingTicket) {
-            return interaction.editReply({ content: `❌ Ya tienes un ticket abierto o en proceso: <#${existingTicket.channelId}>` });
+            return interaction.editReply({ content: t('errorTicketAlreadyOpen', member).replace('{channelId}', existingTicket.channelId) });
         }
 
         try {
@@ -1691,16 +1691,17 @@ if (customId.startsWith('admin_continue_no_logo_')) {
                 ],
             });
 
-            const ticketEmbed = new EmbedBuilder()
-                .setTitle(`Ticket de Soporte`)
-                .setDescription(`¡Hola <@${user.id}>! Tu ticket ha sido creado.\n\nPor favor, describe tu problema o duda con el mayor detalle posible. Un miembro del staff te atenderá pronto.`)
-                .setColor('Blue')
-                .setFooter({ text: 'Puedes cerrar este ticket en cualquier momento pulsando el botón 🔒.' });
+            const ticketDescription = t('ticketDescription', member).replace('{userId}', user.id);
+const ticketEmbed = new EmbedBuilder()
+    .setTitle(t('ticketTitle', member))
+    .setDescription(ticketDescription)
+    .setColor('Blue')
+    .setFooter({ text: t('ticketFooter', member) });
 
             const ticketButtons = new ActionRowBuilder().addComponents(
-                new ButtonBuilder().setCustomId(`attend_ticket`).setLabel('Atender Ticket').setStyle(ButtonStyle.Primary).setEmoji('✅'),
-                new ButtonBuilder().setCustomId(`close_ticket`).setLabel('Cerrar Ticket').setStyle(ButtonStyle.Danger).setEmoji('🔒')
-            );
+    new ButtonBuilder().setCustomId(`attend_ticket`).setLabel(t('attendTicketButton', member)).setStyle(ButtonStyle.Primary).setEmoji('✅'),
+    new ButtonBuilder().setCustomId(`close_ticket`).setLabel(t('closeTicketButton', member)).setStyle(ButtonStyle.Danger).setEmoji('🔒')
+);
 
             const ticketMessage = await ticketChannel.send({ embeds: [ticketEmbed], components: [ticketButtons] });
 
@@ -1709,12 +1710,15 @@ if (customId.startsWith('admin_continue_no_logo_')) {
             const logChannel = await guild.channels.fetch(ticketConfig.logChannelId);
             if (logChannel) {
                 const staffNotificationEmbed = new EmbedBuilder()
-                    .setTitle('🔔 Nuevo Ticket Abierto')
-                    .setDescription(`Un nuevo ticket ha sido abierto por <@${user.id}>.`)
-                    .addFields({ name: 'Ticket', value: `<#${ticketChannel.id}>`, inline: true }, { name: 'Estado', value: 'Abierto', inline: true })
-                    .setColor('Green').setTimestamp();
+    .setTitle(t('ticketLogNewTitle', member))
+    .setDescription(t('ticketLogNewDescription', member).replace('{userId}', user.id))
+    .addFields(
+        { name: t('ticketLogFieldTicket', member), value: `<#${ticketChannel.id}>`, inline: true }, 
+        { name: t('ticketLogFieldStatus', member), value: t('ticketLogStatusOpen', member), inline: true }
+    )
+    .setColor('Green').setTimestamp();
                 
-                const staffNotificationButtons = new ActionRowBuilder().addComponents(new ButtonBuilder().setLabel('Ir al Ticket').setStyle(ButtonStyle.Link).setURL(ticketChannel.url));
+                const staffNotificationButtons = new ActionRowBuilder().addComponents(new ButtonBuilder().setLabel(t('ticketLogGoToButton', member)).setStyle(ButtonStyle.Link).setURL(ticketChannel.url));
                 const logMessage = await logChannel.send({ embeds: [staffNotificationEmbed], components: [staffNotificationButtons] });
                 
                 newTicket.logMessageId = logMessage.id;
@@ -1731,68 +1735,77 @@ if (customId.startsWith('admin_continue_no_logo_')) {
     }
 
     if (customId === 'attend_ticket') {
-        await interaction.deferReply({ ephemeral: true });
-        const ticket = await Ticket.findOne({ channelId: interaction.channel.id });
-        const ticketConfig = await TicketConfig.findOne({ guildId: guild.id });
+    await interaction.deferReply({ ephemeral: true });
+    const ticket = await Ticket.findOne({ channelId: interaction.channel.id });
+    const ticketConfig = await TicketConfig.findOne({ guildId: guild.id });
 
-        if (!ticket) { return interaction.editReply({ content: '❌ Este canal no corresponde a un ticket válido.' }); }
-        if (ticket.status !== 'open') { return interaction.editReply({ content: `❌ Este ticket ya está ${ticket.status === 'claimed' ? 'siendo atendido' : 'cerrado'}.` }); }
-        if (!member.roles.cache.has(ticketConfig.supportRoleId) && !isAdmin) { return interaction.editReply({ content: '❌ No tienes permiso para atender tickets.' }); }
-
-        ticket.status = 'claimed';
-        ticket.claimedBy = user.id;
-        await ticket.save();
-
-        const updatedEmbed = EmbedBuilder.from(interaction.message.embeds[0]).setColor('Orange').addFields({ name: 'Atendido por', value: `<@${user.id}>` });
-        const updatedButtons = ActionRowBuilder.from(interaction.message.components[0]);
-        updatedButtons.components[0].setDisabled(true);
-
-        await interaction.message.edit({ embeds: [updatedEmbed], components: [updatedButtons] });
-        await interaction.editReply({ content: `✅ Has tomado este ticket. Ahora eres el responsable de atender a <@${ticket.userId}>.` });
-
-        if (ticket.logMessageId) {
-            try {
-                const logChannel = await guild.channels.fetch(ticketConfig.logChannelId);
-                const logMessage = await logChannel.messages.fetch(ticket.logMessageId);
-                const updatedLogEmbed = EmbedBuilder.from(logMessage.embeds[0]).setTitle('📝 Ticket Atendido').setColor('Orange').spliceFields(1, 1, { name: 'Estado', value: `Atendido por <@${user.id}>`, inline: true });
-                await logMessage.edit({ embeds: [updatedLogEmbed] });
-            } catch (error) { console.error("Error al editar el mensaje de log (atender):", error); }
-        }
-        return;
+    if (!ticket) { return interaction.editReply({ content: t('errorTicketInvalid', member) }); }
+    if (ticket.status !== 'open') { 
+        const errorMessage = ticket.status === 'claimed' ? t('errorTicketAlreadyClaimed', member) : t('errorTicketAlreadyClosed', member);
+        return interaction.editReply({ content: errorMessage });
     }
+    if (!member.roles.cache.has(ticketConfig.supportRoleId) && !isAdmin) { return interaction.editReply({ content: t('errorTicketNoPermission', member) }); }
+
+    ticket.status = 'claimed';
+    ticket.claimedBy = user.id;
+    await ticket.save();
+
+    const updatedEmbed = EmbedBuilder.from(interaction.message.embeds[0]).setColor('Orange').addFields({ name: t('ticketFieldAttendedBy', member), value: `<@${user.id}>` });
+    const updatedButtons = ActionRowBuilder.from(interaction.message.components[0]);
+    updatedButtons.components[0].setDisabled(true);
+
+    await interaction.message.edit({ embeds: [updatedEmbed], components: [updatedButtons] });
+    await interaction.editReply({ content: t('ticketTakenConfirmation', member).replace('{userId}', ticket.userId) });
+
+    if (ticket.logMessageId) {
+        try {
+            const logChannel = await guild.channels.fetch(ticketConfig.logChannelId);
+            const logMessage = await logChannel.messages.fetch(ticket.logMessageId);
+            const updatedLogEmbed = EmbedBuilder.from(logMessage.embeds[0])
+                .setTitle(t('ticketLogClaimedTitle', member))
+                .setColor('Orange')
+                .spliceFields(1, 1, { name: t('ticketLogFieldStatus', member), value: t('ticketLogStatusClaimedBy', member).replace('{staffId}', user.id), inline: true });
+            await logMessage.edit({ embeds: [updatedLogEmbed] });
+        } catch (error) { console.error("Error al editar el mensaje de log (atender):", error); }
+    }
+    return;
+}
 
     if (customId === 'close_ticket') {
-        await interaction.deferReply({ ephemeral: true });
-        const ticket = await Ticket.findOne({ channelId: interaction.channel.id });
-        const ticketConfig = await TicketConfig.findOne({ guildId: guild.id });
+    await interaction.deferReply({ ephemeral: true });
+    const ticket = await Ticket.findOne({ channelId: interaction.channel.id });
+    const ticketConfig = await TicketConfig.findOne({ guildId: guild.id });
 
-        if (!ticket) { return interaction.editReply({ content: '❌ Este canal no parece ser un ticket válido.' }); }
-        if (ticket.status === 'closed') { return interaction.editReply({ content: '❌ Este ticket ya está en proceso de cierre.' }); }
+    if (!ticket) { return interaction.editReply({ content: t('errorTicketInvalid', member) }); }
+    if (ticket.status === 'closed') { return interaction.editReply({ content: t('errorTicketAlreadyClosed', member) }); }
 
-        const canClose = member.roles.cache.has(ticketConfig.supportRoleId) || isAdmin || ticket.userId === user.id;
-        if (!canClose) { return interaction.editReply({ content: '❌ No tienes permiso para cerrar este ticket.' }); }
+    const canClose = member.roles.cache.has(ticketConfig.supportRoleId) || isAdmin || ticket.userId === user.id;
+    if (!canClose) { return interaction.editReply({ content: t('errorTicketNoPermission', member) }); }
 
-        ticket.status = 'closed';
-        await ticket.save();
+    ticket.status = 'closed';
+    await ticket.save();
 
-        await interaction.channel.send({ content: '🔒 Este ticket ha sido cerrado y será eliminado en 10 segundos.' });
-        
-        if (ticket.logMessageId) {
-            try {
-                const logChannel = await guild.channels.fetch(ticketConfig.logChannelId);
-                const logMessage = await logChannel.messages.fetch(ticket.logMessageId);
-                const updatedLogEmbed = EmbedBuilder.from(logMessage.embeds[0]).setTitle('🔒 Ticket Cerrado').setColor('Red').setDescription(`El ticket de <@${ticket.userId}> fue cerrado por <@${user.id}>.`);
-                await logMessage.edit({ embeds: [updatedLogEmbed], components: [] });
-            } catch (error) { console.error("Error al editar el mensaje de log (cerrar):", error); }
-        }
-
-        setTimeout(async () => {
-            try { await interaction.channel.delete(); } 
-            catch (err) { console.error(`Error al eliminar el canal del ticket ${ticket.channelId}:`, err); }
-        }, 10000);
-        
-        return interaction.editReply({ content: '✅ El ticket se está cerrando.' });
+    await interaction.channel.send({ content: t('ticketClosingMessage', member) });
+    
+    if (ticket.logMessageId) {
+        try {
+            const logChannel = await guild.channels.fetch(ticketConfig.logChannelId);
+            const logMessage = await logChannel.messages.fetch(ticket.logMessageId);
+            const updatedLogEmbed = EmbedBuilder.from(logMessage.embeds[0])
+                .setTitle(t('ticketLogClosedTitle', member))
+                .setColor('Red')
+                .setDescription(t('ticketLogClosedDescription', member).replace('{userId}', ticket.userId).replace('{staffId}', user.id));
+            await logMessage.edit({ embeds: [updatedLogEmbed], components: [] });
+        } catch (error) { console.error("Error al editar el mensaje de log (cerrar):", error); }
     }
+
+    setTimeout(async () => {
+        try { await interaction.channel.delete(); } 
+        catch (err) { console.error(`Error al eliminar el canal del ticket ${ticket.channelId}:`, err); }
+    }, 10000);
+    
+    return interaction.editReply({ content: t('ticketClosingConfirmation', member) });
+}
 };
 
 
