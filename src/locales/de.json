@@ -297,6 +297,8 @@
 "registrationTwitterLabel": "Dein Twitter (Benutzername ohne @)",
 "registrationWhatsappLabel": "Dein WhatsApp",
   "registrationVPGUsernameLabel": "Dein VPG-Benutzername",
+  "goToDraftChannelButton": "Zum Draft-Anmeldekanal gehen",
+"goToControlPanelButton": "Zum Kontrollpanel gehen",
   "pos_GK": "TW",
   "pos_CB": "IV",
   "pos_WB": "AV",
