@@ -151,37 +151,32 @@ const handler = async (client, interaction) => {
     const { customId, user } = interaction;
     
     if (customId === 'start_player_registration') {
-    // Obtenemos el 'member'. Si la interacción viene de un MD, 'member' no existe y debemos buscarlo.
-    let member = interaction.member;
-    if (!member) {
-        try {
-            // Usamos el ID del servidor principal desde las variables de entorno para encontrar al usuario
-            const guild = await client.guilds.fetch(process.env.GUILD_ID);
-            member = await guild.members.fetch(user.id);
-        } catch (e) {
-            console.error("Error al buscar miembro desde MD en buttonHandler:", e);
-            // Si no lo encontramos en el servidor, no puede registrarse.
-            return interaction.reply({ content: 'No pude encontrarte en el servidor. Asegúrate de estar dentro antes de registrarte.', flags: MessageFlags.Ephemeral });
-        }
-    }
-
-    const modal = new ModalBuilder()
-        .setCustomId('unified_registration_final_modal')
-        .setTitle(t('playerRegistrationTitle', member));
-
-    const gameIdInput = new TextInputBuilder().setCustomId('gameIdInput').setLabel("Tu ID en el juego").setStyle(TextInputStyle.Short).setRequired(true);
-    const platformInput = new TextInputBuilder().setCustomId('platformInput').setLabel("Plataforma (steam, psn, xbox)").setStyle(TextInputStyle.Short).setRequired(true);
-    const twitterInput = new TextInputBuilder().setCustomId('twitterInput').setLabel("Tu Twitter (usuario sin @)").setStyle(TextInputStyle.Short).setRequired(true);
-    const whatsappInput = new TextInputBuilder().setCustomId('whatsappInput').setLabel("Tu WhatsApp").setStyle(TextInputStyle.Short).setRequired(true);
-
-    modal.addComponents(
-        new ActionRowBuilder().addComponents(gameIdInput),
-        new ActionRowBuilder().addComponents(platformInput),
-        new ActionRowBuilder().addComponents(twitterInput),
-        new ActionRowBuilder().addComponents(whatsappInput)
-    );
+    const platformMenu = new StringSelectMenuBuilder()
+        .setCustomId('registration_select_platform_step1')
+        .setPlaceholder('Selecciona tu plataforma de juego principal')
+        .addOptions([
+            { label: 'PlayStation', value: 'psn', emoji: '🎮' },
+            { label: 'Xbox', value: 'xbox', emoji: '❎' },
+            { label: 'PC', value: 'pc', emoji: '🖥️' },
+        ]);
     
-    return interaction.showModal(modal);
+    const row = new ActionRowBuilder().addComponents(platformMenu);
+
+    // Usamos deferUpdate si la interacción ya fue reconocida (ej. desde MD)
+    // o reply si es la primera vez que se responde (ej. desde un canal público)
+    try {
+        if (interaction.deferred || interaction.replied) {
+            await interaction.editReply({ content: '**Paso 1 de 2:** Elige tu plataforma.', components: [row], flags: MessageFlags.Ephemeral });
+        } else {
+            await interaction.reply({ content: '**Paso 1 de 2:** Elige tu plataforma.', components: [row], flags: MessageFlags.Ephemeral });
+        }
+    } catch (e) {
+        // Si viene de un MD, no hay 'reply', solo 'followUp' o editar
+        await interaction.deferUpdate();
+        await interaction.editReply({ content: '**Paso 1 de 2:** Elige tu plataforma.', components: [row] });
+    }
+    
+    return;
 }
     
 
