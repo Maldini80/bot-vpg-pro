@@ -114,6 +114,17 @@ module.exports = async (client, interaction) => {
     
 
 if (customId.startsWith('unified_registration_modal_')) {
+    let member = interaction.member;
+if (!member) {
+    try {
+        const guild = await client.guilds.fetch(process.env.GUILD_ID);
+        member = await guild.members.fetch(user.id);
+    } catch (e) {
+        console.error("Error al buscar miembro desde MD en modalHandler:", e);
+        // Si no lo encontramos, no podemos continuar porque no podemos asignar roles.
+        return interaction.reply({ content: 'Error: No pude encontrarte en el servidor principal para asignarte los roles.', flags: MessageFlags.Ephemeral });
+    }
+}
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     // Extraemos la plataforma del ID del modal
