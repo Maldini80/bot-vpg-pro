@@ -152,11 +152,12 @@ const handler = async (client, interaction) => {
     
     if (customId === 'start_player_registration') {
     let member = interaction.member;
-    if (!member) {
-        try {
-            const guild = await client.guilds.fetch(process.env.GUILD_ID);
-            member = await guild.members.fetch(user.id);
-        } catch (e) {
+    let guild = interaction.guild; // <== AÑADE ESTA LÍNEA
+if (!member) {
+    try {
+        guild = await client.guilds.fetch(process.env.GUILD_ID); // <== QUITA EL 'const'
+        member = await guild.members.fetch(user.id);
+    } catch (e) {
             return interaction.reply({ content: 'No pude encontrarte en el servidor. Asegúrate de estar dentro antes de registrarte.', flags: MessageFlags.Ephemeral });
         }
     }
@@ -172,12 +173,7 @@ const handler = async (client, interaction) => {
     
     const row = new ActionRowBuilder().addComponents(platformMenu);
 
-    try {
-        await interaction.reply({ content: t('registrationPlatformStep1Title', member), components: [row], flags: MessageFlags.Ephemeral });
-    } catch (e) {
-        await interaction.deferUpdate();
-        await interaction.editReply({ content: t('registrationPlatformStep1Title', member), components: [row] });
-    }
+    await interaction.reply({ content: t('registrationPlatformStep1Title', member), components: [row], flags: MessageFlags.Ephemeral });
     
     return;
 }
