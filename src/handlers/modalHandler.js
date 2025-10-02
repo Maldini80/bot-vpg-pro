@@ -18,7 +18,6 @@ async function sendApprovalRequest(interaction, client, { vpgUsername, teamName,
     const approvalChannel = await client.channels.fetch(approvalChannelId).catch(() => null);
     if (!approvalChannel) return;
 
-    // SOLUCIÓN: Reemplazamos los espacios en el nombre de la liga por guiones bajos
     const safeLeagueName = leagueName.replace(/\s/g, '_');
 
     const embed = new EmbedBuilder()
@@ -32,12 +31,11 @@ async function sendApprovalRequest(interaction, client, { vpgUsername, teamName,
             { name: 'Abreviatura', value: teamAbbr },
             { name: 'Twitter del Equipo', value: teamTwitter || 'No especificado' },
             { name: 'URL del Logo', value: `[Ver Logo](${logoUrl})` },
-            { name: 'Liga Seleccionada', value: leagueName } // El texto visible sigue siendo el original
+            { name: 'Liga Seleccionada', value: leagueName }
         )
         .setTimestamp();
 
     const row = new ActionRowBuilder().addComponents(
-        // Usamos el nombre seguro para el ID
         new ButtonBuilder().setCustomId(`approve_request_${interaction.user.id}_${safeLeagueName}`).setLabel('Aprobar').setStyle(ButtonStyle.Success),
         new ButtonBuilder().setCustomId(`reject_request_${interaction.user.id}`).setLabel('Rechazar').setStyle(ButtonStyle.Danger)
     );
@@ -46,19 +44,23 @@ async function sendApprovalRequest(interaction, client, { vpgUsername, teamName,
 
 
 module.exports = async (client, interaction) => {
-    const { customId, fields, guild, user } = interaction;
+    const { customId, fields, user } = interaction;
     let member = interaction.member;
+    let guild = interaction.guild;
 
-    if (!member) {
-    try {
-        const guild = await client.guilds.fetch(process.env.GUILD_ID);
-        member = await guild.members.fetch(user.id);
-    } catch (e) {
-        console.error("Error al buscar miembro en modalHandler:", e);
-        // Si no podemos encontrar al miembro, no podemos continuar.
-        return interaction.reply({ content: 'Error crítico: No pude encontrarte en el servidor principal. No se puede continuar con el registro.', flags: MessageFlags.Ephemeral });
+    // BLOQUE DE SEGURIDAD: Asegura que 'member' y 'guild' siempre tengan valor, incluso desde MDs.
+    if (!member || !guild) {
+        try {
+            guild = await client.guilds.fetch(process.env.GUILD_ID);
+            member = await guild.members.fetch(user.id);
+        } catch (e) {
+            console.error("Error crítico al buscar miembro/guild en modalHandler:", e);
+            if (!interaction.replied && !interaction.deferred) {
+                return interaction.reply({ content: 'Error crítico: No pude encontrarte en el servidor principal. No se puede continuar.', flags: MessageFlags.Ephemeral });
+            }
+            return;
+        }
     }
-}
     
     if (customId.startsWith('admin_submit_logo_modal_')) {
         await interaction.deferUpdate();
@@ -79,134 +81,129 @@ module.exports = async (client, interaction) => {
     }
 
     if (customId.startsWith('admin_create_team_modal_')) {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-    const parts = customId.split('_');
-    const managerId = parts[4];
-    const leagueName = parts[5].replace(/-/g, ' '); // Reconstruimos el nombre de la liga
-    const teamName = fields.getTextInputValue('teamName');
-    const teamAbbr = fields.getTextInputValue('teamAbbr').toUpperCase();
-    const teamTwitter = fields.getTextInputValue('teamTwitter') || null;    
+        const parts = customId.split('_');
+        const managerId = parts[4];
+        const leagueName = parts[5].replace(/-/g, ' ');
+        const teamName = fields.getTextInputValue('teamName');
+        const teamAbbr = fields.getTextInputValue('teamAbbr').toUpperCase();
+        const teamTwitter = fields.getTextInputValue('teamTwitter') || null;    
 
-    const existingTeam = await Team.findOne({ name: teamName, guildId: interaction.guild.id });
-    if (existingTeam) return interaction.editReply({ content: `❌ Ya existe un equipo con el nombre "${teamName}".` });
-    
-    const managerMember = await interaction.guild.members.fetch(managerId).catch(() => null);
-    if (!managerMember) return interaction.editReply({ content: `❌ El mánager seleccionado ya no está en el servidor.` });
+        const existingTeam = await Team.findOne({ name: teamName, guildId: guild.id });
+        if (existingTeam) return interaction.editReply({ content: `❌ Ya existe un equipo con el nombre "${teamName}".` });
+        
+        const managerMember = await guild.members.fetch(managerId).catch(() => null);
+        if (!managerMember) return interaction.editReply({ content: `❌ El mánager seleccionado ya no está en el servidor.` });
 
-    // Creamos el equipo con logo por defecto
-    const newTeam = new Team({ 
-    name: teamName, 
-    abbreviation: teamAbbr, 
-    guildId: interaction.guild.id, 
-    league: leagueName, 
-    logoUrl: 'https://i.imgur.com/X2YIZh4.png', // <-- Se corrige esta URL
-    managerId,
-    twitterHandle: teamTwitter // <-- Se añade esta propiedad
-});
-    await newTeam.save();
-
-    await managerMember.roles.add([process.env.MANAGER_ROLE_ID, process.env.PLAYER_ROLE_ID]);
-    await managerMember.setNickname(`|MG| ${teamAbbr} ${managerMember.user.username}`).catch(() => {});
-    
-    const teamId = newTeam._id.toString();
-    
-    // Creamos botones para la decisión del logo
-    const logoRow = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId(`admin_set_logo_custom_${teamId}`).setLabel('Añadir Logo Personalizado').setStyle(ButtonStyle.Success),
-        new ButtonBuilder().setCustomId(`admin_continue_no_logo_${teamId}`).setLabel('Continuar (Usar Defecto)').setStyle(ButtonStyle.Secondary)
-    );
-
-    await interaction.editReply({ 
-        content: `✅ Equipo **${teamName}** creado con <@${managerId}> como Mánager.\n\n**Paso 3 de 3:** ¿Quieres añadir un logo personalizado o usar el logo por defecto?`,
-        components: [logoRow]
-    });
-    return;
-}
-    
-
-if (customId.startsWith('unified_registration_modal_')) {
-    
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
-    // Extraemos la plataforma del ID del modal
-    const platform = customId.split('_')[3];
-
-    const gameId = fields.getTextInputValue('gameIdInput');
-    const vpgUsername = fields.getTextInputValue('vpgUsernameInput');
-    const twitter = fields.getTextInputValue('twitterInput');
-    const whatsapp = fields.getTextInputValue('whatsappInput');
-
-    let tournamentDbConnection;
-    try {
-        tournamentDbConnection = await mongoose.createConnection(process.env.DATABASE_URL, {
-            dbName: 'tournamentBotDb'
+        const newTeam = new Team({ 
+            name: teamName, 
+            abbreviation: teamAbbr, 
+            guildId: guild.id, 
+            league: leagueName, 
+            logoUrl: 'https://i.imgur.com/X2YIZh4.png',
+            managerId,
+            twitterHandle: teamTwitter
         });
-        const verifiedUsersCollection = tournamentDbConnection.collection('verified_users');
-        const draftsCollection = tournamentDbConnection.collection('drafts');
+        await newTeam.save();
 
-        const verifiedUserData = {
-            discordId: user.id, discordTag: user.tag, gameId: gameId,
-            platform: platform, // Usamos la plataforma del ID
-            twitter: twitter, whatsapp: whatsapp,
-            verifiedAt: new Date()
-        };
-        await verifiedUsersCollection.updateOne({ discordId: user.id }, { $set: verifiedUserData }, { upsert: true });
+        await managerMember.roles.add([process.env.MANAGER_ROLE_ID, process.env.PLAYER_ROLE_ID]);
+        await managerMember.setNickname(`|MG| ${teamAbbr} ${managerMember.user.username}`).catch(() => {});
+        
+        const teamId = newTeam._id.toString();
+        
+        const logoRow = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId(`admin_set_logo_custom_${teamId}`).setLabel('Añadir Logo Personalizado').setStyle(ButtonStyle.Success),
+            new ButtonBuilder().setCustomId(`admin_continue_no_logo_${teamId}`).setLabel('Continuar (Usar Defecto)').setStyle(ButtonStyle.Secondary)
+        );
 
-        await VPGUser.findOneAndUpdate(
-    { discordId: user.id },
-    { vpgUsername: vpgUsername, twitterHandle: twitter }, // <-- Aquí está el cambio
-    { upsert: true, new: true }
-);
-
-        if (process.env.PLAYER_ROLE_ID) await member.roles.add(process.env.PLAYER_ROLE_ID);
-        if (process.env.VERIFIED_ROLE_ID) await member.roles.add(process.env.VERIFIED_ROLE_ID);
-
-        const activeDraft = await draftsCollection.findOne({ status: { $nin: ['finalizado', 'torneo_generado', 'cancelado'] } });
-
-        if (activeDraft) {
-            const embed = new EmbedBuilder()
-    .setTitle(t('unifiedRegistrationDraftTitle', member))
-    .setColor('Green')
-    .setDescription(t('unifiedRegistrationDraftDescription', member).replace('{displayName}', member.displayName).replace('{draftName}', activeDraft.name))
-    .addFields({ 
-        name: t('unifiedRegistrationDraftFieldTitle', member),
-        value: t('unifiedRegistrationDraftFieldValue', member)
-    })
-    .setImage('https://i.imgur.com/jw4PnKN.jpeg');
-
-            const button = new ActionRowBuilder().addComponents(
-                new ButtonBuilder()
-                    .setLabel('Ir al Canal de Inscripción al Draft')
-                    .setStyle(ButtonStyle.Link)
-                    .setURL(`https://discord.com/channels/${guild.id}/1413906746258362398`)
-            );
-            await interaction.editReply({ embeds: [embed], components: [button] });
-
-        } else {
-            const embed = new EmbedBuilder()
-    .setTitle(t('unifiedRegistrationNoDraftTitle', member))
-    .setColor('Blue')
-    .setDescription(t('unifiedRegistrationNoDraftDescription', member).replace('{displayName}', member.displayName))
-    .setImage('https://i.imgur.com/T7hXuuA.jpeg');
-
-            const button = new ActionRowBuilder().addComponents(
-                new ButtonBuilder()
-                    .setLabel('Ir al Panel de Control')
-                    .setStyle(ButtonStyle.Link)
-                    .setURL(`https://discord.com/channels/${guild.id}/1396815232122228827`)
-            );
-            await interaction.editReply({ embeds: [embed], components: [button] });
-        }
-
-    } catch (error) {
-        console.error("Error durante el registro unificado:", error);
-        await interaction.editReply({ content: t('registrationError', member) });
-    } finally {
-        if (tournamentDbConnection) await tournamentDbConnection.close();
+        await interaction.editReply({ 
+            content: `✅ Equipo **${teamName}** creado con <@${managerId}> como Mánager.\n\n**Paso 3 de 3:** ¿Quieres añadir un logo personalizado o usar el logo por defecto?`,
+            components: [logoRow]
+        });
+        return;
     }
-    return;
-}
+
+    if (customId.startsWith('unified_registration_modal_')) {
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+        const platform = customId.split('_')[3];
+        const gameId = fields.getTextInputValue('gameIdInput');
+        const vpgUsername = fields.getTextInputValue('vpgUsernameInput');
+        const twitter = fields.getTextInputValue('twitterInput');
+        const whatsapp = fields.getTextInputValue('whatsappInput');
+
+        let tournamentDbConnection;
+        try {
+            tournamentDbConnection = await mongoose.createConnection(process.env.DATABASE_URL, {
+                dbName: 'tournamentBotDb'
+            });
+            const verifiedUsersCollection = tournamentDbConnection.collection('verified_users');
+            const draftsCollection = tournamentDbConnection.collection('drafts');
+
+            const verifiedUserData = {
+                discordId: user.id, discordTag: user.tag, gameId: gameId,
+                platform: platform,
+                twitter: twitter, whatsapp: whatsapp,
+                verifiedAt: new Date()
+            };
+            await verifiedUsersCollection.updateOne({ discordId: user.id }, { $set: verifiedUserData }, { upsert: true });
+
+            await VPGUser.findOneAndUpdate(
+                { discordId: user.id },
+                { vpgUsername: vpgUsername, twitterHandle: twitter },
+                { upsert: true, new: true }
+            );
+
+            if (process.env.PLAYER_ROLE_ID) await member.roles.add(process.env.PLAYER_ROLE_ID);
+            if (process.env.VERIFIED_ROLE_ID) await member.roles.add(process.env.VERIFIED_ROLE_ID);
+
+            const activeDraft = await draftsCollection.findOne({ status: { $nin: ['finalizado', 'torneo_generado', 'cancelado'] } });
+
+            if (activeDraft) {
+                const embed = new EmbedBuilder()
+                    .setTitle(t('unifiedRegistrationDraftTitle', member))
+                    .setColor('Green')
+                    .setDescription(t('unifiedRegistrationDraftDescription', member).replace('{displayName}', member.displayName).replace('{draftName}', activeDraft.name))
+                    .addFields({ 
+                        name: t('unifiedRegistrationDraftFieldTitle', member),
+                        value: t('unifiedRegistrationDraftFieldValue', member)
+                    })
+                    .setImage('https://i.imgur.com/jw4PnKN.jpeg');
+
+                const button = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder()
+                        .setLabel('Ir al Canal de Inscripción al Draft')
+                        .setStyle(ButtonStyle.Link)
+                        .setURL(`https://discord.com/channels/${guild.id}/1413906746258362398`)
+                );
+                await interaction.editReply({ embeds: [embed], components: [button] });
+
+            } else {
+                const embed = new EmbedBuilder()
+                    .setTitle(t('unifiedRegistrationNoDraftTitle', member))
+                    .setColor('Blue')
+                    .setDescription(t('unifiedRegistrationNoDraftDescription', member).replace('{displayName}', member.displayName))
+                    .setImage('https://i.imgur.com/T7hXuuA.jpeg');
+
+                const button = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder()
+                        .setLabel('Ir al Panel de Control')
+                        .setStyle(ButtonStyle.Link)
+                        .setURL(`https://discord.com/channels/${guild.id}/1396815232122228827`)
+                );
+                await interaction.editReply({ embeds: [embed], components: [button] });
+            }
+
+        } catch (error) {
+            console.error("Error durante el registro unificado:", error);
+            await interaction.editReply({ content: t('registrationError', member) });
+        } finally {
+            if (tournamentDbConnection) await tournamentDbConnection.close();
+        }
+        return;
+    }
+
     if (customId === 'edit_profile_modal') {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
@@ -302,7 +299,7 @@ if (customId.startsWith('unified_registration_modal_')) {
         await interaction.editReply({ embeds: [embed], components: [row], flags: MessageFlags.Ephemeral });
     }
 
-        if (customId.startsWith('final_logo_submit_')) {
+    if (customId.startsWith('final_logo_submit_')) {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const pendingTeamId = customId.split('_')[3];
@@ -317,7 +314,6 @@ if (customId.startsWith('unified_registration_modal_')) {
         await sendApprovalRequest(interaction, client, { ...pendingTeam.toObject(), logoUrl });
         await PendingTeam.findByIdAndDelete(pendingTeamId);
         
-        // --- CORRECCIÓN: Usamos el traductor ---
         await interaction.editReply({ content: t('requestSentCustomLogo', member), components: [] });
     }
 
@@ -358,21 +354,21 @@ if (customId.startsWith('unified_registration_modal_')) {
                     
                     const changes = [];
                     const noneText = t('logValueNone', member);
-if (oldData.name !== newName) changes.push(`**${t('logFieldName', member)}:** \`\`\`diff\n- ${oldData.name}\n+ ${newName}\`\`\``);
-if (oldData.abbreviation !== newAbbr) changes.push(`**${t('logFieldAbbreviation', member)}:** \`\`\`diff\n- ${oldData.abbreviation}\n+ ${newAbbr}\`\`\``);
-if (oldData.logoUrl !== newLogo) changes.push(`**${t('logFieldLogo', member)}:** ${t('logFieldLogoChanged', member)}`);
-if ((oldData.twitterHandle || '') !== (newTwitter || '')) changes.push(`**${t('logFieldTwitter', member)}:** \`\`\`diff\n- ${oldData.twitterHandle || noneText}\n+ ${newTwitter || noneText}\`\`\``);
+                    if (oldData.name !== newName) changes.push(`**${t('logFieldName', member)}:** \`\`\`diff\n- ${oldData.name}\n+ ${newName}\`\`\``);
+                    if (oldData.abbreviation !== newAbbr) changes.push(`**${t('logFieldAbbreviation', member)}:** \`\`\`diff\n- ${oldData.abbreviation}\n+ ${newAbbr}\`\`\``);
+                    if (oldData.logoUrl !== newLogo) changes.push(`**${t('logFieldLogo', member)}:** ${t('logFieldLogoChanged', member)}`);
+                    if ((oldData.twitterHandle || '') !== (newTwitter || '')) changes.push(`**${t('logFieldTwitter', member)}:** \`\`\`diff\n- ${oldData.twitterHandle || noneText}\n+ ${newTwitter || noneText}\`\`\``);
 
                     if (changes.length > 0) {
                         const logEmbed = new EmbedBuilder()
-    .setTitle(t('logTeamDataEditedTitle', member).replace('{teamName}', team.name))
-    .setColor('Blue')
-    .setAuthor({ name: t('logActionMadeBy', member).replace('{userTag}', user.tag), iconURL: user.displayAvatarURL() })
-    .setDescription(`${t('logManagerUpdatedFollowing', member)}\n\n${changes.join('\n')}`)
-    .setThumbnail(newLogo && newLogo.startsWith('http') ? newLogo : null)
-    .setFooter({ text: `ID del Equipo: ${team._id}` })
-    .setTimestamp();
-await logChannel.send({ embeds: [logEmbed] });
+                            .setTitle(t('logTeamDataEditedTitle', member).replace('{teamName}', team.name))
+                            .setColor('Blue')
+                            .setAuthor({ name: t('logActionMadeBy', member).replace('{userTag}', user.tag), iconURL: user.displayAvatarURL() })
+                            .setDescription(`${t('logManagerUpdatedFollowing', member)}\n\n${changes.join('\n')}`)
+                            .setThumbnail(newLogo && newLogo.startsWith('http') ? newLogo : null)
+                            .setFooter({ text: `ID del Equipo: ${team._id}` })
+                            .setTimestamp();
+                        await logChannel.send({ embeds: [logEmbed] });
                     }
                 }
             } catch (error) {
@@ -458,7 +454,8 @@ await logChannel.send({ embeds: [logEmbed] });
 
         return interaction.editReply({ content: `${responseMessage} en el canal ${channel}` });
     }
-        if (customId.startsWith('offer_add_requirements_')) {
+
+    if (customId.startsWith('offer_add_requirements_')) {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const parts = customId.split('_');
@@ -561,7 +558,7 @@ await logChannel.send({ embeds: [logEmbed] });
         return interaction.editReply({ content: `✅ El equipo **${team.name}** ha sido disuelto.` });
     }
     
-        if (customId.startsWith('application_modal_')) {
+    if (customId.startsWith('application_modal_')) {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const teamId = customId.split('_')[2];
@@ -572,7 +569,6 @@ await logChannel.send({ embeds: [logEmbed] });
         const presentation = fields.getTextInputValue('presentation');
         const application = await PlayerApplication.create({ userId: user.id, teamId: teamId, presentation: presentation });
         
-        // El MD al mánager lo dejamos bilingüe, ya que no sabemos su idioma
         const embed = new EmbedBuilder().setTitle(`✉️ New Application / Nueva Solicitud for ${team.name}`).setAuthor({ name: user.tag, iconURL: user.displayAvatarURL() }).setDescription(presentation).setColor('Blue');
         const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`accept_application_${application._id}`).setLabel('Accept / Aceptar').setStyle(ButtonStyle.Success), new ButtonBuilder().setCustomId(`reject_application_${application._id}`).setLabel('Decline / Rechazar').setStyle(ButtonStyle.Danger));
         
