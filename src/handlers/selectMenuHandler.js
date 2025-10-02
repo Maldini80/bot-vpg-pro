@@ -20,27 +20,25 @@ module.exports = async (client, interaction) => {
     const platform = selectedValue;
 
     if (platform === 'pc') {
-        // Si elige PC, mostramos el segundo menú
         const pcPlatformMenu = new StringSelectMenuBuilder()
             .setCustomId('registration_select_platform_pc_step2')
-            .setPlaceholder('¿Juegas en Steam o en EA App?')
+            .setPlaceholder(t('registrationPCPlaceholder', interaction.member))
             .addOptions([
-                { label: 'Steam', value: 'steam' },
-                { label: 'EA App', value: 'ea_app' },
+                { label: t('platformSteam', interaction.member), value: 'steam' },
+                { label: t('platformEAApp', interaction.member), value: 'ea_app' },
             ]);
         
         const row = new ActionRowBuilder().addComponents(pcPlatformMenu);
-        return interaction.update({ content: '**Paso 2 de 2:** Elige tu lanzador de PC.', components: [row] });
+        return interaction.update({ content: t('registrationPCStep2Title', interaction.member), components: [row] });
 
     } else {
-        // Si elige PSN o XBOX, mostramos el formulario final directamente
         const modal = new ModalBuilder()
-            .setCustomId(`unified_registration_modal_${platform}`) // Pasamos la plataforma en el ID
-            .setTitle('Registro de Perfil de Jugador (2/2)');
+            .setCustomId(`unified_registration_modal_${platform}`)
+            .setTitle(t('registrationFinalModalTitle', interaction.member));
         
-        const gameIdInput = new TextInputBuilder().setCustomId('gameIdInput').setLabel("Tu ID en el juego").setStyle(TextInputStyle.Short).setRequired(true);
-        const twitterInput = new TextInputBuilder().setCustomId('twitterInput').setLabel("Tu Twitter (usuario sin @)").setStyle(TextInputStyle.Short).setRequired(true);
-        const whatsappInput = new TextInputBuilder().setCustomId('whatsappInput').setLabel("Tu WhatsApp").setStyle(TextInputStyle.Short).setRequired(true);
+        const gameIdInput = new TextInputBuilder().setCustomId('gameIdInput').setLabel(t('registrationGameIdLabel', interaction.member)).setStyle(TextInputStyle.Short).setRequired(true);
+        const twitterInput = new TextInputBuilder().setCustomId('twitterInput').setLabel(t('registrationTwitterLabel', interaction.member)).setStyle(TextInputStyle.Short).setRequired(true);
+        const whatsappInput = new TextInputBuilder().setCustomId('whatsappInput').setLabel(t('registrationWhatsappLabel', interaction.member)).setStyle(TextInputStyle.Short).setRequired(true);
 
         modal.addComponents(
             new ActionRowBuilder().addComponents(gameIdInput),
@@ -52,17 +50,16 @@ module.exports = async (client, interaction) => {
     }
 }
 
-// Manejador para el segundo menú (Steam, EA App)
 if (customId === 'registration_select_platform_pc_step2') {
     const platform = selectedValue;
 
     const modal = new ModalBuilder()
-        .setCustomId(`unified_registration_modal_${platform}`) // Pasamos la plataforma en el ID
-        .setTitle('Registro de Perfil de Jugador (2/2)');
+        .setCustomId(`unified_registration_modal_${platform}`)
+        .setTitle(t('registrationFinalModalTitle', interaction.member));
     
-    const gameIdInput = new TextInputBuilder().setCustomId('gameIdInput').setLabel("Tu ID en el juego").setStyle(TextInputStyle.Short).setRequired(true);
-    const twitterInput = new TextInputBuilder().setCustomId('twitterInput').setLabel("Tu Twitter (usuario sin @)").setStyle(TextInputStyle.Short).setRequired(true);
-    const whatsappInput = new TextInputBuilder().setCustomId('whatsappInput').setLabel("Tu WhatsApp").setStyle(TextInputStyle.Short).setRequired(true);
+    const gameIdInput = new TextInputBuilder().setCustomId('gameIdInput').setLabel(t('registrationGameIdLabel', interaction.member)).setStyle(TextInputStyle.Short).setRequired(true);
+    const twitterInput = new TextInputBuilder().setCustomId('twitterInput').setLabel(t('registrationTwitterLabel', interaction.member)).setStyle(TextInputStyle.Short).setRequired(true);
+    const whatsappInput = new TextInputBuilder().setCustomId('whatsappInput').setLabel(t('registrationWhatsappLabel', interaction.member)).setStyle(TextInputStyle.Short).setRequired(true);
 
     modal.addComponents(
         new ActionRowBuilder().addComponents(gameIdInput),
