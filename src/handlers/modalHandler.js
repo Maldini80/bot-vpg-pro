@@ -166,14 +166,14 @@ if (customId.startsWith('unified_registration_modal_')) {
 
         if (activeDraft) {
             const embed = new EmbedBuilder()
-                .setTitle('✅ ¡Verificación Completa! Siguiente paso: Inscríbete al Draft')
-                .setColor('Green')
-                .setDescription(`¡Felicidades, ${member.displayName}! Ya estás verificado.\n\nEl draft **${activeDraft.name}** está activo. Para participar, solo te queda un paso:`)
-                .addFields({ 
-                    name: '➡️ Ve al canal de inscripción y pulsa el botón verde',
-                    value: 'Usa el botón de abajo para ir directamente al canal. Una vez allí, pulsa de nuevo el botón verde de "Inscribirse" y el sistema te reconocerá.'
-                })
-                .setImage('https://i.imgur.com/jw4PnKN.jpeg');
+    .setTitle(t('unifiedRegistrationDraftTitle', member))
+    .setColor('Green')
+    .setDescription(t('unifiedRegistrationDraftDescription', member).replace('{displayName}', member.displayName).replace('{draftName}', activeDraft.name))
+    .addFields({ 
+        name: t('unifiedRegistrationDraftFieldTitle', member),
+        value: t('unifiedRegistrationDraftFieldValue', member)
+    })
+    .setImage('https://i.imgur.com/jw4PnKN.jpeg');
 
             const button = new ActionRowBuilder().addComponents(
                 new ButtonBuilder()
@@ -185,10 +185,10 @@ if (customId.startsWith('unified_registration_modal_')) {
 
         } else {
             const embed = new EmbedBuilder()
-                .setTitle('✅ ¡Verificación Completa!')
-                .setColor('Blue')
-                .setDescription(`¡Felicidades, ${member.displayName}! Tu registro se ha completado correctamente.\n\nActualmente no hay ningún draft activo, pero ya estás listo. Mientras tanto, puedes buscar un equipo o registrar el tuyo propio desde el panel de control.`)
-                .setImage('https://i.imgur.com/T7hXuuA.jpeg');
+    .setTitle(t('unifiedRegistrationNoDraftTitle', member))
+    .setColor('Blue')
+    .setDescription(t('unifiedRegistrationNoDraftDescription', member).replace('{displayName}', member.displayName))
+    .setImage('https://i.imgur.com/T7hXuuA.jpeg');
 
             const button = new ActionRowBuilder().addComponents(
                 new ButtonBuilder()
@@ -201,7 +201,7 @@ if (customId.startsWith('unified_registration_modal_')) {
 
     } catch (error) {
         console.error("Error durante el registro unificado:", error);
-        await interaction.editReply({ content: '❌ Ocurrió un error al procesar tu registro. Por favor, contacta a un administrador.' });
+        await interaction.editReply({ content: t('registrationError', member) });
     } finally {
         if (tournamentDbConnection) await tournamentDbConnection.close();
     }
