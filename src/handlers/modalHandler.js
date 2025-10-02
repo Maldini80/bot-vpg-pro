@@ -46,7 +46,19 @@ async function sendApprovalRequest(interaction, client, { vpgUsername, teamName,
 
 
 module.exports = async (client, interaction) => {
-    const { customId, fields, guild, user, member } = interaction;
+    const { customId, fields, guild, user } = interaction;
+    let member = interaction.member;
+
+    if (!member) {
+    try {
+        const guild = await client.guilds.fetch(process.env.GUILD_ID);
+        member = await guild.members.fetch(user.id);
+    } catch (e) {
+        console.error("Error al buscar miembro en modalHandler:", e);
+        // Si no podemos encontrar al miembro, no podemos continuar.
+        return interaction.reply({ content: 'Error crítico: No pude encontrarte en el servidor principal. No se puede continuar con el registro.', flags: MessageFlags.Ephemeral });
+    }
+}
     
     if (customId.startsWith('admin_submit_logo_modal_')) {
         await interaction.deferUpdate();
@@ -114,17 +126,7 @@ module.exports = async (client, interaction) => {
     
 
 if (customId.startsWith('unified_registration_modal_')) {
-    let member = interaction.member;
-if (!member) {
-    try {
-        const guild = await client.guilds.fetch(process.env.GUILD_ID);
-        member = await guild.members.fetch(user.id);
-    } catch (e) {
-        console.error("Error al buscar miembro desde MD en modalHandler:", e);
-        // Si no lo encontramos, no podemos continuar porque no podemos asignar roles.
-        return interaction.reply({ content: 'Error: No pude encontrarte en el servidor principal para asignarte los roles.', flags: MessageFlags.Ephemeral });
-    }
-}
+    
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     // Extraemos la plataforma del ID del modal
