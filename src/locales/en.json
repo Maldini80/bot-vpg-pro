@@ -301,6 +301,7 @@
 "registrationGameIdLabel": "Your in-game ID",
 "registrationTwitterLabel": "Your Twitter (username without @)",
 "registrationWhatsappLabel": "Your WhatsApp",
+  "registrationVPGUsernameLabel": "Your VPG Username",
   "pos_GK": "GK",
   "pos_CB": "CB",
   "pos_WB": "WB",
