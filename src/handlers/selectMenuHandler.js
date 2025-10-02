@@ -17,6 +17,15 @@ module.exports = async (client, interaction) => {
     const selectedValue = values[0];
 
     if (customId === 'registration_select_platform_step1') {
+        let member = interaction.member;
+if (!member) {
+    try {
+        const guild = await client.guilds.fetch(process.env.GUILD_ID);
+        member = await guild.members.fetch(user.id);
+    } catch (e) {
+        return interaction.update({ content: 'Error: No pude encontrarte en el servidor principal.', components: [] });
+    }
+}
     const platform = selectedValue;
 
     if (platform === 'pc') {
@@ -53,6 +62,15 @@ module.exports = async (client, interaction) => {
 }
 
 if (customId === 'registration_select_platform_pc_step2') {
+    let member = interaction.member;
+if (!member) {
+    try {
+        const guild = await client.guilds.fetch(process.env.GUILD_ID);
+        member = await guild.members.fetch(user.id);
+    } catch (e) {
+        return interaction.update({ content: 'Error: No pude encontrarte en el servidor principal.', components: [] });
+    }
+}
     const platform = selectedValue;
 
     const modal = new ModalBuilder()
