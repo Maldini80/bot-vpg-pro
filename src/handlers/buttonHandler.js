@@ -472,24 +472,24 @@ if (customId.startsWith('admin_continue_no_logo_')) {
     
     // Panel de Solicitud General
         if (customId === 'start_player_registration') {
-        // --- CORRECCIÓN: Usamos el traductor para el título y las etiquetas del formulario ---
-        const modal = new ModalBuilder()
-            .setCustomId('player_registration_modal')
-            .setTitle(t('playerRegistrationTitle', member)); // Título traducido
+    const modal = new ModalBuilder()
+        .setCustomId('unified_registration_final_modal') // ID correcto que usará el otro fichero
+        .setTitle(t('playerRegistrationTitle', member));
 
-        const vpgUsernameInput = new TextInputBuilder().setCustomId('vpgUsernameInput').setLabel(t('vpgUsernameLabel', member)).setStyle(TextInputStyle.Short).setRequired(true);
-        const twitterInput = new TextInputBuilder().setCustomId('twitterInput').setLabel(t('playerTwitterLabel', member)).setStyle(TextInputStyle.Short).setRequired(false);
-        const psnIdInput = new TextInputBuilder().setCustomId('psnIdLabel', member).setLabel(t('psnIdLabel', member)).setStyle(TextInputStyle.Short).setRequired(false);
-        const eaIdInput = new TextInputBuilder().setCustomId('eaIdLabel', member).setLabel(t('eaIdLabel', member)).setStyle(TextInputStyle.Short).setRequired(false);
+    const gameIdInput = new TextInputBuilder().setCustomId('gameIdInput').setLabel("Tu ID en el juego (Ej: Maldini_80)").setStyle(TextInputStyle.Short).setRequired(true);
+    const platformInput = new TextInputBuilder().setCustomId('platformInput').setLabel("Plataforma (steam, psn, xbox)").setStyle(TextInputStyle.Short).setRequired(true);
+    const twitterInput = new TextInputBuilder().setCustomId('twitterInput').setLabel("Tu Twitter (usuario sin @)").setStyle(TextInputStyle.Short).setRequired(true);
+    const whatsappInput = new TextInputBuilder().setCustomId('whatsappInput').setLabel("Tu WhatsApp").setStyle(TextInputStyle.Short).setRequired(true);
 
-        modal.addComponents(
-            new ActionRowBuilder().addComponents(vpgUsernameInput),
-            new ActionRowBuilder().addComponents(twitterInput),
-            new ActionRowBuilder().addComponents(psnIdInput),
-            new ActionRowBuilder().addComponents(eaIdInput)
-        );
-        return interaction.showModal(modal);
-    }
+    modal.addComponents(
+        new ActionRowBuilder().addComponents(gameIdInput),
+        new ActionRowBuilder().addComponents(platformInput),
+        new ActionRowBuilder().addComponents(twitterInput),
+        new ActionRowBuilder().addComponents(whatsappInput)
+    );
+    
+    return interaction.showModal(modal);
+}
     
     if (customId === 'manager_actions_button') {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
