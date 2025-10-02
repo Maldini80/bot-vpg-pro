@@ -16,6 +16,63 @@ module.exports = async (client, interaction) => {
     const { customId, values, guild, user, member } = interaction;
     const selectedValue = values[0];
 
+    if (customId === 'registration_select_platform_step1') {
+    const platform = selectedValue;
+
+    if (platform === 'pc') {
+        // Si elige PC, mostramos el segundo menú
+        const pcPlatformMenu = new StringSelectMenuBuilder()
+            .setCustomId('registration_select_platform_pc_step2')
+            .setPlaceholder('¿Juegas en Steam o en EA App?')
+            .addOptions([
+                { label: 'Steam', value: 'steam' },
+                { label: 'EA App', value: 'ea_app' },
+            ]);
+        
+        const row = new ActionRowBuilder().addComponents(pcPlatformMenu);
+        return interaction.update({ content: '**Paso 2 de 2:** Elige tu lanzador de PC.', components: [row] });
+
+    } else {
+        // Si elige PSN o XBOX, mostramos el formulario final directamente
+        const modal = new ModalBuilder()
+            .setCustomId(`unified_registration_modal_${platform}`) // Pasamos la plataforma en el ID
+            .setTitle('Registro de Perfil de Jugador (2/2)');
+        
+        const gameIdInput = new TextInputBuilder().setCustomId('gameIdInput').setLabel("Tu ID en el juego").setStyle(TextInputStyle.Short).setRequired(true);
+        const twitterInput = new TextInputBuilder().setCustomId('twitterInput').setLabel("Tu Twitter (usuario sin @)").setStyle(TextInputStyle.Short).setRequired(true);
+        const whatsappInput = new TextInputBuilder().setCustomId('whatsappInput').setLabel("Tu WhatsApp").setStyle(TextInputStyle.Short).setRequired(true);
+
+        modal.addComponents(
+            new ActionRowBuilder().addComponents(gameIdInput),
+            new ActionRowBuilder().addComponents(twitterInput),
+            new ActionRowBuilder().addComponents(whatsappInput)
+        );
+        
+        return interaction.showModal(modal);
+    }
+}
+
+// Manejador para el segundo menú (Steam, EA App)
+if (customId === 'registration_select_platform_pc_step2') {
+    const platform = selectedValue;
+
+    const modal = new ModalBuilder()
+        .setCustomId(`unified_registration_modal_${platform}`) // Pasamos la plataforma en el ID
+        .setTitle('Registro de Perfil de Jugador (2/2)');
+    
+    const gameIdInput = new TextInputBuilder().setCustomId('gameIdInput').setLabel("Tu ID en el juego").setStyle(TextInputStyle.Short).setRequired(true);
+    const twitterInput = new TextInputBuilder().setCustomId('twitterInput').setLabel("Tu Twitter (usuario sin @)").setStyle(TextInputStyle.Short).setRequired(true);
+    const whatsappInput = new TextInputBuilder().setCustomId('whatsappInput').setLabel("Tu WhatsApp").setStyle(TextInputStyle.Short).setRequired(true);
+
+    modal.addComponents(
+        new ActionRowBuilder().addComponents(gameIdInput),
+        new ActionRowBuilder().addComponents(twitterInput),
+        new ActionRowBuilder().addComponents(whatsappInput)
+    );
+    
+    return interaction.showModal(modal);
+}
+
     if (customId.startsWith('admin_select_new_manager_')) {
     await interaction.deferUpdate();
 
