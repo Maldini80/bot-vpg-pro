@@ -169,7 +169,7 @@ const handler = async (client, interaction) => {
         .setCustomId('unified_registration_final_modal')
         .setTitle(t('playerRegistrationTitle', member));
 
-    const gameIdInput = new TextInputBuilder().setCustomId('gameIdInput').setLabel("Tu ID en el juego (Ej: Maldini_80)").setStyle(TextInputStyle.Short).setRequired(true);
+    const gameIdInput = new TextInputBuilder().setCustomId('gameIdInput').setLabel("Tu ID en el juego").setStyle(TextInputStyle.Short).setRequired(true);
     const platformInput = new TextInputBuilder().setCustomId('platformInput').setLabel("Plataforma (steam, psn, xbox)").setStyle(TextInputStyle.Short).setRequired(true);
     const twitterInput = new TextInputBuilder().setCustomId('twitterInput').setLabel("Tu Twitter (usuario sin @)").setStyle(TextInputStyle.Short).setRequired(true);
     const whatsappInput = new TextInputBuilder().setCustomId('whatsappInput').setLabel("Tu WhatsApp").setStyle(TextInputStyle.Short).setRequired(true);
