@@ -151,29 +151,32 @@ const handler = async (client, interaction) => {
     const { customId, user } = interaction;
     
     if (customId === 'start_player_registration') {
+    let member = interaction.member;
+    if (!member) {
+        try {
+            const guild = await client.guilds.fetch(process.env.GUILD_ID);
+            member = await guild.members.fetch(user.id);
+        } catch (e) {
+            return interaction.reply({ content: 'No pude encontrarte en el servidor. Asegúrate de estar dentro antes de registrarte.', flags: MessageFlags.Ephemeral });
+        }
+    }
+
     const platformMenu = new StringSelectMenuBuilder()
         .setCustomId('registration_select_platform_step1')
-        .setPlaceholder('Selecciona tu plataforma de juego principal')
+        .setPlaceholder(t('registrationPlatformPlaceholder', member))
         .addOptions([
-            { label: 'PlayStation', value: 'psn', emoji: '🎮' },
-            { label: 'Xbox', value: 'xbox', emoji: '❎' },
-            { label: 'PC', value: 'pc', emoji: '🖥️' },
+            { label: t('platformPlayStation', member), value: 'psn', emoji: '🎮' },
+            { label: t('platformXbox', member), value: 'xbox', emoji: '❎' },
+            { label: t('platformPC', member), value: 'pc', emoji: '🖥️' },
         ]);
     
     const row = new ActionRowBuilder().addComponents(platformMenu);
 
-    // Usamos deferUpdate si la interacción ya fue reconocida (ej. desde MD)
-    // o reply si es la primera vez que se responde (ej. desde un canal público)
     try {
-        if (interaction.deferred || interaction.replied) {
-            await interaction.editReply({ content: '**Paso 1 de 2:** Elige tu plataforma.', components: [row], flags: MessageFlags.Ephemeral });
-        } else {
-            await interaction.reply({ content: '**Paso 1 de 2:** Elige tu plataforma.', components: [row], flags: MessageFlags.Ephemeral });
-        }
+        await interaction.reply({ content: t('registrationPlatformStep1Title', member), components: [row], flags: MessageFlags.Ephemeral });
     } catch (e) {
-        // Si viene de un MD, no hay 'reply', solo 'followUp' o editar
         await interaction.deferUpdate();
-        await interaction.editReply({ content: '**Paso 1 de 2:** Elige tu plataforma.', components: [row] });
+        await interaction.editReply({ content: t('registrationPlatformStep1Title', member), components: [row] });
     }
     
     return;
