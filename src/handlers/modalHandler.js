@@ -173,7 +173,7 @@ module.exports = async (client, interaction) => {
 
                 const button = new ActionRowBuilder().addComponents(
                     new ButtonBuilder()
-                        .setLabel('Ir al Canal de Inscripción al Draft')
+                        .setLabel(t('goToDraftChannelButton', member))
                         .setStyle(ButtonStyle.Link)
                         .setURL(`https://discord.com/channels/${guild.id}/1413906746258362398`)
                 );
@@ -188,7 +188,7 @@ module.exports = async (client, interaction) => {
 
                 const button = new ActionRowBuilder().addComponents(
                     new ButtonBuilder()
-                        .setLabel('Ir al Panel de Control')
+                        .setLabel(t('goToControlPanelButton', member))
                         .setStyle(ButtonStyle.Link)
                         .setURL(`https://discord.com/channels/${guild.id}/1396815232122228827`)
                 );
