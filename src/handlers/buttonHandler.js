@@ -148,6 +148,41 @@ async function sendApprovalRequest(interaction, client, { vpgUsername, teamName,
 // ===========================================================================
 
 const handler = async (client, interaction) => {
+
+    if (customId === 'start_player_registration') {
+    // Obtenemos el 'member'. Si la interacción viene de un MD, 'member' no existe y debemos buscarlo.
+    let member = interaction.member;
+    if (!member) {
+        try {
+            // Usamos el ID del servidor principal desde las variables de entorno para encontrar al usuario
+            const guild = await client.guilds.fetch(process.env.GUILD_ID);
+            member = await guild.members.fetch(user.id);
+        } catch (e) {
+            console.error("Error al buscar miembro desde MD en buttonHandler:", e);
+            // Si no lo encontramos en el servidor, no puede registrarse.
+            return interaction.reply({ content: 'No pude encontrarte en el servidor. Asegúrate de estar dentro antes de registrarte.', flags: MessageFlags.Ephemeral });
+        }
+    }
+
+    const modal = new ModalBuilder()
+        .setCustomId('unified_registration_final_modal')
+        .setTitle(t('playerRegistrationTitle', member));
+
+    const gameIdInput = new TextInputBuilder().setCustomId('gameIdInput').setLabel("Tu ID en el juego (Ej: Maldini_80)").setStyle(TextInputStyle.Short).setRequired(true);
+    const platformInput = new TextInputBuilder().setCustomId('platformInput').setLabel("Plataforma (steam, psn, xbox)").setStyle(TextInputStyle.Short).setRequired(true);
+    const twitterInput = new TextInputBuilder().setCustomId('twitterInput').setLabel("Tu Twitter (usuario sin @)").setStyle(TextInputStyle.Short).setRequired(true);
+    const whatsappInput = new TextInputBuilder().setCustomId('whatsappInput').setLabel("Tu WhatsApp").setStyle(TextInputStyle.Short).setRequired(true);
+
+    modal.addComponents(
+        new ActionRowBuilder().addComponents(gameIdInput),
+        new ActionRowBuilder().addComponents(platformInput),
+        new ActionRowBuilder().addComponents(twitterInput),
+        new ActionRowBuilder().addComponents(whatsappInput)
+    );
+    
+    return interaction.showModal(modal);
+}
+    
     const { customId, user } = interaction;
 
     // ===========================================================================
@@ -470,26 +505,6 @@ if (customId.startsWith('admin_continue_no_logo_')) {
     // =================== LÓGICA DE PANELES Y BOTONES ===========================
     // ===========================================================================
     
-    // Panel de Solicitud General
-        if (customId === 'start_player_registration') {
-    const modal = new ModalBuilder()
-        .setCustomId('unified_registration_final_modal') // ID correcto que usará el otro fichero
-        .setTitle(t('playerRegistrationTitle', member));
-
-    const gameIdInput = new TextInputBuilder().setCustomId('gameIdInput').setLabel("Tu ID en el juego (Ej: Maldini_80)").setStyle(TextInputStyle.Short).setRequired(true);
-    const platformInput = new TextInputBuilder().setCustomId('platformInput').setLabel("Plataforma (steam, psn, xbox)").setStyle(TextInputStyle.Short).setRequired(true);
-    const twitterInput = new TextInputBuilder().setCustomId('twitterInput').setLabel("Tu Twitter (usuario sin @)").setStyle(TextInputStyle.Short).setRequired(true);
-    const whatsappInput = new TextInputBuilder().setCustomId('whatsappInput').setLabel("Tu WhatsApp").setStyle(TextInputStyle.Short).setRequired(true);
-
-    modal.addComponents(
-        new ActionRowBuilder().addComponents(gameIdInput),
-        new ActionRowBuilder().addComponents(platformInput),
-        new ActionRowBuilder().addComponents(twitterInput),
-        new ActionRowBuilder().addComponents(whatsappInput)
-    );
-    
-    return interaction.showModal(modal);
-}
     
     if (customId === 'manager_actions_button') {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
