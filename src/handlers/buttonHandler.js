@@ -148,7 +148,8 @@ async function sendApprovalRequest(interaction, client, { vpgUsername, teamName,
 // ===========================================================================
 
 const handler = async (client, interaction) => {
-
+    const { customId, user } = interaction;
+    
     if (customId === 'start_player_registration') {
     // Obtenemos el 'member'. Si la interacción viene de un MD, 'member' no existe y debemos buscarlo.
     let member = interaction.member;
@@ -183,7 +184,6 @@ const handler = async (client, interaction) => {
     return interaction.showModal(modal);
 }
     
-    const { customId, user } = interaction;
 
     // ===========================================================================
     // =================== LÓGICA DE INTERACCIONES EN MD =========================
