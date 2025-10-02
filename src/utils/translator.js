@@ -32,15 +32,16 @@ fs.readdirSync(localesDir).forEach(file => {
 function t(key, member) {
     let userLang = 'es'; // Idioma por defecto es Español
 
-    // Busca si el miembro tiene alguno de los roles de idioma
-    for (const roleId in roleToLang) {
-        if (member.roles.cache.has(roleId)) {
-            userLang = roleToLang[roleId];
-            break; // Encontramos un idioma, dejamos de buscar
+    // AHORA COMPROBAMOS SI 'member' EXISTE ANTES DE LEER SUS ROLES
+    if (member && member.roles) {
+        for (const roleId in roleToLang) {
+            if (member.roles.cache.has(roleId)) {
+                userLang = roleToLang[roleId];
+                break; 
+            }
         }
     }
 
-    // Devuelve el texto del diccionario correcto. Si no existe, devuelve la clave.
     return translations[userLang]?.[key] || key;
 }
 
