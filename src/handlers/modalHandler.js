@@ -8,6 +8,7 @@ const FreeAgent = require('../models/freeAgent.js');
 const TeamOffer = require('../models/teamOffer.js');
 const PendingTeam = require('../models/pendingTeam.js');
 const t = require('../utils/translator.js');
+const mongoose = require('mongoose');
 
 const POSITION_KEYS = ['GK', 'CB', 'WB', 'CDM', 'CM', 'CAM', 'ST'];
 
@@ -110,44 +111,104 @@ module.exports = async (client, interaction) => {
     });
     return;
 }
-        if (customId === 'player_registration_modal') {
-        await interaction.deferReply({ flags: MessageFlags.Ephemeral }); 
+    
+if (customId === 'player_registration_modal') {
+    const modal = new ModalBuilder()
+        .setCustomId('unified_registration_final_modal') // Usaremos un nuevo ID para el siguiente paso
+        .setTitle(t('playerRegistrationTitle', member));
 
-        const vpgUsername = fields.getTextInputValue('vpgUsernameInput');
-        const twitterHandle = fields.getTextInputValue('twitterInput');
-        const psnId = fields.getTextInputValue('psnIdInput');
-        const eaId = fields.getTextInputValue('eaIdInput');
+    const gameIdInput = new TextInputBuilder().setCustomId('gameIdInput').setLabel("Tu ID en el juego (Ej: Maldini_80)").setStyle(TextInputStyle.Short).setRequired(true);
+    const platformInput = new TextInputBuilder().setCustomId('platformInput').setLabel("Plataforma (steam, psn, xbox)").setStyle(TextInputStyle.Short).setRequired(true);
+    const twitterInput = new TextInputBuilder().setCustomId('twitterInput').setLabel("Tu Twitter (usuario sin @)").setStyle(TextInputStyle.Short).setRequired(true);
+    const whatsappInput = new TextInputBuilder().setCustomId('whatsappInput').setLabel("Tu WhatsApp").setStyle(TextInputStyle.Short).setRequired(true);
+
+    modal.addComponents(
+        new ActionRowBuilder().addComponents(gameIdInput),
+        new ActionRowBuilder().addComponents(platformInput),
+        new ActionRowBuilder().addComponents(twitterInput),
+        new ActionRowBuilder().addComponents(whatsappInput)
+    );
+    
+    return interaction.showModal(modal);
+}
+
+if (customId === 'unified_registration_final_modal') {
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+    const gameId = fields.getTextInputValue('gameIdInput');
+    const platform = fields.getTextInputValue('platformInput').toLowerCase();
+    const twitter = fields.getTextInputValue('twitterInput');
+    const whatsapp = fields.getTextInputValue('whatsappInput');
+
+    let tournamentDbConnection;
+    try {
+        tournamentDbConnection = await mongoose.createConnection(process.env.DATABASE_URL, {
+            dbName: 'tournamentBotDb'
+        });
+        const verifiedUsersCollection = tournamentDbConnection.collection('verified_users');
+        const draftsCollection = tournamentDbConnection.collection('drafts');
+
+        const verifiedUserData = {
+            discordId: user.id, discordTag: user.tag, gameId: gameId,
+            platform: platform, twitter: twitter, whatsapp: whatsapp,
+            verifiedAt: new Date()
+        };
+        await verifiedUsersCollection.updateOne({ discordId: user.id }, { $set: verifiedUserData }, { upsert: true });
 
         await VPGUser.findOneAndUpdate(
             { discordId: user.id },
-            { vpgUsername, twitterHandle, psnId, eaId },
+            { vpgUsername: gameId, twitterHandle: twitter },
             { upsert: true, new: true }
         );
 
-        const positionOptions = POSITION_KEYS.map(p => ({ 
-            label: t(`pos_${p}`, member), 
-            value: p 
-        }));
-        
-        const primaryMenu = new StringSelectMenuBuilder()
-            .setCustomId('register_select_primary_position')
-            .setPlaceholder(t('primaryPositionPlaceholder', member))
-            .addOptions(positionOptions);
+        if (process.env.PLAYER_ROLE_ID) await member.roles.add(process.env.PLAYER_ROLE_ID);
+        if (process.env.VERIFIED_ROLE_ID) await member.roles.add(process.env.VERIFIED_ROLE_ID);
 
-        const secondaryMenu = new StringSelectMenuBuilder()
-            .setCustomId('register_select_secondary_position')
-            .setPlaceholder(t('secondaryPositionPlaceholder', member))
-            .addOptions({ label: t('noSecondaryPosition', member), value: 'NINGUNA' }, ...positionOptions);
+        const activeDraft = await draftsCollection.findOne({ status: { $nin: ['finalizado', 'torneo_generado', 'cancelado'] } });
 
-        return interaction.editReply({
-            content: t('registrationStep2', member),
-            components: [
-                new ActionRowBuilder().addComponents(primaryMenu),
-                new ActionRowRowBuilder().addComponents(secondaryMenu)
-            ],
-            flags: MessageFlags.Ephemeral
-        });
+        if (activeDraft) {
+            const embed = new EmbedBuilder()
+                .setTitle('✅ ¡Verificación Completa! Siguiente paso: Inscríbete al Draft')
+                .setColor('Green')
+                .setDescription(`¡Felicidades, ${member.displayName}! Ya estás verificado.\n\nEl draft **${activeDraft.name}** está activo. Para participar, solo te queda un paso:`)
+                .addFields({ 
+                    name: '➡️ Ve al canal de inscripción y pulsa el botón verde',
+                    value: 'Usa el botón de abajo para ir directamente al canal. Una vez allí, pulsa de nuevo el botón verde de "Inscribirse" y el sistema te reconocerá.'
+                })
+                .setImage('https://i.imgur.com/jw4PnKN.jpeg');
+
+            const button = new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setLabel('Ir al Canal de Inscripción al Draft')
+                    .setStyle(ButtonStyle.Link)
+                    .setURL(`https://discord.com/channels/${guild.id}/1413906746258362398`)
+            );
+            await interaction.editReply({ embeds: [embed], components: [button] });
+
+        } else {
+            const embed = new EmbedBuilder()
+                .setTitle('✅ ¡Verificación Completa!')
+                .setColor('Blue')
+                .setDescription(`¡Felicidades, ${member.displayName}! Tu registro se ha completado correctamente.\n\nActualmente no hay ningún draft activo, pero ya estás listo. Mientras tanto, puedes buscar un equipo o registrar el tuyo propio desde el panel de control.`)
+                .setImage('https://i.imgur.com/T7hXuuA.jpeg');
+
+            const button = new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setLabel('Ir al Panel de Control')
+                    .setStyle(ButtonStyle.Link)
+                    .setURL(`https://discord.com/channels/${guild.id}/1396815232122228827`)
+            );
+            await interaction.editReply({ embeds: [embed], components: [button] });
+        }
+
+    } catch (error) {
+        console.error("Error durante el registro unificado:", error);
+        await interaction.editReply({ content: '❌ Ocurrió un error al procesar tu registro. Por favor, contacta a un administrador.' });
+    } finally {
+        if (tournamentDbConnection) await tournamentDbConnection.close();
     }
+    return;
+}
     if (customId === 'edit_profile_modal') {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
