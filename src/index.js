@@ -3,7 +3,7 @@ require('dotenv').config();
 const fs = require('node:fs');
 const path = require('node:path');
 // LÍNEA MODIFICADA: Se añaden los componentes necesarios
-const { Client, Collection, GatewayIntentBits, Events, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
+const { Client, Collection, GatewayIntentBits, Events, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags, ModalBuilder, TextInputBuilder } = require('discord.js');
 const mongoose = require('mongoose');
 const cron = require('node-cron');
 const axios = require('axios');
@@ -156,20 +156,19 @@ client.on(Events.InteractionCreate, async interaction => {
         if (handler) await handler.execute(interaction);
 
     } else if (interaction.isButton()) {
-        handlerName = 'buttonHandler';
-        handler = client.handlers.get('buttonHandler');
-        if (handler) await handler(client, interaction);
+    handlerName = 'buttonHandler';
+    handler = client.handlers.get('buttonHandler');
+    if (handler) await handler(client, interaction);
 
-    // --- LÍNEA CORREGIDA Y MEJORADA ---
-    } else if (interaction.isStringSelectMenu() || interaction.isUserSelectMenu()) { 
-        handlerName = 'selectMenuHandler';
-        handler = client.handlers.get('selectMenuHandler');
-        if (handler) await handler(client, interaction);
+} else if (interaction.isStringSelectMenu() || interaction.isUserSelectMenu()) {
+    handlerName = 'selectMenuHandler';
+    handler = client.handlers.get('selectMenuHandler');
+    if (handler) await handler(client, interaction);
 
-    } else if (interaction.isModalSubmit()) {
-        handlerName = 'modalHandler';
-        handler = client.handlers.get('modalHandler');
-        if (handler) await handler(client, interaction);
+} else if (interaction.isModalSubmit()) {
+    handlerName = 'modalHandler';
+    handler = client.handlers.get('modalHandler');
+    if (handler) await handler(client, interaction);
 
     } else if (interaction.isAutocomplete()) {
         handlerName = 'autocompleteHandler';
