@@ -37,7 +37,7 @@ module.exports = async (client, interaction) => {
             .setTitle(t('registrationFinalModalTitle', interaction.member));
         
         const gameIdInput = new TextInputBuilder().setCustomId('gameIdInput').setLabel(t('registrationGameIdLabel', interaction.member)).setStyle(TextInputStyle.Short).setRequired(true);
-        const vpgUsernameInput = new TextInputBuilder().setCustomId('vpgUsernameInput').setLabel("Tu nombre de usuario VPG").setStyle(TextInputStyle.Short).setRequired(true);
+        const vpgUsernameInput = new TextInputBuilder().setCustomId('vpgUsernameInput').setLabel(t('registrationVPGUsernameLabel', interaction.member)).setStyle(TextInputStyle.Short).setRequired(true);
         const twitterInput = new TextInputBuilder().setCustomId('twitterInput').setLabel(t('registrationTwitterLabel', interaction.member)).setStyle(TextInputStyle.Short).setRequired(true);
         const whatsappInput = new TextInputBuilder().setCustomId('whatsappInput').setLabel(t('registrationWhatsappLabel', interaction.member)).setStyle(TextInputStyle.Short).setRequired(true);
 
@@ -60,7 +60,7 @@ if (customId === 'registration_select_platform_pc_step2') {
         .setTitle(t('registrationFinalModalTitle', interaction.member));
     
     const gameIdInput = new TextInputBuilder().setCustomId('gameIdInput').setLabel(t('registrationGameIdLabel', interaction.member)).setStyle(TextInputStyle.Short).setRequired(true);
-    const vpgUsernameInput = new TextInputBuilder().setCustomId('vpgUsernameInput').setLabel("Tu nombre de usuario VPG").setStyle(TextInputStyle.Short).setRequired(true);
+    const vpgUsernameInput = new TextInputBuilder().setCustomId('vpgUsernameInput').setLabel(t('registrationVPGUsernameLabel', interaction.member)).setStyle(TextInputStyle.Short).setRequired(true);
     const twitterInput = new TextInputBuilder().setCustomId('twitterInput').setLabel(t('registrationTwitterLabel', interaction.member)).setStyle(TextInputStyle.Short).setRequired(true);
     const whatsappInput = new TextInputBuilder().setCustomId('whatsappInput').setLabel(t('registrationWhatsappLabel', interaction.member)).setStyle(TextInputStyle.Short).setRequired(true);
 
