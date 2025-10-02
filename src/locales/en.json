@@ -287,6 +287,7 @@
 "paginationNext": "Next",
   "profileReminderField4Title": "Deadline",
 "profileReminderField4Value": "Remember that you have until **{fecha}** at **{hora}** to complete your registration.",
+  "unifiedRegistrationComplete": "✅ Registration and verification complete! You have received the Player and Verified Player roles. You can now enroll in drafts!",
   "pos_GK": "GK",
   "pos_CB": "CB",
   "pos_WB": "WB",
