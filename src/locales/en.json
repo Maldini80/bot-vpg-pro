@@ -309,6 +309,8 @@
 "unifiedRegistrationNoDraftTitle": "✅ Verification Complete!",
 "unifiedRegistrationNoDraftDescription": "Congratulations, {displayName}! Your registration has been completed successfully.\n\nThere are currently no active drafts, but you are all set. In the meantime, you can look for a team or register your own from the control panel.",
 "registrationError": "❌ An error occurred while processing your registration. Please contact an administrator.",
+  "goToDraftChannelButton": "Go to Draft Enrollment Channel",
+"goToControlPanelButton": "Go to Control Panel",
   "pos_GK": "GK",
   "pos_CB": "CB",
   "pos_WB": "WB",
