@@ -113,11 +113,13 @@ module.exports = async (client, interaction) => {
 }
     
 
-if (customId === 'unified_registration_final_modal') {
+if (customId.startsWith('unified_registration_modal_')) {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
+    // Extraemos la plataforma del ID del modal
+    const platform = customId.split('_')[3];
+
     const gameId = fields.getTextInputValue('gameIdInput');
-    const platform = fields.getTextInputValue('platformInput').toLowerCase();
     const twitter = fields.getTextInputValue('twitterInput');
     const whatsapp = fields.getTextInputValue('whatsappInput');
 
@@ -131,7 +133,8 @@ if (customId === 'unified_registration_final_modal') {
 
         const verifiedUserData = {
             discordId: user.id, discordTag: user.tag, gameId: gameId,
-            platform: platform, twitter: twitter, whatsapp: whatsapp,
+            platform: platform, // Usamos la plataforma del ID
+            twitter: twitter, whatsapp: whatsapp,
             verifiedAt: new Date()
         };
         await verifiedUsersCollection.updateOne({ discordId: user.id }, { $set: verifiedUserData }, { upsert: true });
