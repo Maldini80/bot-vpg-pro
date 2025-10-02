@@ -297,6 +297,8 @@
 "registrationTwitterLabel": "Twitter'ın (@ olmadan kullanıcı adı)",
 "registrationWhatsappLabel": "WhatsApp'ın",
   "registrationVPGUsernameLabel": "VPG kullanıcı adın",
+  "goToDraftChannelButton": "Draft Kayıt Kanalına Git",
+"goToControlPanelButton": "Kontrol Paneline Git",
   "pos_GK": "KL",
   "pos_CB": "STP",
   "pos_WB": "BEK",
