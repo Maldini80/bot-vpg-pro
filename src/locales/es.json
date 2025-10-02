@@ -308,6 +308,8 @@
 "unifiedRegistrationNoDraftTitle": "✅ ¡Verificación Completa!",
 "unifiedRegistrationNoDraftDescription": "¡Felicidades, {displayName}! Tu registro se ha completado correctamente.\n\nActualmente no hay ningún draft activo, pero ya estás listo. Mientras tanto, puedes buscar un equipo o registrar el tuyo propio desde el panel de control.",
 "registrationError": "❌ Ocurrió un error al procesar tu registro. Por favor, contacta a un administrador.",
+  "goToDraftChannelButton": "Ir al Canal de Inscripción al Draft",
+"goToControlPanelButton": "Ir al Panel de Control",
   "pos_GK": "POR",
   "pos_CB": "DFC",
   "pos_WB": "LD/LI",
