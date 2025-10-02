@@ -112,25 +112,6 @@ module.exports = async (client, interaction) => {
     return;
 }
     
-if (customId === 'player_registration_modal') {
-    const modal = new ModalBuilder()
-        .setCustomId('unified_registration_final_modal') // Usaremos un nuevo ID para el siguiente paso
-        .setTitle(t('playerRegistrationTitle', member));
-
-    const gameIdInput = new TextInputBuilder().setCustomId('gameIdInput').setLabel("Tu ID en el juego (Ej: Maldini_80)").setStyle(TextInputStyle.Short).setRequired(true);
-    const platformInput = new TextInputBuilder().setCustomId('platformInput').setLabel("Plataforma (steam, psn, xbox)").setStyle(TextInputStyle.Short).setRequired(true);
-    const twitterInput = new TextInputBuilder().setCustomId('twitterInput').setLabel("Tu Twitter (usuario sin @)").setStyle(TextInputStyle.Short).setRequired(true);
-    const whatsappInput = new TextInputBuilder().setCustomId('whatsappInput').setLabel("Tu WhatsApp").setStyle(TextInputStyle.Short).setRequired(true);
-
-    modal.addComponents(
-        new ActionRowBuilder().addComponents(gameIdInput),
-        new ActionRowBuilder().addComponents(platformInput),
-        new ActionRowBuilder().addComponents(twitterInput),
-        new ActionRowBuilder().addComponents(whatsappInput)
-    );
-    
-    return interaction.showModal(modal);
-}
 
 if (customId === 'unified_registration_final_modal') {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
