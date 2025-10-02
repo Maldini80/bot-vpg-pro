@@ -120,6 +120,7 @@ if (customId.startsWith('unified_registration_modal_')) {
     const platform = customId.split('_')[3];
 
     const gameId = fields.getTextInputValue('gameIdInput');
+    const vpgUsername = fields.getTextInputValue('vpgUsernameInput');
     const twitter = fields.getTextInputValue('twitterInput');
     const whatsapp = fields.getTextInputValue('whatsappInput');
 
@@ -140,10 +141,10 @@ if (customId.startsWith('unified_registration_modal_')) {
         await verifiedUsersCollection.updateOne({ discordId: user.id }, { $set: verifiedUserData }, { upsert: true });
 
         await VPGUser.findOneAndUpdate(
-            { discordId: user.id },
-            { vpgUsername: gameId, twitterHandle: twitter },
-            { upsert: true, new: true }
-        );
+    { discordId: user.id },
+    { vpgUsername: vpgUsername, twitterHandle: twitter }, // <-- Aquí está el cambio
+    { upsert: true, new: true }
+);
 
         if (process.env.PLAYER_ROLE_ID) await member.roles.add(process.env.PLAYER_ROLE_ID);
         if (process.env.VERIFIED_ROLE_ID) await member.roles.add(process.env.VERIFIED_ROLE_ID);
