@@ -1522,116 +1522,113 @@ if (customId.startsWith('admin_continue_no_logo_')) {
     }
     
     if (customId.startsWith('market_')) {
-        if (customId === 'market_post_agent') {
-            const hasRequiredRole = member.roles.cache.has(process.env.PLAYER_ROLE_ID) || member.roles.cache.has(process.env.CAPTAIN_ROLE_ID);
-            if (!hasRequiredRole) {
-                return interaction.reply({ content: '❌ Necesitas el rol de "Jugador" o "Capitán" para anunciarte.', flags: MessageFlags.Ephemeral });
-            }
-
-            const modal = new ModalBuilder().setCustomId('market_agent_modal').setTitle('Anunciarse como Agente Libre');
-            const experienceInput = new TextInputBuilder().setCustomId('experienceInput').setLabel("Tu experiencia (clubes, logros, etc.)").setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(500);
-            const seekingInput = new TextInputBuilder().setCustomId('seekingInput').setLabel("¿Qué tipo de equipo buscas?").setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(500);
-            const availabilityInput = new TextInputBuilder().setCustomId('availabilityInput').setLabel("Tu disponibilidad horaria").setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(200);
-            modal.addComponents(new ActionRowBuilder().addComponents(experienceInput), new ActionRowBuilder().addComponents(seekingInput), new ActionRowBuilder().addComponents(availabilityInput));
-            await interaction.showModal(modal);
+    if (customId === 'market_post_agent') {
+        const hasRequiredRole = member.roles.cache.has(process.env.PLAYER_ROLE_ID) || member.roles.cache.has(process.env.CAPTAIN_ROLE_ID);
+        if (!hasRequiredRole) {
+            return interaction.reply({ content: t('errorPlayerRoleNeeded', member), flags: MessageFlags.Ephemeral });
         }
-                        else if (customId === 'market_post_offer') {
-            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-            const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
-            if (!team) return interaction.editReply({ content: t('errorMustBeManagerOrCaptain', member) });
+        const modal = new ModalBuilder().setCustomId('market_agent_modal').setTitle(t('agentModalTitle', member));
+        const experienceInput = new TextInputBuilder().setCustomId('experienceInput').setLabel(t('agentModalExperienceLabel', member)).setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(500);
+        const seekingInput = new TextInputBuilder().setCustomId('seekingInput').setLabel(t('agentModalSeekingLabel', member)).setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(500);
+        const availabilityInput = new TextInputBuilder().setCustomId('availabilityInput').setLabel(t('agentModalAvailabilityLabel', member)).setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(200);
+        modal.addComponents(new ActionRowBuilder().addComponents(experienceInput), new ActionRowBuilder().addComponents(seekingInput), new ActionRowBuilder().addComponents(availabilityInput));
+        await interaction.showModal(modal);
+
+    } else if (customId === 'market_post_offer') {
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        const team = await Team.findOne({ guildId: guild.id, $or: [{ managerId: user.id }, { captains: user.id }] });
+        if (!team) return interaction.editReply({ content: t('errorMustBeManagerOrCaptain', member) });
+        
+        const positionOptions = POSITION_KEYS.map(p => ({ label: t(`pos_${p}`, member), value: p }));
+        const positionMenu = new StringSelectMenuBuilder()
+            .setCustomId(`offer_select_positions_${team._id}`)
+            .setPlaceholder(t('offerPositionsPlaceholder', member))
+            .addOptions(positionOptions)
+            .setMinValues(1)
+            .setMaxValues(positionOptions.length);
+
+        await interaction.editReply({
+            content: t('offerStep1Header', member),
+            components: [new ActionRowBuilder().addComponents(positionMenu)],
+        });
+
+    } else if (customId === 'market_search_teams') {
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        const leagues = await League.find({ guildId: guild.id }).lean();
+        const leagueOptions = leagues.map(l => ({ label: l.name, value: l.name }));
+        const positionOptions = POSITION_KEYS.map(p => ({ label: t(`pos_${p}`, member), value: p }));
+        
+        const positionMenu = new StringSelectMenuBuilder()
+            .setCustomId('search_team_pos_filter')
+            .setPlaceholder(t('filterTeamPosPlaceholder', member))
+            .addOptions({ label: t('filterAnyPosition', member), value: 'ANY' }, ...positionOptions);
+        
+        const leagueMenu = new StringSelectMenuBuilder()
+            .setCustomId('search_team_league_filter')
+            .setPlaceholder(t('filterTeamLeaguePlaceholder', member))
+            .addOptions({ label: t('filterAnyLeague', member), value: 'ANY' }, ...leagueOptions);
             
-            // --- CORRECCIÓN: Usamos las claves de posición y el traductor ---
-            const positionOptions = POSITION_KEYS.map(p => ({ 
-                label: t(`pos_${p}`, member), 
-                value: p 
-            }));
+        await interaction.editReply({ content: t('filterMenuPrompt', member), components: [new ActionRowBuilder().addComponents(positionMenu), new ActionRowBuilder().addComponents(leagueMenu)]});
 
-            const positionMenu = new StringSelectMenuBuilder()
-                .setCustomId(`offer_select_positions_${team._id}`)
-                .setPlaceholder(t('offerPositionsPlaceholder', member))
-                .addOptions(positionOptions)
-                .setMinValues(1)
-                .setMaxValues(positionOptions.length);
+    } else if (customId === 'market_manage_ad') {
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        const existingAd = await FreeAgent.findOne({ userId: user.id });
 
-            await interaction.editReply({
-                content: t('offerStep1Header', member),
-                components: [new ActionRowBuilder().addComponents(positionMenu)],
-            });
+        if (!existingAd) {
+            return interaction.editReply({ content: t('errorNoActiveAd', member) });
         }
-        else if (customId === 'market_search_teams') {
-            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-            const leagues = await League.find({ guildId: guild.id }).lean();
-            const leagueOptions = leagues.map(l => ({ label: l.name, value: l.name }));
-            const positionOptions = POSITIONS.map(p => ({ label: p, value: p }));
-            const positionMenu = new StringSelectMenuBuilder().setCustomId('search_team_pos_filter').setPlaceholder('Filtrar por posición que buscan').addOptions({ label: 'Cualquier Posición', value: 'ANY' }, ...positionOptions);
-            const leagueMenu = new StringSelectMenuBuilder().setCustomId('search_team_league_filter').setPlaceholder('Filtrar por liga').addOptions({ label: 'Cualquier Liga', value: 'ANY' }, ...leagueOptions);
-            await interaction.editReply({ content: 'Usa los menús para filtrar las ofertas de equipo.', components: [new ActionRowBuilder().addComponents(positionMenu), new ActionRowBuilder().addComponents(leagueMenu)]});
-        }
-        else if (customId === 'market_search_players') {
-            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-            const positionOptions = POSITIONS.map(p => ({ label: p, value: p }));
-            const positionMenu = new StringSelectMenuBuilder().setCustomId('search_player_pos_filter').setPlaceholder('Selecciona las posiciones que buscas').addOptions(positionOptions).setMinValues(1).setMaxValues(5);
-            await interaction.editReply({ content: 'Usa el menú para filtrar jugadores por su posición principal o secundaria.', components: [new ActionRowBuilder().addComponents(positionMenu)]});
-        }
-        else if (customId === 'market_manage_ad') {
-            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-            const existingAd = await FreeAgent.findOne({ userId: user.id });
+        
+        const notSpecified = t('valueNotSpecified', member);
+        const embed = new EmbedBuilder()
+            .setTitle(t('manageAdEmbedTitle', member))
+            .setDescription(t('manageAdEmbedDescription', member))
+            .addFields(
+                { name: t('manageAdFieldExperience', member), value: existingAd.experience || notSpecified },
+                { name: t('manageAdFieldSeeking', member), value: existingAd.seeking || notSpecified },
+                { name: t('manageAdFieldAvailability', member), value: existingAd.availability || notSpecified }
+            )
+            .setColor('Orange');
 
-            if (!existingAd) {
-                return interaction.editReply({ content: '❌ No tienes ningún anuncio de agente libre activo.' });
-            }
+        const managementRow = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId('market_edit_ad_button').setLabel(t('editAdButton', member)).setStyle(ButtonStyle.Primary),
+            new ButtonBuilder().setCustomId('market_delete_ad_button').setLabel(t('deleteAdButton', member)).setStyle(ButtonStyle.Danger)
+        );
+        
+        await interaction.editReply({ embeds: [embed], components: [managementRow] });
 
-            const embed = new EmbedBuilder()
-                .setTitle('Gestión de tu Anuncio de Agente Libre')
-                .setDescription('Aquí está tu anuncio actual. Puedes editarlo o borrarlo.')
-                .addFields(
-                    { name: 'Experiencia actual', value: existingAd.experience || 'No especificado' },
-                    { name: 'Equipo que busco', value: existingAd.seeking || 'No especificado' },
-                    { name: 'Disponibilidad actual', value: existingAd.availability || 'No especificado' }
-                )
-                .setColor('Orange');
+    } else if (customId === 'market_delete_ad_button') {
+        await interaction.deferUpdate(); 
+        const adToDelete = await FreeAgent.findOne({ userId: user.id });
 
-            const managementRow = new ActionRowBuilder().addComponents(
-                new ButtonBuilder().setCustomId('market_edit_ad_button').setLabel('Editar Anuncio').setStyle(ButtonStyle.Primary),
-                new ButtonBuilder().setCustomId('market_delete_ad_button').setLabel('Borrar Anuncio').setStyle(ButtonStyle.Danger)
-            );
-            
-            await interaction.editReply({ embeds: [embed], components: [managementRow] });
+        if (adToDelete && adToDelete.messageId) {
+            try {
+                const channel = await client.channels.fetch(process.env.PLAYERS_AD_CHANNEL_ID);
+                await channel.messages.delete(adToDelete.messageId);
+            } catch (error) {}
         }
-        else if (customId === 'market_delete_ad_button') {
-            await interaction.deferUpdate(); 
-            const adToDelete = await FreeAgent.findOne({ userId: user.id });
+        
+        await FreeAgent.deleteOne({ userId: user.id });
+        
+        await interaction.editReply({ 
+            content: t('adDeletedSuccess', member),
+            embeds: [], 
+            components: [] 
+        });
 
-            if (adToDelete && adToDelete.messageId) {
-                try {
-                    const channel = await client.channels.fetch(process.env.PLAYERS_AD_CHANNEL_ID);
-                    await channel.messages.delete(adToDelete.messageId);
-                } catch (error) {}
-            }
-            
-            await FreeAgent.deleteOne({ userId: user.id });
-            
-            await interaction.editReply({ 
-                content: '✅ Tu anuncio de agente libre ha sido borrado con éxito.',
-                embeds: [], 
-                components: [] 
-            });
+    } else if (customId === 'market_edit_ad_button') {
+        const existingAd = await FreeAgent.findOne({ userId: user.id });
+        if (!existingAd) {
+            return interaction.reply({ content: t('errorAdNotFoundForEdit', member), flags: MessageFlags.Ephemeral });
         }
-        else if (customId === 'market_edit_ad_button') {
-            const existingAd = await FreeAgent.findOne({ userId: user.id });
-            if (!existingAd) {
-                return interaction.reply({ content: '❌ No se pudo encontrar tu anuncio para editarlo.', flags: MessageFlags.Ephemeral });
-            }
-
-            const modal = new ModalBuilder().setCustomId(`market_agent_modal_edit:${existingAd._id}`).setTitle('Editar Anuncio de Agente Libre');
-            const experienceInput = new TextInputBuilder().setCustomId('experienceInput').setLabel("Tu experiencia").setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(500).setValue(existingAd.experience || '');
-            const seekingInput = new TextInputBuilder().setCustomId('seekingInput').setLabel("¿Qué tipo de equipo buscas?").setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(500).setValue(existingAd.seeking || '');
-            const availabilityInput = new TextInputBuilder().setCustomId('availabilityInput').setLabel("Tu disponibilidad horaria").setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(200).setValue(existingAd.availability || '');
-            modal.addComponents(new ActionRowBuilder().addComponents(experienceInput), new ActionRowBuilder().addComponents(seekingInput), new ActionRowBuilder().addComponents(availabilityInput));
-            await interaction.showModal(modal);
-        }
-        return;
+        const modal = new ModalBuilder().setCustomId(`market_agent_modal_edit:${existingAd._id}`).setTitle(t('editAdModalTitle', member));
+        const experienceInput = new TextInputBuilder().setCustomId('experienceInput').setLabel(t('agentModalExperienceLabel', member)).setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(500).setValue(existingAd.experience || '');
+        const seekingInput = new TextInputBuilder().setCustomId('seekingInput').setLabel(t('agentModalSeekingLabel', member)).setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(500).setValue(existingAd.seeking || '');
+        const availabilityInput = new TextInputBuilder().setCustomId('availabilityInput').setLabel(t('agentModalAvailabilityLabel', member)).setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(200).setValue(existingAd.availability || '');
+        modal.addComponents(new ActionRowBuilder().addComponents(experienceInput), new ActionRowBuilder().addComponents(seekingInput), new ActionRowBuilder().addComponents(availabilityInput));
+        await interaction.showModal(modal);
     }
+    return;
+}
     
         if (customId === 'team_manage_offer_button') {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
