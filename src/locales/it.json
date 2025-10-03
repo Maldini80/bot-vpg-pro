@@ -353,6 +353,7 @@
 "agentsFoundSuccess": "✅ Ricerca riuscita! Trovati {count} svincolati. Te li invio subito...",
 "agentFieldVpgTwitter": "VPG / Twitter",
 "agentFooterContact": "Puoi contattare direttamente questo giocatore.",
+  "langSetSuccess": "✅ La tua lingua è stata impostata su Italiano.",
   "pos_GK": "POR",
   "pos_CB": "DC",
   "pos_WB": "TS/TD",
