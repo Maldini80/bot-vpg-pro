@@ -353,6 +353,7 @@
 "agentsFoundSuccess": "✅ Pesquisa bem-sucedida! Encontrados {count} agentes livres. A enviá-los para si agora...",
 "agentFieldVpgTwitter": "VPG / Twitter",
 "agentFooterContact": "Pode contactar este jogador diretamente.",
+  "langSetSuccess": "✅ O seu idioma foi configurado para Português.",
   "pos_GK": "GOL",
   "pos_CB": "ZAG",
   "pos_WB": "LE/LD",
