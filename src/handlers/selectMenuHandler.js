@@ -370,32 +370,36 @@ if (customId.startsWith('admin_select_members_')) {
     }
     
     if (customId === 'search_team_pos_filter' || customId === 'search_team_league_filter') {
-        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-        const filter = { guildId: guild.id, status: 'ACTIVE' };
-        if (selectedValue !== 'ANY') {
-            if (customId === 'search_team_pos_filter') {
-                filter.positions = selectedValue;
-            }
-        }
-        const offers = await TeamOffer.find(filter).populate('teamId').limit(10);
-        if (offers.length === 0) {
-            return interaction.editReply({ content: '❌ No se encontraron ofertas de equipo con los filtros seleccionados.' });
-        }
-        await interaction.editReply({ content: `✅ Se encontraron ${offers.length} ofertas. Te las muestro a continuación:` });
-        for (const offer of offers) {
-            const offerEmbed = new EmbedBuilder()
-                .setAuthor({ name: offer.teamId.name, iconURL: offer.teamId.logoUrl })
-                .setThumbnail(offer.teamId.logoUrl)
-                .setColor('Green')
-                .addFields(
-                    { name: 'Posiciones Buscadas', value: `\`${offer.positions.join(', ')}\`` },
-                    { name: 'Requisitos', value: offer.requirements },
-                    { name: 'Contacto', value: `<@${offer.postedById}>` }
-                );
-            await interaction.followUp({ embeds: [offerEmbed], flags: MessageFlags.Ephemeral });
-        }
-        return;
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    const filter = { guildId: guild.id, status: 'ACTIVE' };
+    
+    // NOTA: Esta lógica asume que solo se puede filtrar por una cosa a la vez.
+    // Si en el futuro se quiere filtrar por liga Y posición, habría que guardar el estado del filtro.
+    if (selectedValue !== 'ANY') {
+        if (customId === 'search_team_pos_filter') filter.positions = selectedValue;
+        if (customId === 'search_team_league_filter') filter['teamId.league'] = selectedValue;
     }
+
+    const offers = await TeamOffer.find(filter).populate('teamId').limit(10);
+    if (offers.length === 0) {
+        return interaction.editReply({ content: t('errorNoOffersFound', member) });
+    }
+
+    await interaction.editReply({ content: t('offersFoundSuccess', member).replace('{count}', offers.length) });
+    for (const offer of offers) {
+        const offerEmbed = new EmbedBuilder()
+            .setAuthor({ name: offer.teamId.name, iconURL: offer.teamId.logoUrl })
+            .setThumbnail(offer.teamId.logoUrl)
+            .setColor('Green')
+            .addFields(
+                { name: t('offerFieldPositions', member), value: `\`${offer.positions.join(', ')}\`` },
+                { name: t('offerFieldRequirements', member), value: offer.requirements },
+                { name: t('offerFieldContact', member), value: `<@${offer.postedById}>` }
+            );
+        await interaction.followUp({ embeds: [offerEmbed], flags: MessageFlags.Ephemeral });
+    }
+    return;
+}
     
     if (customId === 'search_player_pos_filter') {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
