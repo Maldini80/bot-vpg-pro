@@ -353,6 +353,7 @@
 "agentsFoundSuccess": "✅ Suche erfolgreich! {count} freie Spieler gefunden. Ich sende sie dir jetzt...",
 "agentFieldVpgTwitter": "VPG / Twitter",
 "agentFooterContact": "Du kannst diesen Spieler direkt kontaktieren.",
+  "langSetSuccess": "✅ Deine Sprache wurde auf Deutsch eingestellt.",
   "pos_GK": "TW",
   "pos_CB": "IV",
   "pos_WB": "AV",
