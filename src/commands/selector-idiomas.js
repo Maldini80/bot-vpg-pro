@@ -13,7 +13,7 @@ module.exports = {
         const embed = new EmbedBuilder()
             .setTitle('Selección de Idioma / Language Selection')
             .setColor('#2980b9')
-            .setImage('https://i.imgur.com/g2n3n9V.png')
+            .setImage('https://i.imgur.com/dBIejz8.jpeg')
             .setDescription(
                 '🇪🇸 Pulsa el botón de tu idioma para que el bot te hable en esa lengua. Esto cambiará tu rol de idioma actual si ya tenías uno.\n\n' +
                 '🇬🇧 Press the button for your language to have the bot interact with you in that language. This will replace your current language role if you already have one.'
