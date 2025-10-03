@@ -1831,6 +1831,50 @@ if (customId.startsWith('admin_continue_no_logo_')) {
     
     return interaction.editReply({ content: t('ticketClosingConfirmation', member) });
 }
+    if (customId.startsWith('select_lang_')) {
+    await interaction.deferReply({ ephemeral: true });
+
+    const langCode = customId.split('_')[2];
+    
+    const langToRole = {
+        'es': '1392409960322826270',
+        'en': '1392410199490302043',
+        'it': '1392410102706737282',
+        'fr': '1392410295044931746',
+        'pt': '1392410361063276575',
+        'de': '1392410401391775814',
+        'tr': '1392410445578637342',
+    };
+
+    const allLangRoleIds = Object.values(langToRole);
+    const targetRoleId = langToRole[langCode];
+
+    if (!targetRoleId) {
+        return interaction.editReply({ content: 'Error: Código de idioma no válido.' });
+    }
+
+    const rolesToRemove = member.roles.cache
+        .filter(role => allLangRoleIds.includes(role.id))
+        .map(role => role.id);
+
+    try {
+        if (rolesToRemove.length > 0) {
+            await member.roles.remove(rolesToRemove);
+        }
+        await member.roles.add(targetRoleId);
+
+        // Forzamos la obtención del miembro actualizado para que el traductor use el nuevo rol
+        const updatedMember = await interaction.guild.members.fetch(user.id);
+        const confirmationMessage = t('langSetSuccess', updatedMember);
+        
+        await interaction.editReply({ content: confirmationMessage });
+
+    } catch (error) {
+        console.error(`Error al cambiar el rol de idioma para ${user.tag}:`, error);
+        await interaction.editReply({ content: '❌ Ocurrió un error al cambiar tu rol. Por favor, asegúrate de que tengo permisos para gestionar roles.' });
+    }
+    return;
+}
 };
 
 
