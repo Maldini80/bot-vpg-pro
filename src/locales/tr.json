@@ -353,6 +353,7 @@
 "agentsFoundSuccess": "✅ Arama başarılı! {count} serbest oyuncu bulundu. Şimdi size gönderiyorum...",
 "agentFieldVpgTwitter": "VPG / Twitter",
 "agentFooterContact": "Bu oyuncuyla doğrudan iletişime geçebilirsiniz.",
+  "langSetSuccess": "✅ Diliniz Türkçe olarak ayarlandı.",
   "pos_GK": "KL",
   "pos_CB": "STP",
   "pos_WB": "BEK",
