@@ -259,45 +259,48 @@ module.exports = async (client, interaction) => {
         return interaction.editReply({ content: responseMessage });
     }
 
-    if (customId.startsWith('manager_request_modal_')) {
-        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-        
-        const leagueName = customId.split('_')[3];
-        const vpgUsername = fields.getTextInputValue('vpgUsername');
-        const teamName = fields.getTextInputValue('teamName');
-        const teamAbbr = fields.getTextInputValue('teamAbbr').toUpperCase();
-        const teamTwitter = fields.getTextInputValue('teamTwitterInput');
+    // >>> ESTE ES EL NUEVO BLOQUE CORREGIDO <<<
+if (customId.startsWith('manager_request_modal_')) {
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    
+    const leagueName = customId.split('_')[3];
+    const vpgUsername = fields.getTextInputValue('vpgUsername');
+    const teamName = fields.getTextInputValue('teamName');
+    const teamAbbr = fields.getTextInputValue('teamAbbr').toUpperCase();
+    const teamTwitter = fields.getTextInputValue('teamTwitterInput');
 
-        const pendingTeam = await new PendingTeam({
-            userId: user.id,
-            guildId: guild.id,
-            leagueName,
-            vpgUsername,
-            teamName,
-            teamAbbr,
-            teamTwitter,
-        }).save();
+    const pendingTeam = await new PendingTeam({
+        userId: user.id,
+        guildId: guild.id,
+        leagueName,
+        vpgUsername,
+        teamName,
+        teamAbbr,
+        teamTwitter,
+    }).save();
 
-        const embed = new EmbedBuilder()
-            .setTitle('✅ Datos guardados. ¿Quieres añadir un logo a tu equipo?')
-            .setDescription('Este paso es opcional. Puedes subir un logo personalizado para tu club o usar uno genérico proporcionado por la comunidad.')
-            .setColor('Green');
+    // --- CORRECCIÓN: Ahora usamos el traductor t() ---
+    const embed = new EmbedBuilder()
+        .setTitle(t('askForLogoTitle', member)) // Texto traducido
+        .setDescription(t('askForLogoDescription', member)) // Texto traducido
+        .setColor('Green');
 
-        const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                .setCustomId(`ask_logo_yes_${pendingTeam._id}`)
-                .setLabel('Sí, añadir logo')
-                .setStyle(ButtonStyle.Success)
-                .setEmoji('🖼️'),
-            new ButtonBuilder()
-                .setCustomId(`ask_logo_no_${pendingTeam._id}`)
-                .setLabel('No, usar logo por defecto')
-                .setStyle(ButtonStyle.Secondary)
-                .setEmoji('🛡️')
-        );
-        
-        await interaction.editReply({ embeds: [embed], components: [row], flags: MessageFlags.Ephemeral });
-    }
+    // --- CORRECCIÓN: Ahora usamos el traductor t() para los botones ---
+    const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+            .setCustomId(`ask_logo_yes_${pendingTeam._id}`)
+            .setLabel(t('addLogoYesButton', member)) // Botón traducido
+            .setStyle(ButtonStyle.Success)
+            .setEmoji('🖼️'),
+        new ButtonBuilder()
+            .setCustomId(`ask_logo_no_${pendingTeam._id}`)
+            .setLabel(t('addLogoNoButton', member)) // Botón traducido
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('🛡️')
+    );
+    
+    await interaction.editReply({ embeds: [embed], components: [row], flags: MessageFlags.Ephemeral });
+}
 
     if (customId.startsWith('final_logo_submit_')) {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
